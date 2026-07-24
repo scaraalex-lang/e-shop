@@ -4,6 +4,8 @@ namespace Modules\Catalog\Providers;
 
 use Nwidart\Modules\Support\ModuleServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
+use Modules\Catalog\Console\Commands\ImportImagesCommand;
+use Modules\Catalog\Console\Commands\SetCategoryImageCommand;
 
 class CatalogServiceProvider extends ModuleServiceProvider
 {
@@ -22,7 +24,10 @@ class CatalogServiceProvider extends ModuleServiceProvider
      *
      * @var string[]
      */
-    // protected array $commands = [];
+    protected array $commands = [
+        ImportImagesCommand::class,
+        SetCategoryImageCommand::class,
+    ];
 
     /**
      * Provider classes to register.
