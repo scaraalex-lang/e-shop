@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google" content="notranslate">
 <title>Designer Ricordini | MemorAI</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Merriweather:ital,wght@0,300;0,400;1,300&family=Cinzel:wght@400;600&family=GFS+Didot&family=Philosopher:ital@0;1&family=Spectral:ital,wght@0,300;0,400;1,300&family=Goudy+Bookletter+1911&family=UnifrakturMaguntia&family=Pinyon+Script&family=Dancing+Script:wght@400;600&display=swap" rel="stylesheet">
+<link href="/vendor/fonts/editor-fonts.css" rel="stylesheet">
 <script src="/vendor/libs/fabric.min.js"></script>
 <style>
 @font-face { font-family:'Monotype Corsiva'; src:url('/fonts/Monotype-Corsiva-Regular.ttf') format('truetype'); font-weight:normal; font-style:normal; font-display:swap; }

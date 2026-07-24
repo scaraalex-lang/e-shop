@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestione Foto | MemorAI</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link href="/vendor/fonts/editor-fonts.css" rel="stylesheet">
 <script src="/vendor/libs/fabric.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
