@@ -411,6 +411,22 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
           <button class="btn-sm" onclick="setStrokePreset(8)">Spesso</button>
         </div>
       </div>
+      <div class="prop-group" id="shadow-group" style="display:none">
+        <span class="prop-label">Ombra del testo</span>
+        <div class="prop-row" style="align-items:center;margin-bottom:.4rem">
+          <div><span class="prop-label">Colore</span>
+            <div class="color-row">
+              <input type="color" class="color-swatch" id="prop-shadow-color" value="#000000" oninput="updateShadow()">
+            </div>
+          </div>
+        </div>
+        <div class="btn-group-row">
+          <button class="btn-sm" onclick="setShadowPreset('none')">No</button>
+          <button class="btn-sm" onclick="setShadowPreset('soft')">Leggera</button>
+          <button class="btn-sm" onclick="setShadowPreset('medium')">Media</button>
+          <button class="btn-sm" onclick="setShadowPreset('strong')">Marcata</button>
+        </div>
+      </div>
       <div class="prop-group">
         <button class="btn-danger" onclick="deleteSelected()">🗑 Elimina</button>
       </div>
@@ -911,6 +927,15 @@ function updatePropsPanel() {
   } else {
     borderGroup.style.display = 'none';
   }
+  const shadowGroup = document.getElementById('shadow-group');
+  if (obj.type === 'textbox' || obj.type === 'text') {
+    shadowGroup.style.display = 'block';
+    if (obj.shadow && typeof obj.shadow.color === 'string' && obj.shadow.color[0] === '#') {
+      document.getElementById('prop-shadow-color').value = obj.shadow.color;
+    }
+  } else {
+    shadowGroup.style.display = 'none';
+  }
 }
 
 function clearPropsPanel() {
@@ -1001,6 +1026,27 @@ function updateBorder() {
 function setStrokePreset(size) {
   document.getElementById('prop-stroke-width').value = size;
   updateBorder();
+}
+
+// ── OMBRA DEL TESTO ──
+// blur/offset in proporzione al fontSize, così l'ombra resta equilibrata a ogni scala.
+function applyShadow(level) {
+  const c = getActiveCanvas();
+  const obj = c.getActiveObject();
+  if (!obj) return;
+  if (level === 'none') { obj.set('shadow', null); obj._shadowLevel = 'none'; c.renderAll(); return; }
+  const color = document.getElementById('prop-shadow-color').value;
+  const F = obj.fontSize || 20;
+  const b = level === 'soft' ? 0.06 : level === 'strong' ? 0.22 : 0.12;   // sfocatura
+  const o = level === 'soft' ? 0.04 : level === 'strong' ? 0.10 : 0.07;   // offset
+  obj.set('shadow', new fabric.Shadow({ color: color, blur: F*b, offsetX: F*o, offsetY: F*o }));
+  obj._shadowLevel = level;
+  c.renderAll();
+}
+function setShadowPreset(level) { applyShadow(level); }
+function updateShadow() {
+  const obj = getActiveCanvas().getActiveObject();
+  if (obj && obj.shadow) applyShadow(obj._shadowLevel || 'medium');
 }
 
 function deleteSelected() {
