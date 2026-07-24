@@ -82,18 +82,57 @@ Dettagli operativi:
 - Self-host completo: Fabric.js 5.3.1, jsPDF 2.5.1, 55 woff2 Google Fonts,
   4 TTF **Monotype Corsiva** (font proprietario fornito dal committente).
 
-## Cosa manca (Fase 2, dipende da Commerce)
+## Prossimi passi, in ordine di priorità
 
-- Persistenza vera di foto e pratiche legate all'ordine; oggi
-  `PhotoPrintController` usa dati mock/demo e un solo defunto (`firstOrFail`).
-- Auth: le route `/studio/*` sono **pubbliche** → il token è scrapeabile dalla
-  pagina. La protezione vera è l'area cliente B2C / staff, che sostituirà
-  `VerifyStudioToken`.
-- Flussi B2B: necrologio, invio-approvazione con link/token alla famiglia,
-  storico revisioni.
-- Aggancio `defunti.ordine_id` all'ordine trigesimo (colonna già pronta, no FK).
-- Quando si passerà a nginx + php-fpm concorrente: togliere la riscrittura URL
-  verso :8010 in `WizardApiController::rewriteForProxy()`.
+Il cliente vero del sottosistema editor è l'**agenzia B2B**: fa decine di
+ricordini al mese, quindi è lì che stanno il volume, il valore e i flussi da
+costruire. Il B2C usa gli stessi editor ma in versione ridotta (un ricordino,
+nessun archivio). L'ordine qui sotto segue le dipendenze reali, non i desideri.
+
+**1. Commerce — sblocca tutto il resto.** Account B2B con approvazione + ordini.
+Senza account non esiste il proprietario dei template, non esiste auth, non
+esiste l'ordine a cui agganciare defunto e ricordino. Ogni punto seguente lo
+presuppone: non provare a scavalcarlo con soluzioni tampone.
+
+**2. Chiudere l'accesso agli editor** (sicurezza, appena c'è auth). Oggi
+`/studio/*` è pubblica e il token `X-Studio-Token` è iniettato nella pagina,
+quindi scrapeabile: è un lucchetto contro gli scanner, non una protezione.
+Sostituire `VerifyStudioToken` con l'auth dell'area agenzia/staff.
+
+**3. Template per account** (il pezzo B2B più immediato). Decisione presa:
+- **predefiniti MemorAI** curati da noi, uguali per tutti, sola lettura → si
+  continuano a versionare nel seeder, non serve un CRUD admin;
+- **template dell'agenzia**: ogni account approvato salva e ritocca i suoi, e
+  non vede quelli delle altre agenzie (è informazione commerciale loro);
+- **B2C**: nessuna libreria personale, parte da un predefinito e le modifiche
+  restano sulla bozza in `ricordini`.
+
+  Serve: colonna proprietario nullable su `ricordino_templates` (`null` =
+  predefinito MemorAI), filtro nell'elenco (predefiniti + i propri) e controllo
+  su `PUT`/`DELETE`. Ipotesi di lavoro: `agenzia_id`, dato che il B2C non ha
+  archivio; passare a un `owner_id` polimorfo solo se servirà davvero.
+
+**4. Persistenza foto/pratica legata all'ordine.** Oggi `PhotoPrintController`
+serve dati mock e un solo defunto (`Defunto::firstOrFail()`): va sostituito con
+il defunto dell'ordine in lavorazione, e le foto vanno legate alla pratica.
+
+**5. Bozza condivisibile con la famiglia** (il flusso che vende il B2B). Link con
+token che l'agenzia manda alla famiglia per l'approvazione, storico revisioni,
+transizioni di `ricordini.stato` (`bozza` → `in_approvazione` → `approvato`; la
+colonna c'è già). Link valido finché l'ordine è aperto.
+
+**6. Necrologio e invio-approvazione** dal designer: i pulsanti sono già nel
+blade, nascosti in attesa del backend.
+
+**7. Aggancio `defunti.ordine_id`** all'ordine trigesimo (colonna pronta, no FK).
+
+**8. Rifiniture editor** (non bloccano nulla, si fanno a richiesta):
+cornice dorata che segue la maschera; il pannello proprietà lascia i valori del
+testo precedente quando si seleziona un'immagine; azione "promuovi a
+predefinito" nell'area staff per pescare un layout riuscito da quelli reali.
+
+**Pulizia tecnica dovuta**: passando a nginx + php-fpm concorrente, togliere la
+riscrittura URL verso :8010 in `WizardApiController::rewriteForProxy()`.
 
 ## Nodo architetturale da tenere a mente
 
@@ -101,3 +140,10 @@ memoraiengine è **pratica/defunto-centrico** (l'agenzia crea la pratica).
 L'e-shop MemorAI è **ordine/cliente-centrico**. Il modulo Memorial è il ponte:
 il defunto è l'entità che collega ordine ↔ ricordino. Ogni scelta di modellazione
 qui deve restare compatibile con quel ponte.
+
+Corollario per il B2B: l'agenzia lavora **per conto di** una famiglia, quindi
+ogni cosa che il designer produce ha tre soggetti distinti — l'account che la
+crea (agenzia), la persona a cui si riferisce (defunto) e chi la approva
+(famiglia). Non collassarli: è la ragione per cui il consenso GDPR sta sul
+defunto, i template staranno sull'agenzia e l'approvazione viaggerà su un token
+dato alla famiglia.
