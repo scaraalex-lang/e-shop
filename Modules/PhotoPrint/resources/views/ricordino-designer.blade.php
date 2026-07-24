@@ -55,6 +55,15 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 .block-btn:hover{border-color:var(--gold);background:rgba(200,169,110,.05)}
 .block-icon{font-size:.9rem;width:18px;text-align:center}
 .blocks-list{padding:.4rem}
+.layer-row{display:flex;align-items:center;gap:.3rem;padding:.28rem .4rem;border:1px solid var(--border);border-radius:5px;margin-bottom:.25rem;cursor:pointer;background:var(--cream);font-size:.72rem}
+.layer-row.active{border-color:var(--gold);background:rgba(200,169,110,.14)}
+.layer-ic{width:15px;text-align:center;flex-shrink:0}
+.layer-nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.layer-nm.hidden{opacity:.45;text-decoration:line-through}
+.layer-acts{display:flex;gap:0;flex-shrink:0}
+.layer-acts button{border:none;background:none;cursor:pointer;font-size:.72rem;padding:.05rem .12rem;line-height:1;opacity:.6}
+.layer-acts button:hover{opacity:1}
+.layers-empty{color:var(--gray);font-size:.72rem;font-style:italic;padding:.35rem}
 .upload-area{padding:.6rem;border-top:1px solid var(--border)}
 .upload-btn{width:100%;padding:.5rem;border:2px dashed var(--border);border-radius:6px;background:none;color:var(--gray);font-size:.76rem;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;transition:all .2s}
 .upload-btn:hover{border-color:var(--gold);color:var(--gold)}
@@ -196,6 +205,12 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
       <button onclick="setActiveSide('fronte')" id="btn-fronte" style="flex:1;padding:.5rem;border-radius:6px;font-size:.8rem;cursor:pointer;border:2px solid var(--gold);background:var(--gold);color:#fff;font-family:'DM Sans',sans-serif">FRONTE</button>
       <button onclick="setActiveSide('retro')" id="btn-retro" style="flex:1;padding:.5rem;border-radius:6px;font-size:.8rem;cursor:pointer;border:2px solid var(--border);background:var(--cream);color:var(--ink);font-family:'DM Sans',sans-serif">RETRO</button>
     </div>
+
+    <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Livelli</span>
+      <button onclick="deselectAll()" title="Deseleziona tutto" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--gray);font-size:.58rem;padding:.12rem .4rem;cursor:pointer;text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif">Deseleziona</button>
+    </div>
+    <div id="layers-list" style="padding:.4rem;max-height:220px;overflow-y:auto"></div>
 
     <div class="panel-title">Sfondo</div>
     <div style="padding:.5rem">
@@ -611,8 +626,16 @@ window.onload = function() {
   canvasRetro.on('selection:cleared', clearPropsPanel);
   canvasRetro.on('mouse:down', function() { if(activeSide !== 'retro') setActiveSide('retro'); });
 
+  // Pannello Livelli: si aggiorna a ogni aggiunta/rimozione/selezione.
+  ['object:added','object:removed','object:modified',
+   'selection:created','selection:updated','selection:cleared'].forEach(function(ev){
+    canvasFronte.on(ev, refreshLayers);
+    canvasRetro.on(ev, refreshLayers);
+  });
+
   autoZoom();
   loadSavedTemplates();
+  refreshLayers();
 };
 
 // ── LATO ATTIVO ──
@@ -648,6 +671,7 @@ function setActiveSide(side) {
   document.getElementById('btn-retro').style.color = side === 'retro' ? '#fff' : 'var(--ink)';
   document.getElementById('btn-retro').style.borderColor = side === 'retro' ? 'var(--gold)' : 'var(--border)';
   clearPropsPanel();
+  refreshLayers();
 }
 
 // ── FORMATO ──
@@ -1097,8 +1121,75 @@ function distributeObjects(dir) {
   c.renderAll();
 }
 
-function bringForward() { const c=getActiveCanvas(); const obj=c.getActiveObject(); if(obj){c.bringForward(obj);c.renderAll();} }
-function sendBackward() { const c=getActiveCanvas(); const obj=c.getActiveObject(); if(obj){c.sendBackwards(obj);c.renderAll();} }
+function bringForward() { const c=getActiveCanvas(); const obj=c.getActiveObject(); if(obj){c.bringForward(obj);c.renderAll();refreshLayers();} }
+function sendBackward() { const c=getActiveCanvas(); const obj=c.getActiveObject(); if(obj){c.sendBackwards(obj);c.renderAll();refreshLayers();} }
+
+// ── PANNELLO LIVELLI ──
+function _lyEsc(s){ return String(s).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); }
+function _lyIcon(o){
+  if(o.type==='image') return '🖼';
+  if(o.type==='line') return '➖';
+  if((o.type==='textbox'||o.type==='text') && (o.text||'').trim().length<=2) return '✝';
+  if(o.type==='textbox'||o.type==='text') return '📝';
+  return '◻';
+}
+function _lyLabel(o){
+  if(o.type==='image') return 'Immagine';
+  if(o.type==='line') return 'Linea';
+  if(o.type==='textbox'||o.type==='text'){
+    var t=(o.text||'').replace(/\s+/g,' ').trim();
+    return t ? (t.length>26 ? t.slice(0,26)+'…' : t) : 'Testo';
+  }
+  return o.type || 'Oggetto';
+}
+function refreshLayers(){
+  var c=getActiveCanvas();
+  var list=document.getElementById('layers-list');
+  if(!c || !list) return;
+  var objs=c.getObjects();
+  var active=c.getActiveObject();
+  var html='';
+  for(var i=objs.length-1;i>=0;i--){          // il più in alto per primo
+    var o=objs[i];
+    if(o.customType==='background') continue;   // lo sfondo si gestisce dal suo pannello
+    var isA=(o===active), hid=(o.visible===false);
+    html += '<div class="layer-row'+(isA?' active':'')+'" onclick="selectLayer('+i+')">'
+      + '<span class="layer-ic">'+_lyIcon(o)+'</span>'
+      + '<span class="layer-nm'+(hid?' hidden':'')+'">'+_lyEsc(_lyLabel(o))+'</span>'
+      + '<span class="layer-acts">'
+      + '<button title="Mostra/Nascondi" onclick="event.stopPropagation();layerToggleVis('+i+')">'+(hid?'🚫':'👁')+'</button>'
+      + '<button title="Porta su" onclick="event.stopPropagation();layerMove('+i+',1)">▲</button>'
+      + '<button title="Porta giù" onclick="event.stopPropagation();layerMove('+i+',-1)">▼</button>'
+      + '<button title="Elimina" onclick="event.stopPropagation();layerDelete('+i+')">🗑</button>'
+      + '</span></div>';
+  }
+  list.innerHTML = html || '<div class="layers-empty">Nessun blocco</div>';
+}
+function selectLayer(i){
+  var c=getActiveCanvas(); var o=c.getObjects()[i];
+  if(!o || o.visible===false) return;
+  c.setActiveObject(o); c.renderAll(); updatePropsPanel(); refreshLayers();
+}
+function layerMove(i,dir){
+  var c=getActiveCanvas(); var o=c.getObjects()[i]; if(!o) return;
+  if(dir>0) c.bringForward(o); else c.sendBackwards(o);
+  c.renderAll(); refreshLayers();
+}
+function layerToggleVis(i){
+  var c=getActiveCanvas(); var o=c.getObjects()[i]; if(!o) return;
+  o.visible = (o.visible===false);           // toggle
+  o.selectable = o.visible; o.evented = o.visible;
+  if(!o.visible && c.getActiveObject()===o){ c.discardActiveObject(); clearPropsPanel(); }
+  c.renderAll(); refreshLayers();
+}
+function layerDelete(i){
+  var c=getActiveCanvas(); var o=c.getObjects()[i]; if(!o) return;
+  c.remove(o); c.discardActiveObject(); clearPropsPanel(); c.renderAll(); refreshLayers();
+}
+function deselectAll(){
+  var c=getActiveCanvas(); if(!c) return;
+  c.discardActiveObject(); c.renderAll(); clearPropsPanel(); refreshLayers();
+}
 
 // ── TEMPLATE SALVATI ──
 function loadSavedTemplates() {
