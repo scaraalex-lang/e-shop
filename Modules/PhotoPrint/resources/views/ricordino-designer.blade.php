@@ -1572,35 +1572,6 @@ function insertSimbolo(tipo) {
   var simboli = {
     croce_latina: '✝', croce_greca: '✚', croce_ortodossa: '☦', croce_raggi: '✛',
     stella: '✦', stella6: '✡', omega: 'Ω', chi_rho: '☧',
-    separatore: '— ✦ —', giglio: '⚜', colomba: '🕊', infinito: '∞', gamma: 'Γ', alfa_omega: 'Αω'
-  };
-  var char = simboli[tipo] || '✝';
-  var fontSize = tipo === 'separatore' ? Math.round(12*SCALA) : Math.round(28*SCALA);
-  var obj = new fabric.Text(char, {
-    left: W/2,
-    top: H/2,
-    fontSize: fontSize,
-    fontFamily: 'serif',
-    fill: '#1a1a2e',
-    originX: 'center',
-    originY: 'center',
-    selectable: true,
-    editable: false,
-  });
-  c.add(obj);
-  c.setActiveObject(obj);
-  c.renderAll();
-}
-
-
-// ── SIMBOLI RELIGIOSI ──
-function insertSimbolo(tipo) {
-  var c = getActiveCanvas();
-  var W = c.getWidth();
-  var H = c.getHeight();
-  var simboli = {
-    croce_latina: '✝', croce_greca: '✚', croce_ortodossa: '☦', croce_raggi: '✛',
-    stella: '✦', stella6: '✡', omega: 'Ω', chi_rho: '☧',
     separatore: '— ✦ —', giglio: '⚜', colomba: '🕊', infinito: '∞',
     gamma: 'Γ', alfa_omega: 'Αω'
   };
