@@ -52,14 +52,22 @@ Fabric), `stato` (`bozza` | `in_approvazione` | `approvato`),
 `anteprima_fronte`/`anteprima_retro` (path PNG). Indice `[defunto_id, stato]`.
 
 **`ricordino_templates`** (`RicordinoTemplate`)
-`nome`, `formato`, `fronte`/`retro` JSON, `anteprima` (path JPG), indice su
-`formato`. È un **layout riusabile**, non la bozza di una persona: il designer
+`nome`, `formato`, `is_predefinito`, `sort_order`, `fronte`/`retro` JSON,
+`anteprima` (path JPG). È un **layout riusabile**, non la bozza di una persona: il designer
 lo salva già ripulito (blocchi personali riportati a segnaposto via
 `canvasTemplateJSON`, foto del defunto esclusa) e lo ricompila coi dati del
 defunto corrente all'applicazione (`riempiConDefunto`). Regola da non rompere:
 **nel DB dei template non devono mai finire dati di una persona reale**, né nel
 JSON né nell'anteprima (che infatti si renderizza dal JSON ripulito, non dal
 canvas a schermo).
+
+I **predefiniti MemorAI** (`is_predefinito = true`) arrivano da
+`RicordinoTemplateSeeder`: i layout sono descritti in **coordinate relative**
+(frazioni di larghezza/altezza) e generati per entrambi i formati, così le
+misure non sono duplicate. Il seeder è rilanciabile (`updateOrCreate` su
+nome+formato+is_predefinito). I predefiniti stanno in cima all'elenco, non
+hanno file di anteprima — il designer la renderizza al volo dal layout — e la
+`DELETE` su uno di loro risponde **403**.
 
 **`santi`** (`Santo`)
 `nome`, `path` (relativo sul disk `public`). `url()` ritorna path **relativo**

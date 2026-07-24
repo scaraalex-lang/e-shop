@@ -16,12 +16,22 @@ class RicordinoTemplate extends Model
 {
     protected $table = 'ricordino_templates';
 
-    protected $fillable = ['nome', 'formato', 'fronte', 'retro', 'anteprima'];
+    protected $fillable = ['nome', 'formato', 'is_predefinito', 'sort_order', 'fronte', 'retro', 'anteprima'];
 
     protected $casts = [
-        'fronte' => 'array',
-        'retro'  => 'array',
+        'fronte'         => 'array',
+        'retro'          => 'array',
+        'is_predefinito' => 'boolean',
     ];
+
+    /**
+     * Ordine di presentazione: prima i predefiniti MemorAI (nel loro ordine),
+     * poi i template dell'utente dal più recente.
+     */
+    public function scopeInOrdineDiElenco($query)
+    {
+        return $query->orderByDesc('is_predefinito')->orderBy('sort_order')->orderByDesc('id');
+    }
 
     /**
      * URL relativo dell'anteprima (stessa scelta di Santo::url(): evita il

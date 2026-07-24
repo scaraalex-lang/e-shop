@@ -64,8 +64,10 @@ Dettagli operativi:
 - **Pannello Livelli**: elenco blocchi del lato attivo, selezione (anche se
   coperti), riordino z-index ▲/▼, mostra/nascondi, elimina, deseleziona tutto.
 - **Sistema template**: salva/applica/elimina layout riusabili (tabella
-  `ricordino_templates` in Memorial). I template non contengono dati personali:
-  vedi `references/api-e-dati.md`.
+  `ricordino_templates` in Memorial) + 3 **predefiniti MemorAI** (Classico,
+  Con foto, Sobrio) per 7x10 e 6x9, generati da `RicordinoTemplateSeeder` in
+  coordinate relative. I template non contengono dati personali: vedi
+  `references/api-e-dati.md`.
 - **Sidebar a fisarmonica**: ogni sezione è un `<details>` nativo; stato
   aperto/chiuso in `localStorage` (`ricordino-designer:sezioni`). Una sezione
   nuova va aggiunta come `<details class="acc" id="acc-...">` — `initAccordion()`

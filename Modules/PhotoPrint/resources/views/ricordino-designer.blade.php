@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
     </details>
 
     <details class="acc" id="acc-template">
-      <summary class="panel-title"><span class="acc-lbl">I Miei Template</span><span class="acc-arrow">▾</span></summary>
+      <summary class="panel-title"><span class="acc-lbl">Template</span><span class="acc-arrow">▾</span></summary>
       <div id="saved-templates-list" style="padding:.4rem">
         <div style="color:var(--gray);font-size:.75rem;font-style:italic;padding:.4rem">Caricamento...</div>
       </div>
@@ -1267,19 +1267,37 @@ function loadSavedTemplates() {
       container.innerHTML='<div style="color:var(--gray);font-size:.75rem;font-style:italic;padding:.4rem">Nessun template</div>';
       return;
     }
-    container.innerHTML = templates.map(t => `
+    // Predefiniti MemorAI in cima, poi i template salvati dall'utente.
+    const predefiniti = templates.filter(t => t.predefinito);
+    const miei        = templates.filter(t => !t.predefinito);
+    container.innerHTML = (predefiniti.length ? gruppoTemplate('Predefiniti MemorAI', predefiniti) : '')
+                        + (miei.length ? gruppoTemplate('I miei', miei) : '');
+
+    // I predefiniti non hanno un file di anteprima: la si renderizza al volo
+    // dal layout stesso, così l'elenco non resta pieno di riquadri grigi.
+    templates.filter(t => !t.thumbnail).forEach(t => {
+      anteprimaTemplate(t.canvas_fronte, function(dataUrl) {
+        const box = container.querySelector('[data-anteprima="' + t.id + '"]');
+        if (box && dataUrl) box.style.backgroundImage = "url('" + dataUrl + "')";
+      }, t.format);
+    });
+  });
+}
+
+function gruppoTemplate(titolo, lista) {
+  return '<div style="font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gray);padding:.3rem .1rem .25rem">' + titolo + '</div>'
+    + lista.map(t => `
       <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.35rem;padding:.35rem;border:1px solid var(--border);border-radius:5px;background:var(--cream)">
-        ${t.thumbnail?`<img src="${t.thumbnail}" style="width:28px;height:40px;object-fit:cover;border-radius:3px;flex-shrink:0">`:'<div style="width:28px;height:40px;background:#ddd;border-radius:3px;flex-shrink:0"></div>'}
+        <div data-anteprima="${t.id}" style="width:28px;height:40px;border-radius:3px;flex-shrink:0;border:1px solid var(--border);background-color:#fff;background-size:cover;background-position:center${t.thumbnail?`;background-image:url('${t.thumbnail}')`:''}"></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:.73rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_lyEsc(t.name)}</div>
           <div style="font-size:.62rem;color:var(--gray)">${t.format || '7x10'} cm</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:2px">
           <button title="Applica al ricordino" onclick="loadSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--ink);color:#fff;cursor:pointer">↓</button>
-          <button title="Elimina template" onclick="deleteSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>
+          ${t.predefinito ? '' : `<button title="Elimina template" onclick="deleteSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>`}
         </div>
       </div>`).join('');
-  });
 }
 
 /**
@@ -1301,10 +1319,9 @@ function canvasTemplateJSON(c) {
 }
 
 /** Anteprima del template: renderizzata dal JSON ripulito, non dal canvas a schermo. */
-function anteprimaTemplate(json, cb) {
-  const tmp = new fabric.StaticCanvas(null, {
-    width: canvasFronte.getWidth(), height: canvasFronte.getHeight(),
-  });
+function anteprimaTemplate(json, cb, formato) {
+  const f = FORMATI[formato] || { w: canvasFronte.getWidth(), h: canvasFronte.getHeight() };
+  const tmp = new fabric.StaticCanvas(null, { width: f.w, height: f.h });
   tmp.loadFromJSON(json, function() {
     // A schermo il foglio bianco è lo sfondo CSS sotto un canvas trasparente:
     // qui va messo davvero, o il JPEG dell'anteprima esce nero.

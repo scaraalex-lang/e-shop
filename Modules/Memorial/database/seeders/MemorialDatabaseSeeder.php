@@ -29,5 +29,8 @@ class MemorialDatabaseSeeder extends Seeder
             ['nome' => 'Sacro Cuore di Gesù'],
             ['path' => 'photoprint-demo/test-sacro-cuore.jpg'],
         );
+
+        // Impaginazioni di partenza del Ricordino Designer.
+        $this->call(RicordinoTemplateSeeder::class);
     }
 }

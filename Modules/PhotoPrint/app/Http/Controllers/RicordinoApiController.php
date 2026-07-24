@@ -113,10 +113,11 @@ class RicordinoApiController extends Controller
      */
     public function templatesIndex()
     {
-        $templates = RicordinoTemplate::orderByDesc('id')->get()->map(fn (RicordinoTemplate $t) => [
+        $templates = RicordinoTemplate::inOrdineDiElenco()->get()->map(fn (RicordinoTemplate $t) => [
             'id'            => $t->id,
             'name'          => $t->nome,
             'format'        => $t->formato,
+            'predefinito'   => $t->is_predefinito,
             'thumbnail'     => $t->anteprimaUrl(),
             'canvas_fronte' => $t->fronte,
             'canvas_retro'  => $t->retro,
@@ -157,9 +158,13 @@ class RicordinoApiController extends Controller
         return response()->json(['success' => true, 'id' => $template->id]);
     }
 
-    /** Elimina un template e la sua anteprima. */
+    /** Elimina un template dell'utente e la sua anteprima. I predefiniti restano. */
     public function templatesDestroy(RicordinoTemplate $template)
     {
+        if ($template->is_predefinito) {
+            return response()->json(['error' => 'I template predefiniti MemorAI non si possono eliminare.'], 403);
+        }
+
         if ($template->anteprima) {
             Storage::disk('public')->delete($template->anteprima);
         }
