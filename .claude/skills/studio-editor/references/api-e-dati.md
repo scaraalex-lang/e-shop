@@ -30,7 +30,9 @@ prima di passarli al proxy (vedi `dev-setup.md`, deadlock).
 |---|---|
 | `GET santi` | galleria santi condivisa |
 | `POST santi` | upload nuovo santo |
-| `GET ricordino-templates` | **Fase 1: torna `[]`** — sistema template in Fase 2 |
+| `GET ricordino-templates` | elenco template (`{id, name, format, thumbnail, canvas_fronte, canvas_retro}`) |
+| `POST ricordino-templates` | salva il layout corrente: `name`, `format`, `thumbnail` (data URL), `canvas_fronte`, `canvas_retro` già ripuliti dal designer. 422 se entrambi i canvas sono vuoti |
+| `DELETE ricordino-templates/{template}` | elimina template + file anteprima |
 | `POST defunto/{defunto}/ricordino` | salva la bozza: `canvas_fronte`, `canvas_retro`, `format`, `preview`, `preview_retro` (data URL PNG) → un solo ricordino per defunto (`firstOrNew`), `stato = bozza` |
 | `POST defunto/{defunto}/gdpr` | registra il consenso: `autorizzato_da` (obbl.), `parentela`, `note` |
 
@@ -48,6 +50,16 @@ Metodi: `nomeCompleto()`, `autorizzaGdpr($da, $parentela, $note)`,
 `defunto_id` FK, `formato` (`7x10` | `6x9`), `fronte`/`retro` JSON (stato canvas
 Fabric), `stato` (`bozza` | `in_approvazione` | `approvato`),
 `anteprima_fronte`/`anteprima_retro` (path PNG). Indice `[defunto_id, stato]`.
+
+**`ricordino_templates`** (`RicordinoTemplate`)
+`nome`, `formato`, `fronte`/`retro` JSON, `anteprima` (path JPG), indice su
+`formato`. È un **layout riusabile**, non la bozza di una persona: il designer
+lo salva già ripulito (blocchi personali riportati a segnaposto via
+`canvasTemplateJSON`, foto del defunto esclusa) e lo ricompila coi dati del
+defunto corrente all'applicazione (`riempiConDefunto`). Regola da non rompere:
+**nel DB dei template non devono mai finire dati di una persona reale**, né nel
+JSON né nell'anteprima (che infatti si renderizza dal JSON ripulito, non dal
+canvas a schermo).
 
 **`santi`** (`Santo`)
 `nome`, `path` (relativo sul disk `public`). `url()` ritorna path **relativo**

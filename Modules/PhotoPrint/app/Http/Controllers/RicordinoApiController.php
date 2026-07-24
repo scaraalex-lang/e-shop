@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\Ricordino;
+use Modules\Memorial\Models\RicordinoTemplate;
 use Modules\Memorial\Models\Santo;
 
 /**
@@ -20,6 +21,8 @@ use Modules\Memorial\Models\Santo;
 class RicordinoApiController extends Controller
 {
     private const SANTI_DIR = 'santi';
+    private const ANTEPRIME_DIR = 'ricordini/anteprime';
+    private const TEMPLATE_DIR = 'ricordini/template';
 
     // ---- Galleria santi --------------------------------------------------
 
@@ -102,11 +105,67 @@ class RicordinoApiController extends Controller
         ]);
     }
 
-    // ---- Template (FASE 1: solo elenco vuoto, sistema completo in Fase 2) --
+    // ---- Template di ricordino -------------------------------------------
 
+    /**
+     * Elenco dei template salvati. Le chiavi rispecchiano quelle attese dal JS
+     * del designer (name/format/thumbnail/canvas_*), importato da memoraiengine.
+     */
     public function templatesIndex()
     {
-        return response()->json([]);
+        $templates = RicordinoTemplate::orderByDesc('id')->get()->map(fn (RicordinoTemplate $t) => [
+            'id'            => $t->id,
+            'name'          => $t->nome,
+            'format'        => $t->formato,
+            'thumbnail'     => $t->anteprimaUrl(),
+            'canvas_fronte' => $t->fronte,
+            'canvas_retro'  => $t->retro,
+        ]);
+
+        return response()->json($templates);
+    }
+
+    /**
+     * Salva il layout corrente come template.
+     *
+     * Il designer invia i canvas già ripuliti: testi personali riportati a
+     * segnaposto e foto del defunto esclusa (vedi canvasTemplateJSON nel
+     * blade). Qui si rifiuta solo un template senza alcun contenuto.
+     */
+    public function templatesStore(Request $request)
+    {
+        $validated = $request->validate([
+            'name'   => ['required', 'string', 'max:120'],
+            'format' => ['nullable', 'string', 'in:7x10,6x9'],
+        ]);
+
+        $fronte = $this->decodeCanvas($request->input('canvas_fronte'));
+        $retro  = $this->decodeCanvas($request->input('canvas_retro'));
+
+        if (empty($fronte['objects']) && empty($retro['objects'])) {
+            return response()->json(['error' => 'Il ricordino è vuoto: non c\'è niente da salvare come template.'], 422);
+        }
+
+        $template = RicordinoTemplate::create([
+            'nome'      => $validated['name'],
+            'formato'   => $validated['format'] ?? '7x10',
+            'fronte'    => $fronte,
+            'retro'     => $retro,
+            'anteprima' => $this->storeDataUrl($request->input('thumbnail'), self::TEMPLATE_DIR),
+        ]);
+
+        return response()->json(['success' => true, 'id' => $template->id]);
+    }
+
+    /** Elimina un template e la sua anteprima. */
+    public function templatesDestroy(RicordinoTemplate $template)
+    {
+        if ($template->anteprima) {
+            Storage::disk('public')->delete($template->anteprima);
+        }
+        $template->delete();
+
+        return response()->json(['success' => true]);
     }
 
     // ---- Helper ----------------------------------------------------------
@@ -126,7 +185,7 @@ class RicordinoApiController extends Controller
     }
 
     /** Salva un'anteprima base64 nello storage e ritorna il path (o null). */
-    private function storeDataUrl($dataUrl): ?string
+    private function storeDataUrl($dataUrl, string $dir = self::ANTEPRIME_DIR): ?string
     {
         if (! is_string($dataUrl) || ! str_starts_with($dataUrl, 'data:')) {
             return null;
@@ -139,7 +198,7 @@ class RicordinoApiController extends Controller
         if ($binary === false) {
             return null;
         }
-        $path = 'ricordini/anteprime/' . Str::uuid() . '.jpg';
+        $path = trim($dir, '/') . '/' . Str::uuid() . '.jpg';
         Storage::disk('public')->put($path, $binary);
 
         return $path;

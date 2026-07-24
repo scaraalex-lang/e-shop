@@ -30,7 +30,9 @@ Route::prefix('admin/api')->middleware([VerifyStudioToken::class, 'throttle:30,1
     // Ricordino Designer (dati Memorial).
     Route::get('santi',                [RicordinoApiController::class, 'santiIndex']);
     Route::post('santi',               [RicordinoApiController::class, 'santiStore']);
-    Route::get('ricordino-templates',  [RicordinoApiController::class, 'templatesIndex']);
+    Route::get('ricordino-templates',                [RicordinoApiController::class, 'templatesIndex']);
+    Route::post('ricordino-templates',               [RicordinoApiController::class, 'templatesStore']);
+    Route::delete('ricordino-templates/{template}',  [RicordinoApiController::class, 'templatesDestroy']);
     Route::post('defunto/{defunto}/ricordino', [RicordinoApiController::class, 'salvaRicordino']);
     Route::post('defunto/{defunto}/gdpr',      [RicordinoApiController::class, 'salvaGdpr']);
 });

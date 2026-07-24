@@ -119,7 +119,8 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
     <button class="nav-btn btn-ghost" onclick="clearCanvas()">🗑 Pulisci</button>
     <button class="nav-btn btn-gold" onclick="exportPNG()" style="font-size:.75rem">📥 PNG</button>
         <button onclick="apriImpaginatorePDF()" style="background:rgba(200,169,110,.15);color:#c8a96e;border:1px solid rgba(200,169,110,.3);padding:.4rem .75rem;border-radius:6px;font-size:.75rem;cursor:pointer;font-family:Inter,sans-serif">📄 Stampa PDF</button>
-    {{-- Salva Template, Necrologio e Invia-approvazione: flussi B2B → FASE 2 --}}
+    <button class="nav-btn btn-ghost" onclick="saveAsTemplate()" title="Salva l'impaginazione come template riusabile">⭐ Template</button>
+    {{-- Necrologio e Invia-approvazione: flussi B2B → FASE 2 --}}
     <button class="nav-btn btn-green" onclick="saveToPratica()">💾 Salva</button>
     <a href="/studio/foto" class="nav-btn btn-ghost">← Foto Manager</a>
   </div>
@@ -800,6 +801,27 @@ function uploadBackground(input) {
 }
 
 // ── BLOCCHI ──
+// Blocchi che contengono dati di UNA persona: vanno riempiti col defunto
+// corrente e non devono mai finire dentro un template.
+const BLOCCHI_PERSONALI = ['nome', 'eta', 'date', 'frase', 'preghiera'];
+
+/**
+ * Testo di un blocco personale per i dati passati. Senza dati (dati = null)
+ * ritorna il segnaposto: è la forma con cui il blocco viene salvato nei template.
+ */
+function testoPersonale(tipo, dati) {
+  const d = dati || {};
+  switch (tipo) {
+    case 'nome':      return (d.cognome || 'COGNOME') + '\n' + (d.nome || 'Nome');
+    case 'eta':       return d.anni ? 'di anni ' + d.anni : 'di anni ___';
+    case 'date':      return (d.data_nascita || '__/__/____') + ' — ' + (d.data_morte || '__/__/____');
+    case 'frase':     return d.frase || "E mancato all'affetto dei suoi cari";
+    case 'preghiera': return (d.prayer && d.prayer.trim()) ? d.prayer
+                        : "Signore, accogli nella tua pace\nl'anima del tuo servo.\nAmen.";
+  }
+  return '';
+}
+
 function addBlock(type) {
   const c = getActiveCanvas();
   const W = c.getWidth();
@@ -820,21 +842,25 @@ function addBlock(type) {
   let text = '', fontSize = 10, fontFamily = 'Cormorant Garamond';
   let fontStyle = 'normal', fontWeight = 'normal', textAlign = 'center', fill = '#1a1a2e', customType = 'testo';
 
+  // I blocchi personali portano il proprio customType (non il generico 'testo'):
+  // è così che il sistema template li riconosce per svuotarli quando si salva
+  // un layout e per riempirli col defunto giusto quando lo si applica.
+
   switch(type) {
     case 'nome':
-      text = (praticaData.cognome || 'COGNOME') + '\n' + (praticaData.nome || 'Nome');
-      fontSize = 16*FS; fontWeight = 'bold'; break;
+      text = testoPersonale('nome', praticaData);
+      fontSize = 16*FS; fontWeight = 'bold'; customType = 'nome'; break;
     case 'eta':
-      text = praticaData.anni ? 'di anni ' + praticaData.anni : 'di anni ___';
-      fontSize = 11*FS; fontStyle = 'italic'; break;
+      text = testoPersonale('eta', praticaData);
+      fontSize = 11*FS; fontStyle = 'italic'; customType = 'eta'; break;
     case 'date':
-      text = (praticaData.data_nascita || '__/__/____') + ' — ' + (praticaData.data_morte || '__/__/____');
-      fontSize = 9*FS; break;
+      text = testoPersonale('date', praticaData);
+      fontSize = 9*FS; customType = 'date'; break;
     case 'frase':
-      text = praticaData.frase || "E mancato all'affetto dei suoi cari";
-      fontSize = 9*FS; fontStyle = 'italic'; break;
+      text = testoPersonale('frase', praticaData);
+      fontSize = 9*FS; fontStyle = 'italic'; customType = 'frase'; break;
     case 'preghiera':
-      text = (praticaData.prayer && praticaData.prayer.trim()) ? praticaData.prayer : "Signore, accogli nella tua pace\nl'anima del tuo servo.\nAmen.";
+      text = testoPersonale('preghiera', praticaData);
       fontSize = 8*FS; fontStyle = 'italic'; customType = 'preghiera';
       break;
     case 'logo':
@@ -1244,45 +1270,109 @@ function loadSavedTemplates() {
     container.innerHTML = templates.map(t => `
       <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.35rem;padding:.35rem;border:1px solid var(--border);border-radius:5px;background:var(--cream)">
         ${t.thumbnail?`<img src="${t.thumbnail}" style="width:28px;height:40px;object-fit:cover;border-radius:3px;flex-shrink:0">`:'<div style="width:28px;height:40px;background:#ddd;border-radius:3px;flex-shrink:0"></div>'}
-        <div style="flex:1;min-width:0"><div style="font-size:.73rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name}</div></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.73rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_lyEsc(t.name)}</div>
+          <div style="font-size:.62rem;color:var(--gray)">${t.format || '7x10'} cm</div>
+        </div>
         <div style="display:flex;flex-direction:column;gap:2px">
-          <button onclick="loadSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--ink);color:#fff;cursor:pointer">↓</button>
-          <button onclick="deleteSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>
+          <button title="Applica al ricordino" onclick="loadSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--ink);color:#fff;cursor:pointer">↓</button>
+          <button title="Elimina template" onclick="deleteSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>
         </div>
       </div>`).join('');
+  });
+}
+
+/**
+ * Stato del canvas ripulito per l'uso come template: i blocchi personali
+ * tornano al testo segnaposto e la foto del defunto viene esclusa. Così un
+ * layout si riusa su chiunque, e i dati di una persona non finiscono nel
+ * ricordino di un'altra.
+ */
+function canvasTemplateJSON(c) {
+  const data = JSON.parse(JSON.stringify(c.toJSON(['customType'])));
+  data.objects = (data.objects || []).filter(o => o.customType !== 'photo');
+  data.objects.forEach(o => {
+    if (BLOCCHI_PERSONALI.indexOf(o.customType) !== -1) {
+      o.text = testoPersonale(o.customType, null);
+      delete o.styles;               // gli stili per-carattere non valgono più sul nuovo testo
+    }
+  });
+  return data;
+}
+
+/** Anteprima del template: renderizzata dal JSON ripulito, non dal canvas a schermo. */
+function anteprimaTemplate(json, cb) {
+  const tmp = new fabric.StaticCanvas(null, {
+    width: canvasFronte.getWidth(), height: canvasFronte.getHeight(),
+  });
+  tmp.loadFromJSON(json, function() {
+    // A schermo il foglio bianco è lo sfondo CSS sotto un canvas trasparente:
+    // qui va messo davvero, o il JPEG dell'anteprima esce nero.
+    if (!tmp.backgroundColor) tmp.setBackgroundColor('#ffffff');
+    tmp.renderAll();
+    let thumb = null;
+    try { thumb = tmp.toDataURL({format:'jpeg', quality:0.5, multiplier:0.3}); } catch (e) {}
+    tmp.dispose();
+    cb(thumb);
   });
 }
 
 function saveAsTemplate() {
   const name = prompt('Nome template:', 'Ricordino ' + new Date().toLocaleDateString('it-IT'));
   if (!name) return;
-  const thumbnail = canvasFronte.toDataURL({format:'jpeg',quality:0.5,multiplier:0.3});
-  const data = { name, format: currentFormat, thumbnail,
-    canvas_fronte: JSON.stringify(canvasFronte.toJSON(['customType'])),
-    canvas_retro: JSON.stringify(canvasRetro.toJSON(['customType'])) };
-  fetch('/admin/api/ricordino-templates', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
-    body: JSON.stringify(data)
-  }).then(r=>r.json()).then(res => { if(res.success){alert('Template salvato!');loadSavedTemplates();} });
+
+  const fronte = canvasTemplateJSON(canvasFronte);
+  const retro  = canvasTemplateJSON(canvasRetro);
+
+  anteprimaTemplate(fronte, function(thumbnail) {
+    fetch('/admin/api/ricordino-templates', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+      body: JSON.stringify({ name: name, format: currentFormat, thumbnail: thumbnail,
+        canvas_fronte: JSON.stringify(fronte), canvas_retro: JSON.stringify(retro) })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) { alert(res.error || 'Salvataggio del template non riuscito.'); return; }
+      const sez = document.getElementById('acc-template');
+      if (sez) sez.open = true;                 // mostra subito dove è finito
+      loadSavedTemplates();
+    })
+    .catch(() => alert('Salvataggio del template non riuscito.'));
+  });
 }
 
+/** Applica un template al ricordino corrente, riempiendolo coi dati del defunto. */
 function loadSavedTemplate(id) {
+  if (!confirm('Applicare il template? Il contenuto attuale di fronte e retro verrà sostituito.')) return;
+
   fetch('/admin/api/ricordino-templates').then(r=>r.json()).then(templates => {
     const t = templates.find(x=>x.id==id);
     if (!t) return;
-    const f = FORMATI[t.format] || FORMATI['7x10'];
+    const fmt = t.format || '7x10';
+    const f = FORMATI[fmt] || FORMATI['7x10'];
     [canvasFronte, canvasRetro].forEach(c => { c.setWidth(f.w); c.setHeight(f.h); });
-    document.getElementById('formato-select').value = t.format || '7x10';
-    currentFormat = t.format || '7x10';
-    canvasFronte.loadFromJSON(t.canvas_fronte, () => canvasFronte.renderAll());
-    canvasRetro.loadFromJSON(t.canvas_retro, () => canvasRetro.renderAll());
+    document.getElementById('formato-select').value = fmt;
+    currentFormat = fmt;
+    canvasFronte.loadFromJSON(t.canvas_fronte, () => riempiConDefunto(canvasFronte));
+    canvasRetro.loadFromJSON(t.canvas_retro, () => riempiConDefunto(canvasRetro));
     autoZoom();
   });
 }
 
+/** Rimette i dati del defunto corrente nei blocchi personali (segnaposto del template). */
+function riempiConDefunto(c) {
+  c.getObjects().forEach(function(o) {
+    if (BLOCCHI_PERSONALI.indexOf(o.customType) !== -1) {
+      o.set('text', testoPersonale(o.customType, praticaData));
+    }
+  });
+  c.renderAll();
+  refreshLayers();
+}
+
 function deleteSavedTemplate(id) {
-  if (!confirm('Eliminare?')) return;
+  if (!confirm('Eliminare il template?')) return;
   fetch('/admin/api/ricordino-templates/'+id, {method:'DELETE',headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}})
     .then(r=>r.json()).then(res => { if(res.success) loadSavedTemplates(); });
 }

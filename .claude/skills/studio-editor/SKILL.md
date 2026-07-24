@@ -63,6 +63,9 @@ Dettagli operativi:
 - Testo: **traccia (contorno)** e **ombra** configurabili.
 - **Pannello Livelli**: elenco blocchi del lato attivo, selezione (anche se
   coperti), riordino z-index ▲/▼, mostra/nascondi, elimina, deseleziona tutto.
+- **Sistema template**: salva/applica/elimina layout riusabili (tabella
+  `ricordino_templates` in Memorial). I template non contengono dati personali:
+  vedi `references/api-e-dati.md`.
 - **Sidebar a fisarmonica**: ogni sezione è un `<details>` nativo; stato
   aperto/chiuso in `localStorage` (`ricordino-designer:sezioni`). Una sezione
   nuova va aggiunta come `<details class="acc" id="acc-...">` — `initAccordion()`
@@ -79,7 +82,6 @@ Dettagli operativi:
   `VerifyStudioToken`.
 - Flussi B2B: necrologio, invio-approvazione con link/token alla famiglia,
   storico revisioni.
-- Sistema template ricordino (`GET ricordino-templates` oggi torna `[]`).
 - Aggancio `defunti.ordine_id` all'ordine trigesimo (colonna già pronta, no FK).
 - Quando si passerà a nginx + php-fpm concorrente: togliere la riscrittura URL
   verso :8010 in `WizardApiController::rewriteForProxy()`.
