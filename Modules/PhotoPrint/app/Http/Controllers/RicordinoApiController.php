@@ -158,6 +158,50 @@ class RicordinoApiController extends Controller
         return response()->json(['success' => true, 'id' => $template->id]);
     }
 
+    /**
+     * Aggiorna un template esistente col layout corrente (ed eventualmente lo
+     * rinomina): è il "salva sopra" dopo aver ritoccato un template applicato.
+     * I predefiniti MemorAI non si sovrascrivono, si duplicano.
+     */
+    public function templatesUpdate(Request $request, RicordinoTemplate $template)
+    {
+        if ($template->is_predefinito) {
+            return response()->json(['error' => 'I template predefiniti MemorAI non si modificano: salvalo come nuovo template.'], 403);
+        }
+
+        $validated = $request->validate([
+            'name'   => ['required', 'string', 'max:120'],
+            'format' => ['nullable', 'string', 'in:7x10,6x9'],
+        ]);
+
+        $fronte = $this->decodeCanvas($request->input('canvas_fronte'));
+        $retro  = $this->decodeCanvas($request->input('canvas_retro'));
+
+        if (empty($fronte['objects']) && empty($retro['objects'])) {
+            return response()->json(['error' => 'Il ricordino è vuoto: non c\'è niente da salvare come template.'], 422);
+        }
+
+        $anteprima = $this->storeDataUrl($request->input('thumbnail'), self::TEMPLATE_DIR);
+        if ($anteprima && $template->anteprima) {
+            Storage::disk('public')->delete($template->anteprima);   // via la vecchia
+        }
+
+        // fronte/retro si sovrascrivono anche se vuoti (svuotare un lato è una
+        // modifica legittima); l'anteprima solo se ne è arrivata una nuova.
+        $dati = [
+            'nome'    => $validated['name'],
+            'formato' => $validated['format'] ?? $template->formato,
+            'fronte'  => $fronte,
+            'retro'   => $retro,
+        ];
+        if ($anteprima) {
+            $dati['anteprima'] = $anteprima;
+        }
+        $template->update($dati);
+
+        return response()->json(['success' => true, 'id' => $template->id]);
+    }
+
     /** Elimina un template dell'utente e la sua anteprima. I predefiniti restano. */
     public function templatesDestroy(RicordinoTemplate $template)
     {

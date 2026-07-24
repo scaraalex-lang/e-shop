@@ -32,6 +32,7 @@ Route::prefix('admin/api')->middleware([VerifyStudioToken::class, 'throttle:30,1
     Route::post('santi',               [RicordinoApiController::class, 'santiStore']);
     Route::get('ricordino-templates',                [RicordinoApiController::class, 'templatesIndex']);
     Route::post('ricordino-templates',               [RicordinoApiController::class, 'templatesStore']);
+    Route::put('ricordino-templates/{template}',     [RicordinoApiController::class, 'templatesUpdate']);
     Route::delete('ricordino-templates/{template}',  [RicordinoApiController::class, 'templatesDestroy']);
     Route::post('defunto/{defunto}/ricordino', [RicordinoApiController::class, 'salvaRicordino']);
     Route::post('defunto/{defunto}/gdpr',      [RicordinoApiController::class, 'salvaGdpr']);

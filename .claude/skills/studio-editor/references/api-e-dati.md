@@ -32,7 +32,8 @@ prima di passarli al proxy (vedi `dev-setup.md`, deadlock).
 | `POST santi` | upload nuovo santo |
 | `GET ricordino-templates` | elenco template (`{id, name, format, thumbnail, canvas_fronte, canvas_retro}`) |
 | `POST ricordino-templates` | salva il layout corrente: `name`, `format`, `thumbnail` (data URL), `canvas_fronte`, `canvas_retro` già ripuliti dal designer. 422 se entrambi i canvas sono vuoti |
-| `DELETE ricordino-templates/{template}` | elimina template + file anteprima |
+| `PUT ricordino-templates/{template}` | sovrascrive un template dell'utente col layout corrente (e lo rinomina); 403 sui predefiniti |
+| `DELETE ricordino-templates/{template}` | elimina template + file anteprima; 403 sui predefiniti |
 | `POST defunto/{defunto}/ricordino` | salva la bozza: `canvas_fronte`, `canvas_retro`, `format`, `preview`, `preview_retro` (data URL PNG) → un solo ricordino per defunto (`firstOrNew`), `stato = bozza` |
 | `POST defunto/{defunto}/gdpr` | registra il consenso: `autorizzato_da` (obbl.), `parentela`, `note` |
 

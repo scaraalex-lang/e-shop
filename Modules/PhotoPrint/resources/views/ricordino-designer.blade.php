@@ -249,6 +249,22 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
       </div>
     </details>
 
+    <details class="acc" id="acc-maschere">
+      <summary class="panel-title"><span class="acc-lbl">Maschere foto</span><span class="acc-arrow">▾</span></summary>
+      <div style="padding:.5rem">
+        <div class="btn-group-row" style="margin-top:0" id="mask-buttons">
+          <button class="btn-sm" id="mask-nessuna" onclick="setMaschera('nessuna')">No</button>
+          <button class="btn-sm" id="mask-ovale" onclick="setMaschera('ovale')">Ovale</button>
+          <button class="btn-sm" id="mask-cerchio" onclick="setMaschera('cerchio')">Cerchio</button>
+          <button class="btn-sm" id="mask-arrotondato" onclick="setMaschera('arrotondato')">Angoli</button>
+          <button class="btn-sm" id="mask-arco" onclick="setMaschera('arco')">Arco</button>
+        </div>
+        <div id="mask-nota" style="font-size:.66rem;color:var(--gray);margin-top:.5rem;line-height:1.35">
+          Seleziona una foto sul ricordino per applicare una maschera.
+        </div>
+      </div>
+    </details>
+
     <details class="acc" id="acc-simboli">
       <summary class="panel-title"><span class="acc-lbl">Simboli Religiosi</span><span class="acc-arrow">▾</span></summary>
       <div style="padding:.4rem">
@@ -448,19 +464,6 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
           <button class="btn-sm" onclick="setStrokePreset(8)">Spesso</button>
         </div>
       </div>
-      <div class="prop-group" id="mask-group" style="display:none">
-        <span class="prop-label">Maschera foto</span>
-        <div class="btn-group-row">
-          <button class="btn-sm" id="mask-nessuna" onclick="setMaschera('nessuna')">No</button>
-          <button class="btn-sm" id="mask-ovale" onclick="setMaschera('ovale')">Ovale</button>
-          <button class="btn-sm" id="mask-cerchio" onclick="setMaschera('cerchio')">Cerchio</button>
-          <button class="btn-sm" id="mask-arrotondato" onclick="setMaschera('arrotondato')">Angoli</button>
-          <button class="btn-sm" id="mask-arco" onclick="setMaschera('arco')">Arco</button>
-        </div>
-        <div id="mask-hint" style="display:none;font-size:.63rem;color:var(--gray);margin-top:.4rem;line-height:1.35">
-          Con la maschera attiva il bordo rettangolare resta fuori dal ritaglio: per toglierla scegli "No".
-        </div>
-      </div>
       <div class="prop-group" id="shadow-group" style="display:none">
         <span class="prop-label">Ombra del testo</span>
         <div class="prop-row" style="align-items:center;margin-bottom:.4rem">
@@ -483,6 +486,22 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
     </div>
   </div>
 
+</div>
+
+<!-- MODALE GENERICA (nome template, conferme) -->
+<div id="app-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.72);z-index:1200;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:12px;padding:1.5rem;width:430px;max-width:94vw;box-shadow:0 18px 50px rgba(0,0,0,.35)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.75rem">
+      <div id="app-modal-title" style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:var(--ink);line-height:1.2"></div>
+      <button onclick="chiudiModale(null)" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray);line-height:1">✕</button>
+    </div>
+    <div id="app-modal-text" style="font-size:.82rem;color:var(--gray);line-height:1.5"></div>
+    <div id="app-modal-field" style="display:none;margin-top:.9rem">
+      <span class="prop-label" id="app-modal-label"></span>
+      <input type="text" class="prop-input" id="app-modal-input" style="width:100%" autocomplete="off">
+    </div>
+    <div id="app-modal-actions" style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.25rem;flex-wrap:wrap"></div>
+  </div>
 </div>
 
 <!-- MODAL SANTI -->
@@ -672,6 +691,7 @@ window.onload = function() {
   loadSavedTemplates();
   refreshLayers();
   initAccordion();
+  aggiornaPannelloMaschere(null);   // pulsanti spenti finché non si seleziona una foto
 };
 
 // ── SEZIONI SIDEBAR (fisarmonica) ──
@@ -1035,10 +1055,7 @@ function updatePropsPanel() {
   } else {
     borderGroup.style.display = 'none';
   }
-  const maskGroup = document.getElementById('mask-group');
-  maskGroup.style.display = (obj.type === 'image') ? 'block' : 'none';
-  if (obj.type === 'image') evidenziaMaschera(obj.maschera || 'nessuna');
-  document.getElementById('mask-hint').style.display = mascherata ? 'block' : 'none';
+  aggiornaPannelloMaschere(obj);
 
   const shadowGroup = document.getElementById('shadow-group');
   if (obj.type === 'textbox' || obj.type === 'text') {
@@ -1054,6 +1071,7 @@ function updatePropsPanel() {
 function clearPropsPanel() {
   document.getElementById('no-selection').style.display = 'block';
   document.getElementById('props-content').style.display = 'none';
+  aggiornaPannelloMaschere(null);
 }
 
 function changeRicordinoSize(delta) {
@@ -1280,7 +1298,75 @@ function deselectAll(){
   c.discardActiveObject(); c.renderAll(); clearPropsPanel(); refreshLayers();
 }
 
+// ── MODALE ──
+// Sostituisce prompt/confirm/alert del browser: stessa resa su tutti i
+// dispositivi e coerente con il resto dell'editor.
+// azioni: [{testo, valore, tipo:'primario'|'neutro'|'pericolo'}]
+// Risolve con {azione, valore}: azione null = annullata.
+let _modaleChiudi = null;
+
+function modale(opzioni) {
+  const box    = document.getElementById('app-modal');
+  const input  = document.getElementById('app-modal-input');
+  const campo  = document.getElementById('app-modal-field');
+  const azioni = opzioni.azioni || [{ testo: 'Ho capito', valore: 'ok', tipo: 'primario' }];
+
+  document.getElementById('app-modal-title').textContent = opzioni.titolo || '';
+  document.getElementById('app-modal-text').innerHTML = opzioni.testo || '';
+
+  if (opzioni.campo) {
+    campo.style.display = 'block';
+    document.getElementById('app-modal-label').textContent = opzioni.campo.etichetta || 'Nome';
+    input.value = opzioni.campo.valore || '';
+  } else {
+    campo.style.display = 'none';
+    input.value = '';
+  }
+
+  const stili = {
+    primario: 'background:var(--gold);color:#fff;border:1px solid var(--gold)',
+    neutro:   'background:var(--cream);color:var(--ink);border:1px solid var(--border)',
+    pericolo: 'background:var(--red);color:#fff;border:1px solid var(--red)',
+  };
+  const cont = document.getElementById('app-modal-actions');
+  cont.innerHTML = '';
+  azioni.forEach(function(a) {
+    const b = document.createElement('button');
+    b.textContent = a.testo;
+    b.style.cssText = "padding:.45rem .95rem;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;" + (stili[a.tipo] || stili.neutro);
+    b.onclick = function() { chiudiModale(a.valore); };
+    cont.appendChild(b);
+  });
+
+  box.style.display = 'flex';
+  box.onclick = function(e) { if (e.target === box) chiudiModale(null); };
+  if (opzioni.campo) setTimeout(function() { input.focus(); input.select(); }, 30);
+
+  return new Promise(function(resolve) {
+    function tasti(e) {
+      if (e.key === 'Escape') { e.preventDefault(); chiudiModale(null); }
+      if (e.key === 'Enter') {
+        const primaria = azioni.filter(function(a) { return a.tipo === 'primario'; })[0];
+        if (primaria) { e.preventDefault(); chiudiModale(primaria.valore); }
+      }
+    }
+    _modaleChiudi = function(valore) {
+      document.removeEventListener('keydown', tasti);
+      box.style.display = 'none';
+      _modaleChiudi = null;
+      resolve({ azione: valore, valore: input.value.trim() });
+    };
+    document.addEventListener('keydown', tasti);
+  });
+}
+
+function chiudiModale(valore) { if (_modaleChiudi) _modaleChiudi(valore); }
+
 // ── TEMPLATE SALVATI ──
+// Template attualmente in lavorazione (applicato o appena salvato): è quello
+// che il pulsante "Template" propone di aggiornare.
+let templateCorrente = null;
+
 function loadSavedTemplates() {
   fetch('/admin/api/ricordino-templates').then(r=>r.json()).then(templates => {
     const container = document.getElementById('saved-templates-list');
@@ -1307,18 +1393,21 @@ function loadSavedTemplates() {
 
 function gruppoTemplate(titolo, lista) {
   return '<div style="font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gray);padding:.3rem .1rem .25rem">' + titolo + '</div>'
-    + lista.map(t => `
-      <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.35rem;padding:.35rem;border:1px solid var(--border);border-radius:5px;background:var(--cream)">
+    + lista.map(t => {
+      const inLavorazione = !!templateCorrente && templateCorrente.id === t.id;
+      return `
+      <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.35rem;padding:.35rem;border:1px solid ${inLavorazione?'var(--gold)':'var(--border)'};border-radius:5px;background:${inLavorazione?'rgba(200,169,110,.14)':'var(--cream)'}">
         <div data-anteprima="${t.id}" style="width:28px;height:40px;border-radius:3px;flex-shrink:0;border:1px solid var(--border);background-color:#fff;background-size:cover;background-position:center${t.thumbnail?`;background-image:url('${t.thumbnail}')`:''}"></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:.73rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_lyEsc(t.name)}</div>
-          <div style="font-size:.62rem;color:var(--gray)">${t.format || '7x10'} cm</div>
+          <div style="font-size:.62rem;color:var(--gray)">${t.format || '7x10'} cm${inLavorazione ? ' · in lavorazione' : ''}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:2px">
           <button title="Applica al ricordino" onclick="loadSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--ink);color:#fff;cursor:pointer">↓</button>
-          ${t.predefinito ? '' : `<button title="Elimina template" onclick="deleteSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>`}
+          ${t.predefinito ? '' : `<button title="Elimina template" onclick="deleteSavedTemplate(${t.id}, ${_lyEsc(JSON.stringify(t.name))})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>`}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 }
 
 /**
@@ -1333,7 +1422,7 @@ function canvasTemplateJSON(c) {
   data.objects.forEach(o => {
     if (BLOCCHI_PERSONALI.indexOf(o.customType) !== -1) {
       o.text = testoPersonale(o.customType, null);
-      delete o.styles;               // gli stili per-carattere non valgono più sul nuovo testo
+      o.styles = {};                 // gli stili per-carattere non valgono più sul nuovo testo
     }
   });
   return data;
@@ -1355,52 +1444,114 @@ function anteprimaTemplate(json, cb, formato) {
   });
 }
 
-function saveAsTemplate() {
-  const name = prompt('Nome template:', 'Ricordino ' + new Date().toLocaleDateString('it-IT'));
-  if (!name) return;
-
+/**
+ * Salva il layout: aggiorna il template su cui si sta lavorando oppure ne crea
+ * uno nuovo. Sui predefiniti MemorAI si può solo fare una copia.
+ */
+async function saveAsTemplate() {
   const fronte = canvasTemplateJSON(canvasFronte);
   const retro  = canvasTemplateJSON(canvasRetro);
 
+  if (!fronte.objects.length && !retro.objects.length) {
+    await modale({ titolo: 'Niente da salvare',
+      testo: 'Il ricordino è vuoto: aggiungi almeno un blocco prima di creare un template.' });
+    return;
+  }
+
+  const modificabile = !!templateCorrente && !templateCorrente.predefinito;
+
+  const azioni = [{ testo: 'Annulla', valore: null, tipo: 'neutro' }];
+  if (modificabile) azioni.push({ testo: 'Salva come nuovo', valore: 'nuovo', tipo: 'neutro' });
+  azioni.push(modificabile
+    ? { testo: 'Aggiorna template', valore: 'aggiorna', tipo: 'primario' }
+    : { testo: 'Salva template',    valore: 'nuovo',    tipo: 'primario' });
+
+  let testo, nomeIniziale;
+  if (modificabile) {
+    testo = 'Stai lavorando sul template <strong>' + _lyEsc(templateCorrente.name) + '</strong>: puoi aggiornarlo con le modifiche fatte oppure salvarne una copia nuova.';
+    nomeIniziale = templateCorrente.name;
+  } else if (templateCorrente) {
+    testo = 'I predefiniti MemorAI non si modificano: le tue modifiche diventano un template nuovo, tutto tuo.';
+    nomeIniziale = templateCorrente.name + ' (copia)';
+  } else {
+    testo = 'Viene salvata solo l\'impaginazione: nome, date, frase e preghiera tornano segnaposto e la foto del defunto non viene inclusa.';
+    nomeIniziale = 'Ricordino ' + new Date().toLocaleDateString('it-IT');
+  }
+
+  const scelta = await modale({
+    titolo: modificabile ? 'Salva template' : 'Nuovo template',
+    testo:  testo,
+    campo:  { etichetta: 'Nome del template', valore: nomeIniziale },
+    azioni: azioni,
+  });
+  if (!scelta.azione) return;
+
+  if (!scelta.valore) {
+    await modale({ titolo: 'Manca il nome', testo: 'Dai un nome al template, così lo ritrovi nell\'elenco.' });
+    return;
+  }
+
+  const aggiorna = scelta.azione === 'aggiorna';
+  const url = '/admin/api/ricordino-templates' + (aggiorna ? '/' + templateCorrente.id : '');
+
   anteprimaTemplate(fronte, function(thumbnail) {
-    fetch('/admin/api/ricordino-templates', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
-      body: JSON.stringify({ name: name, format: currentFormat, thumbnail: thumbnail,
+    fetch(url, {
+      method: aggiorna ? 'PUT' : 'POST',
+      headers: {'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+      body: JSON.stringify({ name: scelta.valore, format: currentFormat, thumbnail: thumbnail,
         canvas_fronte: JSON.stringify(fronte), canvas_retro: JSON.stringify(retro) })
     })
     .then(r => r.json())
     .then(res => {
-      if (!res.success) { alert(res.error || 'Salvataggio del template non riuscito.'); return; }
+      if (!res.success) {
+        modale({ titolo: 'Salvataggio non riuscito', testo: _lyEsc(res.error || 'Riprova fra un momento.') });
+        return;
+      }
+      templateCorrente = { id: res.id, name: scelta.valore, predefinito: false };
       const sez = document.getElementById('acc-template');
       if (sez) sez.open = true;                 // mostra subito dove è finito
       loadSavedTemplates();
     })
-    .catch(() => alert('Salvataggio del template non riuscito.'));
-  });
+    .catch(() => modale({ titolo: 'Salvataggio non riuscito', testo: 'Non è stato possibile contattare il server.' }));
+  }, currentFormat);
 }
 
 /** Applica un template al ricordino corrente, riempiendolo coi dati del defunto. */
-function loadSavedTemplate(id) {
-  if (!confirm('Applicare il template? Il contenuto attuale di fronte e retro verrà sostituito.')) return;
+async function loadSavedTemplate(id) {
+  const templates = await fetch('/admin/api/ricordino-templates').then(r => r.json());
+  const t = templates.filter(function(x) { return x.id == id; })[0];
+  if (!t) return;
 
-  fetch('/admin/api/ricordino-templates').then(r=>r.json()).then(templates => {
-    const t = templates.find(x=>x.id==id);
-    if (!t) return;
-    const fmt = t.format || '7x10';
-    const f = FORMATI[fmt] || FORMATI['7x10'];
-    [canvasFronte, canvasRetro].forEach(c => { c.setWidth(f.w); c.setHeight(f.h); });
-    document.getElementById('formato-select').value = fmt;
-    currentFormat = fmt;
-    canvasFronte.loadFromJSON(t.canvas_fronte, () => riempiConDefunto(canvasFronte));
-    canvasRetro.loadFromJSON(t.canvas_retro, () => riempiConDefunto(canvasRetro));
-    autoZoom();
+  const conferma = await modale({
+    titolo: 'Applicare il template?',
+    testo:  '<strong>' + _lyEsc(t.name) + '</strong> · ' + (t.format || '7x10') + ' cm<br>'
+          + 'Il contenuto attuale di fronte e retro verrà sostituito. I dati del defunto vengono riempiti in automatico.',
+    azioni: [
+      { testo: 'Annulla', valore: null, tipo: 'neutro' },
+      { testo: 'Applica', valore: 'ok', tipo: 'primario' },
+    ],
   });
+  if (!conferma.azione) return;
+
+  const fmt = t.format || '7x10';
+  const f = FORMATI[fmt] || FORMATI['7x10'];
+  [canvasFronte, canvasRetro].forEach(c => { c.setWidth(f.w); c.setHeight(f.h); });
+  document.getElementById('formato-select').value = fmt;
+  currentFormat = fmt;
+  canvasFronte.loadFromJSON(t.canvas_fronte, () => riempiConDefunto(canvasFronte));
+  canvasRetro.loadFromJSON(t.canvas_retro, () => riempiConDefunto(canvasRetro));
+  autoZoom();
+
+  templateCorrente = { id: t.id, name: t.name, predefinito: !!t.predefinito };
+  loadSavedTemplates();                          // evidenzia quello in lavorazione
 }
 
 /** Rimette i dati del defunto corrente nei blocchi personali (segnaposto del template). */
 function riempiConDefunto(c) {
   c.getObjects().forEach(function(o) {
+    // Un testo arrivato da JSON senza "styles" fa esplodere la successiva
+    // toJSON() di Fabric: si normalizza qui, all'ingresso.
+    if ((o.type === 'textbox' || o.type === 'text') && !o.styles) o.styles = {};
     if (BLOCCHI_PERSONALI.indexOf(o.customType) !== -1) {
       o.set('text', testoPersonale(o.customType, praticaData));
     }
@@ -1409,10 +1560,23 @@ function riempiConDefunto(c) {
   refreshLayers();
 }
 
-function deleteSavedTemplate(id) {
-  if (!confirm('Eliminare il template?')) return;
+async function deleteSavedTemplate(id, nome) {
+  const conferma = await modale({
+    titolo: 'Eliminare il template?',
+    testo:  '<strong>' + _lyEsc(nome || '') + '</strong> verrà rimosso dall\'elenco. I ricordini già salvati non cambiano.',
+    azioni: [
+      { testo: 'Annulla',  valore: null,     tipo: 'neutro' },
+      { testo: 'Elimina',  valore: 'ok',     tipo: 'pericolo' },
+    ],
+  });
+  if (!conferma.azione) return;
+
   fetch('/admin/api/ricordino-templates/'+id, {method:'DELETE',headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}})
-    .then(r=>r.json()).then(res => { if(res.success) loadSavedTemplates(); });
+    .then(r=>r.json()).then(res => {
+      if (!res.success) { modale({ titolo: 'Eliminazione non riuscita', testo: _lyEsc(res.error || 'Riprova fra un momento.') }); return; }
+      if (templateCorrente && templateCorrente.id === id) templateCorrente = null;
+      loadSavedTemplates();
+    });
 }
 
 // ── CLEAR ──
@@ -1601,7 +1765,7 @@ function setMaschera(tipo) {
   obj.maschera = tipo;
   obj.dirty = true;                 // la cache dell'immagine va rigenerata
   c.renderAll();
-  updatePropsPanel();               // aggiorna evidenza, avviso e gruppo Bordo
+  updatePropsPanel();               // aggiorna evidenza, nota e gruppo Bordo
 }
 
 function creaMaschera(tipo, w, h) {
@@ -1627,11 +1791,33 @@ function creaMaschera(tipo, w, h) {
   return null;                      // 'nessuna': immagine piena
 }
 
-function evidenziaMaschera(tipo) {
+/**
+ * Il pannello Maschere sta nella sidebar, quindi è sempre a schermo: si adegua
+ * alla selezione invece di comparire e sparire. Senza una foto selezionata i
+ * pulsanti restano spenti e la nota dice cosa fare.
+ */
+function aggiornaPannelloMaschere(obj) {
+  const immagine = !!obj && obj.type === 'image';
+  const tipo = immagine ? (obj.maschera || 'nessuna') : null;
+
   MASCHERE.forEach(function(m) {
     const btn = document.getElementById('mask-' + m);
-    if (btn) btn.classList.toggle('active', m === tipo);
+    if (!btn) return;
+    btn.disabled = !immagine;
+    btn.style.opacity = immagine ? '1' : '.45';
+    btn.style.cursor = immagine ? 'pointer' : 'not-allowed';
+    btn.classList.toggle('active', m === tipo);
   });
+
+  const nota = document.getElementById('mask-nota');
+  if (!nota) return;
+  if (!immagine) {
+    nota.textContent = 'Seleziona una foto sul ricordino per applicare una maschera.';
+  } else if (tipo !== 'nessuna') {
+    nota.textContent = 'Con la maschera attiva il bordo rettangolare resta fuori dal ritaglio: per toglierla scegli "No".';
+  } else {
+    nota.textContent = 'La maschera ritaglia la foto e la segue quando la sposti o la ridimensioni.';
+  }
 }
 
 // ── SIMBOLI RELIGIOSI ──
