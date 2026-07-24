@@ -1,0 +1,11 @@
+{
+    "name": "Memorial",
+    "alias": "memorial",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Memorial\\Providers\\MemorialServiceProvider"
+    ],
+    "files": []
+}

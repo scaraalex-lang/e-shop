@@ -1,0 +1,11 @@
+{
+    "name": "PhotoPrint",
+    "alias": "photoprint",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\PhotoPrint\\Providers\\PhotoPrintServiceProvider"
+    ],
+    "files": []
+}
