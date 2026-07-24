@@ -51,6 +51,15 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 
 /* SIDEBAR */
 .panel-title{font-size:.63rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);padding:.6rem 1rem .4rem;border-bottom:1px solid var(--border);font-weight:500}
+/* Sezioni a fisarmonica della sidebar: <details> nativo, così l'apertura
+   funziona anche senza JS; lo stato aperto/chiuso si ricorda in localStorage. */
+.acc{flex-shrink:0}
+.acc>summary{display:flex;align-items:center;gap:.4rem;cursor:pointer;list-style:none;user-select:none}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary:hover{background:rgba(200,169,110,.07)}
+.acc>summary .acc-lbl{flex:1}
+.acc>summary .acc-arrow{font-size:.7rem;opacity:.7;transition:transform .15s;line-height:1}
+.acc[open]>summary .acc-arrow{transform:rotate(180deg)}
 .block-btn{width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:5px;margin-bottom:.35rem;cursor:pointer;font-size:.78rem;text-align:left;background:var(--cream);color:var(--ink);font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:.45rem;transition:all .15s}
 .block-btn:hover{border-color:var(--gold);background:rgba(200,169,110,.05)}
 .block-icon{font-size:.9rem;width:18px;text-align:center}
@@ -206,45 +215,43 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
       <button onclick="setActiveSide('retro')" id="btn-retro" style="flex:1;padding:.5rem;border-radius:6px;font-size:.8rem;cursor:pointer;border:2px solid var(--border);background:var(--cream);color:var(--ink);font-family:'DM Sans',sans-serif">RETRO</button>
     </div>
 
-    <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>Livelli</span>
-      <button onclick="deselectAll()" title="Deseleziona tutto" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--gray);font-size:.58rem;padding:.12rem .4rem;cursor:pointer;text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif">Deseleziona</button>
-    </div>
-    <div id="layers-list" style="padding:.4rem;max-height:220px;overflow-y:auto"></div>
+    <details class="acc" id="acc-livelli" open>
+      <summary class="panel-title">
+        <span class="acc-lbl">Livelli</span>
+        <button onclick="event.preventDefault();event.stopPropagation();deselectAll()" title="Deseleziona tutto" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--gray);font-size:.58rem;padding:.12rem .4rem;cursor:pointer;text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif">Deseleziona</button>
+        <span class="acc-arrow">▾</span>
+      </summary>
+      <div id="layers-list" style="padding:.4rem;max-height:220px;overflow-y:auto"></div>
+    </details>
 
-    <div class="panel-title">Sfondo</div>
-    <div style="padding:.5rem">
-      <button class="block-btn" onclick="setBg('white')"><span class="block-icon">⬜</span>Bianco</button>
-      <button class="block-btn" onclick="setBg('cream')"><span class="block-icon">🟫</span>Avorio</button>
-      <button class="block-btn" onclick="setBg('dark')"><span class="block-icon">⬛</span>Scuro</button>
-      <input type="file" id="bg-upload" accept="image/*" style="display:none" onchange="uploadBackground(this)">
-      <button class="block-btn" onclick="document.getElementById('bg-upload').click()"><span class="block-icon">🖼</span>Carica sfondo</button>
-    </div>
+    <details class="acc" id="acc-blocchi" open>
+      <summary class="panel-title"><span class="acc-lbl">Blocchi Testo</span><span class="acc-arrow">▾</span></summary>
+      <div class="blocks-list">
+        <button class="block-btn" onclick="addBlock('nome')"><span class="block-icon">👤</span>Nome Defunto</button>
+        <button class="block-btn" onclick="addBlock('eta')"><span class="block-icon">🔢</span>Anni vissuti</button>
+        <button class="block-btn" onclick="addBlock('date')"><span class="block-icon">📅</span>Date</button>
+        <button class="block-btn" onclick="addBlock('frase')"><span class="block-icon">✨</span>Frase</button>
+        <button class="block-btn" onclick="addBlock('preghiera')"><span class="block-icon">🙏</span>Preghiera</button>
+        <button class="block-btn" onclick="addBlock('testo')"><span class="block-icon">📝</span>Testo libero</button>
+        <button class="block-btn" onclick="addBlock('linea')"><span class="block-icon">➖</span>Linea decorativa</button>
+      </div>
+    </details>
 
-    <div class="panel-title">Blocchi Testo</div>
-    <div class="blocks-list">
-      <button class="block-btn" onclick="addBlock('nome')"><span class="block-icon">👤</span>Nome Defunto</button>
-      <button class="block-btn" onclick="addBlock('eta')"><span class="block-icon">🔢</span>Anni vissuti</button>
-      <button class="block-btn" onclick="addBlock('date')"><span class="block-icon">📅</span>Date</button>
-      <button class="block-btn" onclick="addBlock('frase')"><span class="block-icon">✨</span>Frase</button>
-      <button class="block-btn" onclick="addBlock('preghiera')"><span class="block-icon">🙏</span>Preghiera</button>
-      <button class="block-btn" onclick="addBlock('testo')"><span class="block-icon">📝</span>Testo libero</button>
-      <button class="block-btn" onclick="addBlock('linea')"><span class="block-icon">➖</span>Linea decorativa</button>
-    </div>
+    <details class="acc" id="acc-immagini">
+      <summary class="panel-title"><span class="acc-lbl">Immagini</span><span class="acc-arrow">▾</span></summary>
+      <div class="blocks-list">
+        <input type="file" id="foto-upload" accept="image/*" style="display:none" onchange="insertFoto(this)">
+        <button class="block-btn" onclick="document.getElementById('foto-upload').click()"><span class="block-icon">📷</span>Carica Foto</button>
+        <button class="block-btn" onclick="apriGalleriaFoto()" style="border-color:#7c3aed;background:rgba(124,58,237,.08)"><span class="block-icon">🖼</span><span style="color:#7c3aed;font-weight:500">Galleria Foto</span></button>
+        <button class="block-btn" onclick="openSantoModal()"><span class="block-icon">📿</span>Immagine Santo</button>
+        <button class="block-btn" onclick="addBlock('logo')"><span class="block-icon">🏢</span>Logo Agenzia</button>
+      </div>
+    </details>
 
-    <div class="panel-title">Immagini</div>
-    <div class="blocks-list">
-      <input type="file" id="foto-upload" accept="image/*" style="display:none" onchange="insertFoto(this)">
-      <button class="block-btn" onclick="document.getElementById('foto-upload').click()"><span class="block-icon">📷</span>Carica Foto</button>
-      <button class="block-btn" onclick="apriGalleriaFoto()" style="border-color:#7c3aed;background:rgba(124,58,237,.08)"><span class="block-icon">🖼</span><span style="color:#7c3aed;font-weight:500">Galleria Foto</span></button>
-
-      <button class="block-btn" onclick="openSantoModal()"><span class="block-icon">📿</span>Immagine Santo</button>
-      <button class="block-btn" onclick="addBlock('logo')"><span class="block-icon">🏢</span>Logo Agenzia</button>
-    </div>
-
-    <div class="panel-title">Simboli Religiosi</div>
-    <div style="padding:.4rem">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;margin-bottom:.4rem" id="simboli-grid">
+    <details class="acc" id="acc-simboli">
+      <summary class="panel-title"><span class="acc-lbl">Simboli Religiosi</span><span class="acc-arrow">▾</span></summary>
+      <div style="padding:.4rem">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;margin-bottom:.4rem" id="simboli-grid">
         <button class="simbolo-btn" onclick="insertSimbolo('croce_latina')" title="Croce Latina">✝</button>
         <button class="simbolo-btn" onclick="insertSimbolo('croce_greca')" title="Croce Greca">✚</button>
         <button class="simbolo-btn" onclick="insertSimbolo('croce_ortodossa')" title="Croce Ortodossa">☦</button>
@@ -261,12 +268,26 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
         <button class="simbolo-btn" onclick="insertSimbolo('alfa_omega')" title="Alfa e Omega">Αω</button>
       </div>
       <div style="font-size:.68rem;color:var(--gray);text-align:center;margin-bottom:.3rem">Colore dal pannello proprietà</div>
-    </div>
+      </div>
+    </details>
 
-    <div class="panel-title">I Miei Template</div>
-    <div id="saved-templates-list" style="padding:.4rem">
-      <div style="color:var(--gray);font-size:.75rem;font-style:italic;padding:.4rem">Caricamento...</div>
-    </div>
+    <details class="acc" id="acc-sfondo">
+      <summary class="panel-title"><span class="acc-lbl">Sfondo</span><span class="acc-arrow">▾</span></summary>
+      <div style="padding:.5rem">
+        <button class="block-btn" onclick="setBg('white')"><span class="block-icon">⬜</span>Bianco</button>
+        <button class="block-btn" onclick="setBg('cream')"><span class="block-icon">🟫</span>Avorio</button>
+        <button class="block-btn" onclick="setBg('dark')"><span class="block-icon">⬛</span>Scuro</button>
+        <input type="file" id="bg-upload" accept="image/*" style="display:none" onchange="uploadBackground(this)">
+        <button class="block-btn" onclick="document.getElementById('bg-upload').click()"><span class="block-icon">🖼</span>Carica sfondo</button>
+      </div>
+    </details>
+
+    <details class="acc" id="acc-template">
+      <summary class="panel-title"><span class="acc-lbl">I Miei Template</span><span class="acc-arrow">▾</span></summary>
+      <div id="saved-templates-list" style="padding:.4rem">
+        <div style="color:var(--gray);font-size:.75rem;font-style:italic;padding:.4rem">Caricamento...</div>
+      </div>
+    </details>
   </div>
 
   <!-- CANVAS AREA -->
@@ -636,7 +657,28 @@ window.onload = function() {
   autoZoom();
   loadSavedTemplates();
   refreshLayers();
+  initAccordion();
 };
+
+// ── SEZIONI SIDEBAR (fisarmonica) ──
+// Ricorda quali sezioni l'utente lascia aperte, così la sidebar si ripresenta
+// come l'ha lasciata. Default (nessuno stato salvato): Livelli + Blocchi Testo.
+const ACC_KEY = 'ricordino-designer:sezioni';
+
+function initAccordion() {
+  let stato = {};
+  try { stato = JSON.parse(localStorage.getItem(ACC_KEY) || '{}'); } catch (e) {}
+  document.querySelectorAll('.sidebar details.acc').forEach(function(d) {
+    if (Object.prototype.hasOwnProperty.call(stato, d.id)) d.open = !!stato[d.id];
+    d.addEventListener('toggle', salvaStatoAccordion);
+  });
+}
+
+function salvaStatoAccordion() {
+  const stato = {};
+  document.querySelectorAll('.sidebar details.acc').forEach(function(d) { stato[d.id] = d.open; });
+  try { localStorage.setItem(ACC_KEY, JSON.stringify(stato)); } catch (e) {}
+}
 
 // ── LATO ATTIVO ──
 function setActiveSide(side) {
