@@ -904,7 +904,7 @@ function updatePropsPanel() {
   document.getElementById('prop-x').value = Math.round(obj.left);
   document.getElementById('prop-y').value = Math.round(obj.top);
   const borderGroup = document.getElementById('border-group');
-  if (obj.type === 'image') {
+  if (obj.type === 'image' || obj.type === 'textbox' || obj.type === 'text') {
     borderGroup.style.display = 'block';
     document.getElementById('prop-stroke-width').value = obj.strokeWidth || 0;
     document.getElementById('prop-stroke-color').value = obj.stroke || '#c8a96e';
@@ -985,7 +985,16 @@ function updateBorder() {
   if (!obj) return;
   const sw = parseInt(document.getElementById('prop-stroke-width').value)||0;
   const sc = document.getElementById('prop-stroke-color').value;
-  obj.set({ strokeWidth: sw, stroke: sw>0?sc:null });
+  const isText = obj.type === 'textbox' || obj.type === 'text';
+  obj.set({
+    strokeWidth: sw,
+    stroke: sw>0 ? sc : null,
+    // Sul testo la traccia va disegnata PRIMA del riempimento (paintFirst:'stroke')
+    // così il contorno resta esterno e non assottiglia le lettere; angoli morbidi.
+    paintFirst: (isText && sw>0) ? 'stroke' : 'fill',
+    strokeLineJoin: 'round',
+    strokeLineCap: 'round',
+  });
   c.renderAll();
 }
 
