@@ -63,6 +63,10 @@ Dettagli operativi:
 - Testo: **traccia (contorno)** e **ombra** configurabili.
 - **Pannello Livelli**: elenco blocchi del lato attivo, selezione (anche se
   coperti), riordino z-index ▲/▼, mostra/nascondi, elimina, deseleziona tutto.
+- **Sidebar a fisarmonica**: ogni sezione è un `<details>` nativo; stato
+  aperto/chiuso in `localStorage` (`ricordino-designer:sezioni`). Una sezione
+  nuova va aggiunta come `<details class="acc" id="acc-...">` — `initAccordion()`
+  la aggancia da sola.
 - Self-host completo: Fabric.js 5.3.1, jsPDF 2.5.1, 55 woff2 Google Fonts,
   4 TTF **Monotype Corsiva** (font proprietario fornito dal committente).
 
