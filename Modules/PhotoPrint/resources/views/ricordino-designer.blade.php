@@ -448,6 +448,19 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
           <button class="btn-sm" onclick="setStrokePreset(8)">Spesso</button>
         </div>
       </div>
+      <div class="prop-group" id="mask-group" style="display:none">
+        <span class="prop-label">Maschera foto</span>
+        <div class="btn-group-row">
+          <button class="btn-sm" id="mask-nessuna" onclick="setMaschera('nessuna')">No</button>
+          <button class="btn-sm" id="mask-ovale" onclick="setMaschera('ovale')">Ovale</button>
+          <button class="btn-sm" id="mask-cerchio" onclick="setMaschera('cerchio')">Cerchio</button>
+          <button class="btn-sm" id="mask-arrotondato" onclick="setMaschera('arrotondato')">Angoli</button>
+          <button class="btn-sm" id="mask-arco" onclick="setMaschera('arco')">Arco</button>
+        </div>
+        <div id="mask-hint" style="display:none;font-size:.63rem;color:var(--gray);margin-top:.4rem;line-height:1.35">
+          Con la maschera attiva il bordo rettangolare resta fuori dal ritaglio: per toglierla scegli "No".
+        </div>
+      </div>
       <div class="prop-group" id="shadow-group" style="display:none">
         <span class="prop-label">Ombra del testo</span>
         <div class="prop-row" style="align-items:center;margin-bottom:.4rem">
@@ -1011,14 +1024,22 @@ function updatePropsPanel() {
   }
   document.getElementById('prop-x').value = Math.round(obj.left);
   document.getElementById('prop-y').value = Math.round(obj.top);
+  // Su un'immagine mascherata il bordo rettangolare viene ritagliato via: il
+  // controllo non avrebbe alcun effetto visibile, quindi si nasconde.
+  const mascherata = obj.type === 'image' && obj.maschera && obj.maschera !== 'nessuna';
   const borderGroup = document.getElementById('border-group');
-  if (obj.type === 'image' || obj.type === 'textbox' || obj.type === 'text') {
+  if (!mascherata && (obj.type === 'image' || obj.type === 'textbox' || obj.type === 'text')) {
     borderGroup.style.display = 'block';
     document.getElementById('prop-stroke-width').value = obj.strokeWidth || 0;
     document.getElementById('prop-stroke-color').value = obj.stroke || '#c8a96e';
   } else {
     borderGroup.style.display = 'none';
   }
+  const maskGroup = document.getElementById('mask-group');
+  maskGroup.style.display = (obj.type === 'image') ? 'block' : 'none';
+  if (obj.type === 'image') evidenziaMaschera(obj.maschera || 'nessuna');
+  document.getElementById('mask-hint').style.display = mascherata ? 'block' : 'none';
+
   const shadowGroup = document.getElementById('shadow-group');
   if (obj.type === 'textbox' || obj.type === 'text') {
     shadowGroup.style.display = 'block';
@@ -1307,7 +1328,7 @@ function gruppoTemplate(titolo, lista) {
  * ricordino di un'altra.
  */
 function canvasTemplateJSON(c) {
-  const data = JSON.parse(JSON.stringify(c.toJSON(['customType'])));
+  const data = JSON.parse(JSON.stringify(c.toJSON(['customType', 'maschera'])));
   data.objects = (data.objects || []).filter(o => o.customType !== 'photo');
   data.objects.forEach(o => {
     if (BLOCCHI_PERSONALI.indexOf(o.customType) !== -1) {
@@ -1537,8 +1558,8 @@ function saveToPratica() {
     method:'POST',
     headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
     body: JSON.stringify({
-      canvas_fronte: JSON.stringify(canvasFronte.toJSON(['customType'])),
-      canvas_retro: JSON.stringify(canvasRetro.toJSON(['customType'])),
+      canvas_fronte: JSON.stringify(canvasFronte.toJSON(['customType', 'maschera'])),
+      canvas_retro: JSON.stringify(canvasRetro.toJSON(['customType', 'maschera'])),
       preview, preview_retro: canvasRetro.toDataURL({format:'jpeg',quality:0.6,multiplier:0.4}), format: currentFormat
     })
   }).then(r=>r.json()).then(res => {
@@ -1562,6 +1583,55 @@ function saveToPratica() {
       setTimeout(()=>msg.remove(),3000);
     }
   }).catch(()=>{btn.textContent='💾 Salva';btn.disabled=false;});
+}
+
+// ── MASCHERE FOTO ──
+// Fabric disegna il clipPath nello spazio NON scalato dell'oggetto e centrato
+// sul suo centro: costruendo la forma su width/height intrinseci, la maschera
+// segue l'immagine quando la si sposta, ridimensiona o ruota, senza ricalcoli.
+// Il tipo resta su obj.maschera (serializzato) così si ritrova riaprendo la bozza.
+const MASCHERE = ['nessuna', 'ovale', 'cerchio', 'arrotondato', 'arco'];
+
+function setMaschera(tipo) {
+  const c = getActiveCanvas();
+  const obj = c.getActiveObject();
+  if (!obj || obj.type !== 'image') return;
+
+  obj.clipPath = creaMaschera(tipo, obj.width, obj.height);
+  obj.maschera = tipo;
+  obj.dirty = true;                 // la cache dell'immagine va rigenerata
+  c.renderAll();
+  updatePropsPanel();               // aggiorna evidenza, avviso e gruppo Bordo
+}
+
+function creaMaschera(tipo, w, h) {
+  const centro = { originX: 'center', originY: 'center', left: 0, top: 0 };
+
+  if (tipo === 'ovale') {
+    return new fabric.Ellipse(Object.assign({ rx: w / 2, ry: h / 2 }, centro));
+  }
+  if (tipo === 'cerchio') {
+    return new fabric.Circle(Object.assign({ radius: Math.min(w, h) / 2 }, centro));
+  }
+  if (tipo === 'arrotondato') {
+    const r = Math.min(w, h) * 0.12;
+    return new fabric.Rect(Object.assign({ width: w, height: h, rx: r, ry: r }, centro));
+  }
+  if (tipo === 'arco') {
+    // Centinato: sommità semicircolare e base dritta, la forma classica delle
+    // foto memoriali. L'arco parte al 42% dell'altezza.
+    const y = h * 0.42;
+    const d = 'M 0 ' + h + ' L 0 ' + y + ' A ' + (w / 2) + ' ' + y + ' 0 0 1 ' + w + ' ' + y + ' L ' + w + ' ' + h + ' Z';
+    return new fabric.Path(d, centro);
+  }
+  return null;                      // 'nessuna': immagine piena
+}
+
+function evidenziaMaschera(tipo) {
+  MASCHERE.forEach(function(m) {
+    const btn = document.getElementById('mask-' + m);
+    if (btn) btn.classList.toggle('active', m === tipo);
+  });
 }
 
 // ── SIMBOLI RELIGIOSI ──

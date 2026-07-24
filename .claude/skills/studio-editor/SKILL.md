@@ -61,6 +61,10 @@ Dettagli operativi:
 - Designer cablato sui dati reali del defunto: precompila i blocchi testo, salva
   fronte/retro sul DB, galleria santi.
 - Testo: **traccia (contorno)** e **ombra** configurabili.
+- **Maschere foto** (ovale, cerchio, angoli arrotondati, arco centinato) via
+  `clipPath` Fabric costruito su `width/height` intrinseci dell'immagine, così
+  segue spostamenti e ridimensionamenti. Il tipo sta su `obj.maschera`, incluso
+  nelle `toJSON([...])` insieme a `customType`.
 - **Pannello Livelli**: elenco blocchi del lato attivo, selezione (anche se
   coperti), riordino z-index ▲/▼, mostra/nascondi, elimina, deseleziona tutto.
 - **Sistema template**: salva/applica/elimina layout riusabili (tabella
