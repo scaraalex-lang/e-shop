@@ -1,9 +1,139 @@
 @import 'tailwindcss';
 
+/* Scansione classi Tailwind anche nelle viste dei moduli nwidart */
+@source '../views';
+@source '../../Modules/**/resources/views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/* ------------------------------------------------------------------ */
+/*  Font ospitati localmente (public/fonts) — nessuna chiamata Google  */
+/*  Cormorant Garamond: serif editoriale / Jost: sans di servizio      */
+/* ------------------------------------------------------------------ */
+@font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/cormorant-garamond-v21-latin-regular.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/cormorant-garamond-v21-latin-italic.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/cormorant-garamond-v21-latin-500.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/cormorant-garamond-v21-latin-600.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/cormorant-garamond-v21-latin-700.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Jost';
+    font-style: normal;
+    font-weight: 300;
+    font-display: swap;
+    src: url('/fonts/jost-v20-latin-300.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Jost';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/jost-v20-latin-regular.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Jost';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/jost-v20-latin-500.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Jost';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/jost-v20-latin-600.woff2') format('woff2');
+}
+
+/* ------------------------------------------------------------------ */
+/*  Design system MemorAI — palette pulita a contrasto netto           */
+/*  Fondo bianco caldo dominante · panna solo come accento ·           */
+/*  marrone caffè per bordi/testi forti/footer · oro per i dettagli.   */
+/*  Colori usabili come classi: bg-bianco, text-caffe, border-caffe…   */
+/* ------------------------------------------------------------------ */
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-serif: 'Cormorant Garamond', ui-serif, Georgia, serif;
+    --font-sans: 'Jost', ui-sans-serif, system-ui, sans-serif;
+
+    --color-bianco: #fdfcfa;      /* fondo dominante (bianco caldo)     */
+    --color-panna: #faf6ec;       /* accento: fasce/blocchi che staccano */
+    --color-caffe: #3a2e22;       /* marrone caffè: bordi, testi forti, footer */
+    --color-oro: #c2a35a;         /* accento primario / pulsanti        */
+    --color-oro-scuro: #a5863f;   /* oro scuro: hover, dettagli         */
+    --color-testo: #3a2e22;       /* testo principale                   */
+    --color-testo-soft: #6b6152;  /* testo secondario                   */
+}
+
+/* Impostazioni tipografiche di base della vetrina */
+@layer base {
+    body {
+        background-color: var(--color-bianco);
+        color: var(--color-testo);
+        font-family: var(--font-sans);
+        font-weight: 300;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+    }
+
+    h1, h2, h3, h4 {
+        font-family: var(--font-serif);
+        font-weight: 500;
+        color: var(--color-testo);
+    }
+}
+
+/* Utility ricorrenti del footer (fondo marrone caffè) */
+@layer components {
+    .footer-heading {
+        font-family: var(--font-sans);
+        font-size: 11px;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: var(--color-oro);
+        margin-bottom: 1.25rem;
+    }
+    .footer-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        font-family: var(--font-sans);
+        font-weight: 300;
+        font-size: 13px;
+    }
+    .footer-link {
+        color: color-mix(in srgb, var(--color-bianco) 72%, transparent);
+        transition: color 0.3s ease;
+    }
+    .footer-link:hover {
+        color: var(--color-oro);
+    }
 }
