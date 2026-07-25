@@ -16,10 +16,11 @@ Guarda il ricordino
 @endcomponent
 
 Non c'è nessuna fretta, e non serve registrarsi: il collegamento resta
-valido finché la lavorazione è aperta.
+valido finché la lavorazione è aperta. Se preferite scriverci, potete
+rispondere direttamente a questo messaggio.
 
 Con rispetto,
-{{ config('app.name') }}
+{{ $firma }}
 
 @slot('subcopy')
 Se il pulsante non funziona, copiate questo indirizzo nel browser:

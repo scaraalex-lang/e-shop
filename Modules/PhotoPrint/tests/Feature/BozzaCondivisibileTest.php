@@ -14,6 +14,7 @@ use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\RevisioneRicordino;
 use Modules\Memorial\Models\Ricordino;
 use Modules\PhotoPrint\Mail\BozzaDaApprovare;
+use Modules\Commerce\Tests\Concerns\CreaSoggetti;
 use Tests\TestCase;
 
 /**
@@ -24,7 +25,7 @@ use Tests\TestCase;
  */
 class BozzaCondivisibileTest extends TestCase
 {
-    use RefreshDatabase;
+    use CreaSoggetti, RefreshDatabase;
 
     private function ordineConBozza(): array
     {
@@ -84,6 +85,55 @@ class BozzaCondivisibileTest extends TestCase
         $this->assertSame(Ricordino::IN_APPROVAZIONE, $ricordino->fresh()->stato);
 
         Mail::assertSent(BozzaDaApprovare::class, fn ($m) => $m->hasTo('famiglia@esempio.it'));
+    }
+
+    /**
+     * B2B: l'email parte dal nostro SMTP, ma chi risponde scrive all'agenzia.
+     *
+     * Il mittente resta nostro di proposito: mettere l'agenzia nel From
+     * farebbe fallire SPF sul suo dominio. La famiglia però sta parlando con
+     * l'agenzia, non con noi.
+     */
+    public function test_la_risposta_della_famiglia_arriva_all_agenzia(): void
+    {
+        Mail::fake();
+        [$utente, $ordine, $ricordino] = $this->ordineConBozza();
+
+        $referente = $this->referenteAgenzia();
+        $ordine->forceFill(['agenzia_id' => $referente->agenzia_id])->save();
+
+        $this->actingAs($utente)
+            ->postJson("/admin/api/ricordino/{$ricordino->id}/invia-approvazione", [
+                'email' => 'famiglia@esempio.it',
+            ])->assertOk();
+
+        Mail::assertSent(BozzaDaApprovare::class, function (BozzaDaApprovare $mail) use ($referente) {
+            $mail->assertHasReplyTo($referente->email);
+
+            // Nessun mittente proprio: resta quello globale, cioè il nostro
+            // SMTP. Se un giorno qualcuno ci mette l'agenzia, questo salta.
+            $this->assertEmpty($mail->from, 'il mittente deve restare il nostro');
+
+            return $mail->hasTo('famiglia@esempio.it');
+        });
+    }
+
+    /** B2C: nessuna agenzia dietro, la risposta torna a noi. */
+    public function test_senza_agenzia_la_risposta_torna_a_noi(): void
+    {
+        Mail::fake();
+        [$utente, , $ricordino] = $this->ordineConBozza();
+
+        $this->actingAs($utente)
+            ->postJson("/admin/api/ricordino/{$ricordino->id}/invia-approvazione", [
+                'email' => 'famiglia@esempio.it',
+            ])->assertOk();
+
+        Mail::assertSent(BozzaDaApprovare::class, function (BozzaDaApprovare $mail) {
+            $this->assertEmpty($mail->replyTo);
+
+            return true;
+        });
     }
 
     public function test_senza_email_non_si_manda_niente(): void

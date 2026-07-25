@@ -44,6 +44,20 @@ class Agenzia extends Model
     }
 
     /**
+     * L'indirizzo a cui scrive chi risponde a un'email partita per conto di
+     * questa agenzia.
+     *
+     * È l'email dell'account: un'agenzia ha un solo login, quindi è la casella
+     * che legge davvero. Le email partono dal nostro SMTP — mettere l'agenzia
+     * nel mittente farebbe fallire SPF sul suo dominio — ma la risposta deve
+     * arrivare a lei, non a noi: è lei che sta seguendo quella famiglia.
+     */
+    public function emailContatto(): ?string
+    {
+        return $this->user?->email;
+    }
+
+    /**
      * Lo spicchio di indirizzo pubblico: /ricordi/{slug}/...
      * Si genera alla creazione se non è stato deciso a mano.
      */

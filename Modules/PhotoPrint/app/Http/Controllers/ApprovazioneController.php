@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Modules\Commerce\Models\Agenzia;
+use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Ricordino;
 use Modules\PhotoPrint\Mail\BozzaDaApprovare;
 use Modules\PhotoPrint\Servizi\LavorazioneCorrente;
@@ -44,7 +46,7 @@ class ApprovazioneController extends Controller
         );
 
         $link = route('bozza', $revisione->token);
-        $inviata = $this->spedisci($revisione->inviata_a, $ricordino, $link);
+        $inviata = $this->spedisci($revisione->inviata_a, $ricordino, $link, $this->agenziaDi($ricordino));
 
         return response()->json([
             'success' => true,
@@ -70,6 +72,23 @@ class ApprovazioneController extends Controller
         $ordine = $this->lavorazione->ordine();
 
         return $ordine !== null && $ordine->defunto_id === $ricordino->defunto_id;
+    }
+
+    /**
+     * L'agenzia per conto della quale sta partendo questa email, se c'è.
+     *
+     * Si legge dall'ordine della pratica, non da chi ha premuto il pulsante:
+     * anche quando manda lo staff, la famiglia deve poter rispondere
+     * all'agenzia che sta seguendo quel funerale. Un ordine di un privato non
+     * ha agenzia: lì la risposta torna a noi, ed è giusto così.
+     */
+    private function agenziaDi(Ricordino $ricordino): ?Agenzia
+    {
+        $ordineId = $this->lavorazione->ordine()?->id ?? $ricordino->defunto?->ordine_id;
+
+        return $ordineId
+            ? Ordine::with('agenzia.user')->find($ordineId)?->agenzia
+            : null;
     }
 
     /**
@@ -102,10 +121,10 @@ class ApprovazioneController extends Controller
      * comunque e l'agenzia lo può mandare a mano. Meglio una revisione senza
      * email che un invio perso.
      */
-    private function spedisci(string $email, Ricordino $ricordino, string $link): bool
+    private function spedisci(string $email, Ricordino $ricordino, string $link, ?Agenzia $agenzia): bool
     {
         try {
-            Mail::to($email)->send(new BozzaDaApprovare($ricordino, $link));
+            Mail::to($email)->send(new BozzaDaApprovare($ricordino, $link, $agenzia));
 
             return true;
         } catch (\Throwable $e) {
