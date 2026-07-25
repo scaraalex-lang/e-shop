@@ -56,6 +56,24 @@
                 Questo ordine comprende articoli personalizzati con il ritratto. Il passo
                 successivo è caricare la fotografia e approvare la bozza.
             </p>
+
+            @if ($ricordino)
+                {{-- Fronte e retro insieme: il retro porta la preghiera, ed è
+                     metà di quello che il cliente deve approvare. --}}
+                <x-bozza-ricordino :ricordino="$ricordino" class="mt-6" />
+            @endif
+
+            @if ($ordine->lavorazioneApribile())
+                <div class="mt-5 flex flex-wrap gap-4">
+                    <x-button :href="route('lavorazione', $ordine)">
+                        {{ $ordine->defunto_id ? 'Riprendi la lavorazione' : 'Comincia dalla fotografia' }}
+                    </x-button>
+                </div>
+            @else
+                <p class="mt-4 font-sans text-[12px] tracking-[0.1em] text-testo-soft">
+                    La lavorazione si apre appena l'ordine è preso in carico.
+                </p>
+            @endif
         </div>
     @endif
 </section>

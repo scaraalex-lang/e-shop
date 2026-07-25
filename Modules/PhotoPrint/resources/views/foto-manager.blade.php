@@ -8,14 +8,14 @@
 <script src="/vendor/libs/fabric.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Inter,sans-serif;background:#1a1a2e;color:#e8e4dc;min-height:100vh;display:flex;flex-direction:column}
+body{font-family:Inter,sans-serif;background:#1a1a2e;color:#e8e4dc;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 nav{background:rgba(0,0,0,.3);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:56px;border-bottom:1px solid rgba(200,169,110,.2);flex-shrink:0}
 .logo{color:#c8a96e;font-weight:600;font-size:.95rem}
 .nav-back{color:rgba(255,255,255,.6);font-size:.82rem;text-decoration:none;display:flex;align-items:center;gap:.4rem}
-.layout{display:flex;flex:1;overflow:hidden}
+.layout{display:flex;flex:1;overflow:hidden;min-height:0}
 
 /* SIDEBAR SINISTRA - GALLERIA */
-.gallery-panel{width:220px;background:rgba(0,0,0,.25);border-right:1px solid rgba(200,169,110,.1);display:flex;flex-direction:column;flex-shrink:0}
+.gallery-panel{width:220px;background:rgba(0,0,0,.25);border-right:1px solid rgba(200,169,110,.1);display:flex;flex-direction:column;flex-shrink:0;min-height:0}
 .panel-title{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:#c8a96e;padding:.6rem 1rem .4rem;border-bottom:1px solid rgba(200,169,110,.1);font-weight:500}
 .gallery-list{flex:1;overflow-y:auto;padding:.5rem}
 .gallery-item{position:relative;border-radius:6px;overflow:hidden;cursor:pointer;margin-bottom:.5rem;border:2px solid transparent;transition:all .2s}
@@ -120,7 +120,7 @@ input[type=file]{display:none}
     <div class="logo">MemorAI — Gestione Foto</div>
     <div style="display:flex;align-items:center;gap:1rem">
         <span style="color:rgba(255,255,255,.5);font-size:.8rem">{{ $nomePratica }}</span>
-        <a href="{{ url('/') }}" class="nav-back">← Torna al sito</a>
+        <a href="{{ $ritorno['url'] }}" class="nav-back">← {{ $ritorno['etichetta'] }}</a>
     </div>
 </nav>
 
@@ -232,14 +232,21 @@ input[type=file]{display:none}
 </div>
 
 <!-- BOTTOM BAR -->
+{{-- Due uscite esplicite: si torna alla pratica, oppure si va avanti a
+     comporre il ricordino. Prima c'era solo "→ Ricordino" e il link in alto
+     riportava in vetrina, lasciando il lavoro a metà. --}}
 <div class="bottom-bar">
+    <a href="{{ $ritorno['url'] }}" class="btn-secondary" style="font-size:.75rem">← {{ $ritorno['etichetta'] }}</a>
     <span class="status-msg" id="status-msg">Seleziona una foto dalla galleria o caricane una nuova</span>
-    <a href="{{ url('/studio/ricordino') }}" class="btn-secondary" style="font-size:.75rem">→ Ricordino</a>
+    <a href="{{ url('/studio/ricordino') }}" class="btn-primary" style="font-size:.75rem;text-decoration:none">
+        Componi il ricordino →
+    </a>
 </div>
 
 <script>
 const praticaId = {{ $praticaId }};
 const csrfToken = '{{ csrf_token() }}';
+const limiteFotoMb = {{ (int) ($limiteFotoMb ?? 8) }};
 // Allega CSRF e sessione a ogni chiamata verso /admin/api/: gli endpoint sono
 // protetti dall'autenticazione dell'area studio, non più da un token condiviso.
 (function () {
@@ -300,6 +307,16 @@ function loadPhotoInCanvas(url, photoId) {
 function uploadFoto(input) {
     if (!input.files[0]) return;
     const file = input.files[0];
+
+    // Il controllo prima di spedire: oltre il limite il server risponde 413 e
+    // il browser non ha modo di spiegare cosa è successo. Meglio dirlo qui.
+    if (file.size > limiteFotoMb * 1024 * 1024) {
+        const pesa = (file.size / 1024 / 1024).toFixed(1).replace('.', ',');
+        setStatus('La foto pesa ' + pesa + ' MB: il massimo è ' + limiteFotoMb + ' MB. Riducila e riprova.');
+        input.value = '';
+        return;
+    }
+
     const formData = new FormData();
     formData.append('photo', file);
     formData.append('pratica_id', praticaId);

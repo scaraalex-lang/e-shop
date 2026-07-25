@@ -123,6 +123,7 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
     {{-- Necrologio e Invia-approvazione: flussi B2B → FASE 2 --}}
     <button class="nav-btn btn-green" onclick="saveToPratica()">💾 Salva</button>
     <a href="/studio/foto" class="nav-btn btn-ghost">← Foto Manager</a>
+    <a href="{{ $ritorno['url'] }}" class="nav-btn btn-ghost">← {{ $ritorno['etichetta'] }}</a>
   </div>
 </nav>
 
@@ -633,6 +634,18 @@ window.onload = function() {
   fabric.Object.prototype.borderScaleFactor = isTouch ? 3 : 2;
   fabric.Object.prototype.padding = isTouch ? 16 : 4;
   fabric.Object.prototype.touchCornerSize = isTouch ? 40 : 24;
+
+  // A schermo il foglio bianco è lo sfondo CSS sotto un canvas trasparente.
+  // I due canvas nascono bianchi, ma loadFromJSON sostituisce lo sfondo con
+  // quello (assente) del JSON salvato: da lì in poi il canvas è trasparente e
+  // il JPEG dell'anteprima esce NERO, perché il JPEG non ha trasparenza.
+  // Va rimesso dopo ogni ricarica e prima di ogni esportazione.
+  window.assicuraSfondo = function (c) {
+    if (!c) return;
+    if (!c.backgroundColor) {
+      c.setBackgroundColor('#ffffff', c.renderAll.bind(c));
+    }
+  };
 
   canvasFronte = new fabric.Canvas('canvas-fronte', {
     width: fmt.w, height: fmt.h,
@@ -1541,8 +1554,8 @@ async function loadSavedTemplate(id) {
   [canvasFronte, canvasRetro].forEach(c => { c.setWidth(f.w); c.setHeight(f.h); });
   document.getElementById('formato-select').value = fmt;
   currentFormat = fmt;
-  canvasFronte.loadFromJSON(t.canvas_fronte, () => riempiConDefunto(canvasFronte));
-  canvasRetro.loadFromJSON(t.canvas_retro, () => riempiConDefunto(canvasRetro));
+  canvasFronte.loadFromJSON(t.canvas_fronte, () => { assicuraSfondo(canvasFronte); riempiConDefunto(canvasFronte); });
+  canvasRetro.loadFromJSON(t.canvas_retro, () => { assicuraSfondo(canvasRetro); riempiConDefunto(canvasRetro); });
   autoZoom();
 
   templateCorrente = { id: t.id, name: t.name, predefinito: !!t.predefinito };
@@ -1714,12 +1727,48 @@ function salvaPreghieraNecrologio() {
     });
 }
 
+/*
+ * Bozza incompleta: caricando una bozza salvata può capitare che un oggetto
+ * non venga ricreato — tipicamente un'immagine il cui file non risponde. Il
+ * canvas si apre lo stesso, con un pezzo in meno, e il salvataggio successivo
+ * cancellerebbe per sempre quel pezzo senza che nessuno se ne accorga.
+ *
+ * Qui si contano gli oggetti attesi contro quelli ricreati: se ne mancano, lo
+ * si dice a schermo e il salvataggio chiede conferma invece di sovrascrivere
+ * in silenzio.
+ */
+let bozzaIncompleta = null;
+
+function verificaBozzaIntegra(lato, json, canvas) {
+  const attesi = (json && json.objects) ? json.objects.length : 0;
+  const presenti = canvas.getObjects().length;
+
+  if (attesi <= presenti) return;
+
+  bozzaIncompleta = { lato: lato, mancanti: attesi - presenti };
+
+  const avviso = document.createElement('div');
+  avviso.style.cssText = 'padding:.55rem 1rem;background:rgba(196,75,58,.15);border-bottom:1px solid rgba(196,75,58,.4);color:#f0a99c;font-size:.82rem';
+  avviso.textContent = '⚠ Il ' + lato + ' di questa bozza non si è caricato per intero: mancano ' +
+    (attesi - presenti) + ' elementi (di solito una fotografia che non risponde più). ' +
+    'Rimettili prima di salvare, altrimenti il salvataggio li cancella.';
+  document.body.insertBefore(avviso, document.body.children[1]);
+}
+
 // ── SALVA PRATICA ──
 function saveToPratica() {
   const practiceId = {{ $praticaId ?? 'null' }};
   if (!practiceId) { alert('Nessuna pratica collegata'); return; }
+
+  if (bozzaIncompleta) {
+    const ok = confirm('Il ' + bozzaIncompleta.lato + ' si era caricato senza ' +
+      bozzaIncompleta.mancanti + ' elementi. Salvando ora li cancelli per sempre. Procedo?');
+    if (!ok) return;
+  }
+
   const btn = event.target;
   btn.textContent = '⏳...'; btn.disabled = true;
+  assicuraSfondo(canvasFronte); assicuraSfondo(canvasRetro);
   const preview = canvasFronte.toDataURL({format:'jpeg',quality:0.6,multiplier:0.4});
   fetch('/admin/api/defunto/'+practiceId+'/ricordino', {
     method:'POST',
@@ -1966,14 +2015,20 @@ window.addEventListener('load', function() {
     }
 
     // 2) BINARIO CONTENUTO: popola il JSON nel CALLBACK (quando la canvas e pronta), non a timeout
-    canvasFronte.loadFromJSON({!! json_encode($savedFronte) !!}, function() {
+    const jsonFronte = {!! json_encode($savedFronte) !!};
+    canvasFronte.loadFromJSON(jsonFronte, function() {
+      assicuraSfondo(canvasFronte);
       canvasFronte.getObjects().forEach(function(o){ applyTouchSettings(o); });
       canvasFronte.renderAll();
+      verificaBozzaIntegra('fronte', jsonFronte, canvasFronte);
     });
     @if(!empty($savedRetro))
-    canvasRetro.loadFromJSON({!! json_encode($savedRetro) !!}, function() {
+    const jsonRetro = {!! json_encode($savedRetro) !!};
+    canvasRetro.loadFromJSON(jsonRetro, function() {
+      assicuraSfondo(canvasRetro);
       canvasRetro.getObjects().forEach(function(o){ applyTouchSettings(o); });
       canvasRetro.renderAll();
+      verificaBozzaIntegra('retro', jsonRetro, canvasRetro);
     });
     @endif
   }

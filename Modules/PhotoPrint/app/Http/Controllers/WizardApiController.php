@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Modules\PhotoPrint\Models\FotoPratica;
+use Modules\PhotoPrint\Servizi\LavorazioneCorrente;
 
 /**
  * Endpoint AI del Foto Manager (FASE 1 — verifica funzionale del wizard).
@@ -32,8 +34,14 @@ class WizardApiController extends Controller
      */
     private const PROXY_FETCH_BASE = 'http://127.0.0.1:8010';
 
-    /** Cartella pubblica per le immagini del foto manager. */
-    private const DISK_DIR = 'photoprint-demo';
+    /**
+     * Cartella pubblica per le immagini del foto manager.
+     *
+     * Era `photoprint-demo`: adesso ci finiscono le fotografie vere dei
+     * clienti, e chiamarle "demo" invitava a cancellarle. I file di prova
+     * restano dov'erano, nessun percorso già scritto si sposta.
+     */
+    private const DISK_DIR = 'photoprint';
 
     // ---- Proxy BFL -------------------------------------------------------
 
@@ -108,6 +116,83 @@ class WizardApiController extends Controller
     // ---- Storage immagini ------------------------------------------------
 
     /**
+     * Carica una fotografia dalla galleria del Foto Manager.
+     *
+     * È il primo gesto di chi apre una lavorazione con la galleria vuota:
+     * senza questo endpoint il bottone "carica" rispondeva 404 e l'editor
+     * diceva soltanto "upload fallito".
+     */
+    public function upload(Request $request)
+    {
+        $request->validate([
+            'photo' => ['required', 'image', 'max:12288'],   // 12 MB
+        ], [
+            'photo.image' => 'Il file non è un\'immagine.',
+            'photo.max' => 'L\'immagine supera i 12 MB: ridimensionala e riprova.',
+        ]);
+
+        $path = $request->file('photo')->store(self::DISK_DIR.'/originali', 'public');
+
+        // La prima foto della pratica diventa la principale: è quella che il
+        // Designer si aspetta di trovare sul canvas.
+        $foto = $this->registra($path, 'originale', principale: $this->primaDellaPratica());
+
+        return response()->json([
+            'success' => true,
+            'photo' => $this->perFrontend($request, $path, 'originale', $foto),
+        ]);
+    }
+
+    /**
+     * Salva sulla pratica quello che c'è sul canvas: il ritaglio, la rotazione,
+     * la versione scelta come principale.
+     */
+    public function salva(Request $request)
+    {
+        $binary = $this->decodeDataUrl((string) $request->input('image', ''));
+
+        if ($binary === null) {
+            return response()->json(['error' => 'Immagine non valida'], 400);
+        }
+
+        $path = self::DISK_DIR.'/pratica/'.Str::uuid().'.jpg';
+        Storage::disk('public')->put($path, $binary);
+
+        $tipo = (string) $request->input('tipo', 'ritagliata');
+        $principale = (bool) $request->input('is_principale', false);
+
+        $foto = $this->registra($path, $tipo, $principale);
+
+        return response()->json([
+            'success' => true,
+            'photo' => $this->perFrontend($request, $path, $tipo, $foto, $principale),
+        ]);
+    }
+
+    /**
+     * Toglie una foto dalla pratica: sia la riga sia il file.
+     */
+    public function elimina(Request $request, int $foto)
+    {
+        $ordine = app(LavorazioneCorrente::class)->ordine();
+
+        // Si cancella solo dentro la propria lavorazione: gli id sono
+        // progressivi e senza questo controllo si toccherebbero le foto altrui.
+        $riga = FotoPratica::where('id', $foto)
+            ->when($ordine, fn ($q) => $q->where('ordine_id', $ordine->id))
+            ->first();
+
+        if (! $riga || ! $ordine) {
+            return response()->json(['error' => 'Fotografia non trovata'], 404);
+        }
+
+        Storage::disk('public')->delete($riga->path);
+        $riga->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * Salva un'immagine base64 (data URL) e ne ritorna l'URL assoluto,
      * così il proxy BFL può scaricarla.
      */
@@ -121,6 +206,10 @@ class WizardApiController extends Controller
 
         $path = self::DISK_DIR . '/tmp/' . Str::uuid() . '.jpg';
         Storage::disk('public')->put($path, $binary);
+
+        // Se si sta lavorando un ordine, la foto entra nel registro della
+        // pratica: prima finiva su disco e nessuno se ne ricordava più.
+        $this->registra($path, 'originale', principale: true);
 
         return response()->json(['url' => $this->absoluteUrl($request, $path)]);
     }
@@ -145,15 +234,72 @@ class WizardApiController extends Controller
         $path = self::DISK_DIR . '/ai/' . Str::uuid() . '.jpg';
         Storage::disk('public')->put($path, $binary);
 
+        $tipo = (string) $request->input('tipo', 'elaborata_ai');
+        $principale = (bool) $request->input('is_principale', false);
+
+        // Il risultato dell'elaborazione è quello che andrà in stampa: va
+        // legato alla pratica, altrimenti si perde chiudendo il browser.
+        $foto = $this->registra($path, $tipo, principale: true);
+
         return response()->json([
             'success' => true,
             'photo'   => [
-                'id'            => (int) (microtime(true) * 1000) % 1000000,
+                'id'            => $foto?->id ?? (int) (microtime(true) * 1000) % 1000000,
                 'url'           => $this->absoluteUrl($request, $path),
-                'tipo'          => (string) $request->input('tipo', 'elaborata_ai'),
-                'is_principale' => (bool) $request->input('is_principale', false),
+                'tipo'          => $tipo,
+                'is_principale' => $foto ? true : $principale,
             ],
         ]);
+    }
+
+    /** Vero se la pratica non ha ancora nessuna fotografia. */
+    private function primaDellaPratica(): bool
+    {
+        $ordine = app(LavorazioneCorrente::class)->ordine();
+
+        return $ordine && ! FotoPratica::where('ordine_id', $ordine->id)->exists();
+    }
+
+    /**
+     * La forma che si aspetta il JS degli editor.
+     *
+     * Fuori da una lavorazione non c'è una riga a database: si ripiega su un
+     * id effimero, così staff e agenzie possono comunque provare gli editor.
+     */
+    private function perFrontend(Request $request, string $path, string $tipo, ?FotoPratica $foto, bool $principale = false): array
+    {
+        return [
+            'id' => $foto?->id ?? (int) (microtime(true) * 1000) % 1000000,
+            'url' => $this->absoluteUrl($request, $path),
+            'tipo' => $tipo,
+            'is_principale' => $foto?->is_principale ?? $principale,
+        ];
+    }
+
+    /**
+     * Registra la foto nella pratica dell'ordine in lavorazione, se ce n'è
+     * uno. Fuori da una lavorazione (staff che prova gli editor) non fa
+     * nulla: non c'è una pratica a cui appendere il file.
+     */
+    private function registra(string $path, string $tipo, bool $principale = false): ?FotoPratica
+    {
+        $ordine = app(LavorazioneCorrente::class)->ordine();
+
+        if (! $ordine) {
+            return null;
+        }
+
+        $foto = FotoPratica::create([
+            'ordine_id' => $ordine->id,
+            'path' => $path,
+            'tipo' => $tipo,
+        ]);
+
+        if ($principale) {
+            $foto->rendiPrincipale();
+        }
+
+        return $foto;
     }
 
     // ---- Helper ----------------------------------------------------------

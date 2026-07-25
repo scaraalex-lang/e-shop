@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\PhotoPrint\Http\Controllers\PhotoPrintController;
 use Modules\PhotoPrint\Http\Controllers\WizardApiController;
 use Modules\PhotoPrint\Http\Controllers\RicordinoApiController;
+use Modules\PhotoPrint\Http\Controllers\LavorazioneController;
 use Modules\PhotoPrint\Http\Middleware\AccessoStudio;
 
 /*
@@ -22,6 +23,20 @@ Route::middleware(['auth', AccessoStudio::class])->group(function () {
 });
 
 /*
+ | La lavorazione fotografica di un ordine, vista dal cliente: dati del
+ | defunto, consenso, ingresso negli editor, approvazione della bozza.
+ |
+ | Basta `auth`: il controllo vero è "questo ordine è tuo ed è aperto", che
+ | AccessoStudio non saprebbe fare (non conosce l'ordine finché non si entra
+ | di qui). È da questa pagina che gli editor imparano su cosa lavorare.
+ */
+Route::middleware('auth')->prefix('account/ordini/{ordine}')->group(function () {
+    Route::get('lavorazione', [LavorazioneController::class, 'show'])->name('lavorazione');
+    Route::post('lavorazione/defunto', [LavorazioneController::class, 'salvaDefunto'])->name('lavorazione.defunto');
+    Route::post('lavorazione/approva', [LavorazioneController::class, 'approva'])->name('lavorazione.approva');
+});
+
+/*
  | Endpoint AI del Foto Manager. I path /admin/api/... rispecchiano quelli
  | attesi dal frontend importato. I bfl/* proxano al microservizio Python vivo.
  |
@@ -33,6 +48,13 @@ Route::prefix('admin/api')->middleware(['auth', AccessoStudio::class, 'throttle:
     Route::post('bfl/enhance',   [WizardApiController::class, 'enhance']);
     Route::post('bfl/outpaint',  [WizardApiController::class, 'outpaint']);
     Route::post('bfl/remove-bg', [WizardApiController::class, 'removeBg']);
+
+    // Galleria della pratica: caricare, salvare quello che c'è sul canvas,
+    // eliminare. Erano chiamate dai due blade ma non erano mai state portate:
+    // in Fase 1 la foto di prova era già sul canvas e nessuno premeva "carica".
+    Route::post('foto-pratica/upload',      [WizardApiController::class, 'upload']);
+    Route::post('foto-pratica/salva',       [WizardApiController::class, 'salva']);
+    Route::delete('foto-pratica/{foto}',    [WizardApiController::class, 'elimina'])->whereNumber('foto');
 
     Route::post('foto-pratica/upload-temp', [WizardApiController::class, 'uploadTemp']);
     Route::post('foto-pratica/salva-url',   [WizardApiController::class, 'salvaUrl']);
