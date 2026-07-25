@@ -127,10 +127,36 @@ Senza account non esiste il proprietario dei template, non esiste auth, non
 esiste l'ordine a cui agganciare defunto e ricordino. Ogni punto seguente lo
 presuppone: non provare a scavalcarlo con soluzioni tampone.
 
+*Punto di partenza, verificato il 25/07/2026 — da qui si riparte:*
+
+- **Non c'è alcuna impalcatura di autenticazione**: in `composer.json` niente
+  Breeze, Fortify o Jetstream, e `users` è la tabella di serie di Laravel
+  (name, email, password). L'auth va scelta e installata: è la prima decisione
+  del modulo, non un dettaglio a valle.
+- **I prezzi dei kit sono già risolti**: `Product::priceForQuantity()` applica
+  la regola del trigesimo (base + extra oltre `included_units`). Gli scaglioni
+  quantità B2B sono invece tutti da fare, e vanno **sul singolo prodotto**, non
+  sul carrello: prezzo pubblico uguale per tutti, sconto solo per account
+  approvati (vedi CLAUDE.md, regole di business).
+- **Ordine dei tagli consigliato**: (a) auth + tipo account privato/agenzia +
+  registrazione B2B con P.IVA in attesa di approvazione, con l'approvazione
+  fatta da `/gestione`, che esiste già; (b) carrello, checkout e ordini, con
+  minimo d'ordine B2B in pezzi e scaglioni; (c) agganci — `defunti.ordine_id`
+  (colonna già pronta), template per agenzia, chiusura di `/studio/*`.
+- **Fatturazione**: fase 1 solo export dei dati, SdI in fase 2. Nessun gateway
+  di pagamento è stato scelto: per il B2B l'ipotesi naturale è pagamento su
+  fattura, quindi il primo taglio può non avere pagamenti online affatto.
+- **`/gestione` è già il posto dove approvare**: la dashboard operativa esiste
+  (slide, pratiche, preghiere, impaginazione Smart) e l'approvazione delle
+  agenzie va aggiunta lì, non in una schermata nuova.
+
 **2. Chiudere l'accesso agli editor** (sicurezza, appena c'è auth). Oggi
-`/studio/*` è pubblica e il token `X-Studio-Token` è iniettato nella pagina,
-quindi scrapeabile: è un lucchetto contro gli scanner, non una protezione.
-Sostituire `VerifyStudioToken` con l'auth dell'area agenzia/staff.
+`/studio/*` e `/studio/ricordino/smart` sono pubbliche e il token
+`X-Studio-Token` è iniettato nella pagina, quindi scrapeabile: è un lucchetto
+contro gli scanner, non una protezione. Sostituire `VerifyStudioToken` con
+l'auth dell'area agenzia/staff. **Stessa sorte per `/gestione`**, che oggi sta
+dietro una password condivisa (`GESTIONE_PASSWORD`): è il gemello di quel
+token e va sostituita dallo stesso auth, non tenuta come seconda porta.
 
 **3. Template per account** (il pezzo B2B più immediato). Decisione presa:
 - **predefiniti MemorAI** curati da noi, uguali per tutti, sola lettura → si
