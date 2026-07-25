@@ -48,6 +48,7 @@ header{
   text-transform:uppercase;color:var(--soft);border-bottom:3px solid transparent;
 }
 .passo[data-attivo]{color:var(--oro-scuro);border-bottom-color:var(--oro)}
+.passo{cursor:pointer;-webkit-tap-highlight-color:rgba(194,163,90,.2)}
 .passo b{display:block;font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:500}
 
 main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.15rem 1.15rem 1.5rem}
@@ -119,13 +120,20 @@ input[type=file]{display:none}
   padding:1.2rem .2rem;margin:0 -1.15rem;padding-left:1.15rem;padding-right:1.15rem;
   -webkit-overflow-scrolling:touch;
 }
-.facciata{scroll-snap-align:center;flex:0 0 78%;max-width:340px}
-.facciata figure{border:2px solid var(--caffe);background:#fff;overflow:hidden}
+.facciata{scroll-snap-align:center;flex:0 0 100%;max-width:100%}
+.facciata figure{border:2px solid var(--caffe);background:#fff;overflow:hidden;min-height:6rem}
+.facciata img{display:block;width:100%;height:auto}
 .facciata figcaption{
   margin-top:.5rem;text-align:center;font-size:.66rem;letter-spacing:.22em;
   text-transform:uppercase;color:var(--soft)
 }
-.punti{display:flex;justify-content:center;gap:.55rem;margin-top:.2rem}
+.punti{display:flex;align-items:center;justify-content:center;gap:.55rem;margin-top:.2rem;flex-wrap:wrap}
+.suggerimento{width:100%;text-align:center;margin-top:.5rem;font-size:.66rem;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--soft)}
+.diagnosi{
+  margin-top:1.2rem;border:2px solid var(--caffe);background:var(--panna);padding:.8rem;
+  font-family:ui-monospace,monospace;font-size:.7rem;line-height:1.5;white-space:pre-wrap;word-break:break-word;
+}
 .punto{width:8px;height:8px;border-radius:50%;border:2px solid var(--caffe);background:transparent}
 .punto[data-attivo]{background:var(--caffe)}
 
@@ -272,19 +280,25 @@ input[type=file]{display:none}
 
         <div class="caricamento" id="composizione">Composizione in corso…</div>
 
+        {{-- Le facciate si compongono FUORI schermo e si mostrano come
+             immagini: una tela viva appesa al DOM, su iOS, può uscire bianca
+             sotto pressione di memoria. Un'immagine no. --}}
         <div class="facciate" id="facciate" hidden>
             <div class="facciata">
-                <figure><canvas id="canvas-fronte"></canvas></figure>
+                <figure><img id="img-fronte" alt="Fronte del ricordino"></figure>
                 <figcaption>Fronte</figcaption>
             </div>
             <div class="facciata">
-                <figure><canvas id="canvas-retro"></canvas></figure>
+                <figure><img id="img-retro" alt="Retro del ricordino"></figure>
                 <figcaption>Retro</figcaption>
             </div>
         </div>
         <div class="punti" id="punti" hidden>
             <span class="punto" data-attivo></span><span class="punto"></span>
+            <span class="suggerimento" id="suggerimento">scorri per il retro →</span>
         </div>
+
+        <pre class="diagnosi" id="diagnosi" hidden></pre>
 
         @if (! $gdpr['consenso'])
             <div class="avviso" id="blocco-gdpr">
@@ -394,6 +408,10 @@ function vaiA(passo) {
 document.querySelectorAll('[data-vai]').forEach(b =>
   b.addEventListener('click', () => vaiA(b.dataset.vai)));
 
+// Anche i tre numeri in alto portano al loro passo: da telefono il pulsante
+// "Vedi il ricordino" sta in fondo alla pagina e si può non trovarlo.
+indicatori.forEach(i => i.addEventListener('click', () => vaiA(i.dataset.indicatore)));
+
 // ───────────────────────────── passo 1: foto ─────────────────────────────
 // Il ritaglio è la cornice stessa: si trascina e si ingrandisce, quello che
 // esce dai bordi è tagliato. Nessun rettangolo di selezione da capire.
@@ -416,10 +434,43 @@ document.getElementById('file-foto').addEventListener('change', function (e) {
   if (!file) return;
 
   const lettore = new FileReader();
-  lettore.onload = ev => caricaNellaCornice(ev.target.result);
+  lettore.onload = ev => riduci(ev.target.result, 1600).then(caricaNellaCornice);
   lettore.readAsDataURL(file);
   e.target.value = '';
 });
+
+/**
+ * Riduce lo scatto prima di lavorarlo.
+ *
+ * Una foto da telefono è da 12 megapixel: tenerla a piena risoluzione su una
+ * tela costa ~50 MB e Safari, sotto pressione di memoria, svuota le tele senza
+ * dire niente. Al ritaglio bastano 1600px di lato lungo. Di passaggio,
+ * riscrive in JPEG anche gli HEIC dell'iPhone, così a valle è tutto uguale.
+ */
+function riduci(dataUrl, latoMax) {
+  return new Promise(risolvi => {
+    const im = new Image();
+
+    im.onload = () => {
+      const fattore = Math.min(1, latoMax / Math.max(im.width, im.height));
+      if (fattore >= 1) { risolvi(dataUrl); return; }
+
+      try {
+        const c = document.createElement('canvas');
+        c.width = Math.round(im.width * fattore);
+        c.height = Math.round(im.height * fattore);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        risolvi(c.toDataURL('image/jpeg', .92));
+      } catch (errore) {
+        console.warn('Riduzione non riuscita, si usa l\'originale:', errore);
+        risolvi(dataUrl);
+      }
+    };
+
+    im.onerror = () => risolvi(dataUrl);
+    im.src = dataUrl;
+  });
+}
 
 function caricaNellaCornice(dataUrl) {
   const { w, h } = misureCornice();
@@ -435,6 +486,12 @@ function caricaNellaCornice(dataUrl) {
   }
 
   fabric.Image.fromURL(dataUrl, img => {
+    if (!img || !img.width) {
+      elVuota.hidden = false;
+      elVuota.textContent = "Questa immagine non si apre. Provane un'altra.";
+      return;
+    }
+
     // "cover": la foto riempie sempre la cornice, non si vedono bordi vuoti
     scalaBase = Math.max(w / img.width, h / img.height);
     img.set({
@@ -455,7 +512,7 @@ function caricaNellaCornice(dataUrl) {
     zonaZoom.hidden = false;
     cursore.value = 100;
     document.getElementById('etichetta-file').textContent = 'Cambia foto';
-  }, { crossOrigin: 'anonymous' });
+  });
 }
 
 /** Impedisce che la foto scopra un angolo della cornice. */
@@ -486,11 +543,24 @@ cursore.addEventListener('input', () => {
   cropCanvas.renderAll();
 });
 
-/** Esporta il ritaglio alla risoluzione della sede sul ricordino. */
+/**
+ * Esporta il ritaglio alla risoluzione della sede sul ricordino.
+ * Se l'esportazione non riesce (succede sui browser che considerano "sporca"
+ * la tela) si prosegue senza foto: meglio un ricordino di solo testo che un
+ * percorso che si pianta.
+ */
 function ritaglio() {
   if (!cropCanvas || !cropImg) return null;
-  const moltiplicatore = SLOT ? (SLOT.width / cropCanvas.getWidth()) : 3;
-  return cropCanvas.toDataURL({ format: 'jpeg', quality: .92, multiplier: moltiplicatore });
+
+  try {
+    const moltiplicatore = SLOT ? (SLOT.width / cropCanvas.getWidth()) : 3;
+    const dati = cropCanvas.toDataURL({ format: 'jpeg', quality: .92, multiplier: moltiplicatore });
+
+    return (typeof dati === 'string' && dati.length > 100) ? dati : null;
+  } catch (e) {
+    console.error('Ritaglio non esportabile:', e);
+    return null;
+  }
 }
 
 // ──────────────────────── passo 2: testi e preghiere ─────────────────────
@@ -517,24 +587,40 @@ document.getElementById('campo-frase').addEventListener('input', e => {
 // ─────────────────────── passo 3: composizione e conferma ────────────────
 let cFronte = null, cRetro = null;
 
+/** Non lasciare che una promessa che non arriva blocchi tutto il percorso. */
+function conScadenza(promessa, ms, etichetta) {
+  return Promise.race([
+    promessa,
+    new Promise((_, rifiuta) => setTimeout(() => rifiuta(new Error(etichetta + ': tempo scaduto')), ms)),
+  ]);
+}
+
 /** I font devono essere caricati prima di disegnare, o il testo esce storto. */
 async function fontiPronte() {
   try {
-    await Promise.all([
+    await conScadenza(Promise.all([
       document.fonts.load("30px 'Cormorant Garamond'"),
       document.fonts.load("italic 30px 'Cormorant Garamond'"),
       document.fonts.load("bold 30px 'Cormorant Garamond'"),
-    ]);
-    await document.fonts.ready;
-  } catch (e) { /* i font di sistema bastano a non bloccare il flusso */ }
+    ]).then(() => document.fonts.ready), 4000, 'font');
+  } catch (e) {
+    // I font di sistema bastano: meglio un ricordino con la grazia sbagliata
+    // che una schermata ferma su "composizione in corso".
+    console.warn('Font non pronti, si prosegue:', e.message);
+  }
 }
 
-function nuovoLato(idElemento, statoJson) {
-  const canvas = new fabric.StaticCanvas(idElemento, {
+function nuovoLato(statoJson) {
+  // Elemento creato al volo e mai appeso alla pagina: serve solo a disegnare.
+  const elemento = document.createElement('canvas');
+  elemento.width = CANVAS_W;
+  elemento.height = CANVAS_H;
+
+  const canvas = new fabric.StaticCanvas(elemento, {
     width: CANVAS_W, height: CANVAS_H, backgroundColor: '#ffffff',
   });
 
-  return new Promise(risolvi => {
+  return conScadenza(new Promise(risolvi => {
     canvas.loadFromJSON(JSON.parse(JSON.stringify(statoJson)), () => {
       // I segnaposto del template diventano i dati di questa persona.
       canvas.getObjects().forEach(o => {
@@ -547,10 +633,15 @@ function nuovoLato(idElemento, statoJson) {
           o.set('text', testoPersonale(o.customType, praticaData));
         }
       });
-      canvas.renderAll();
-      risolvi(canvas);
+      // loadFromJSON sostituisce anche le proprietà della tela: senza sfondo
+      // il JPEG (che non ha trasparenza) esce nero. Si rimette dopo il carico,
+      // non prima.
+      canvas.setBackgroundColor('#ffffff', () => {
+        canvas.renderAll();
+        risolvi(canvas);
+      });
     });
-  });
+  }), 15000, 'composizione della facciata');
 }
 
 /** Mette la foto ritagliata nella sede prevista dal template. */
@@ -559,6 +650,12 @@ function applicaFoto(canvas) {
 
   return new Promise(risolvi => {
     fabric.Image.fromURL(fotoRitagliata, img => {
+      if (!img || !img.width) {
+        console.warn('Foto ritagliata non caricabile: ricordino di solo testo.');
+        risolvi();
+        return;
+      }
+
       const s = SLOT.width / img.width;
       img.set({
         left: SLOT.left, top: SLOT.top, originX: 'left', originY: 'top',
@@ -586,13 +683,26 @@ function applicaFoto(canvas) {
   });
 }
 
-/** Adatta il canvas alla larghezza della card, senza toccarne la risoluzione. */
-function adatta(canvas, elemento) {
-  const larghezza = elemento.parentElement.clientWidth;
-  canvas.setDimensions(
-    { width: larghezza + 'px', height: (larghezza * CANVAS_H / CANVAS_W) + 'px' },
-    { cssOnly: true },
-  );
+/** Esporta un lato come immagine per l'anteprima a schermo. */
+function immagineDi(canvas) {
+  // ~2x la larghezza della card: nitido sul retina, leggero in memoria.
+  return canvas.toDataURL({ format: 'jpeg', quality: .85, multiplier: 800 / CANVAS_W });
+}
+
+/**
+ * Referto tecnico a schermo, solo con ?diagnosi=1 nell'indirizzo: da un
+ * telefono altrui la console non si legge, uno screenshot sì.
+ */
+const MOSTRA_DIAGNOSI = new URLSearchParams(location.search).get('diagnosi') === '1';
+
+function diagnostica(dati) {
+  if (!MOSTRA_DIAGNOSI) return;
+
+  const box = document.getElementById('diagnosi');
+  box.hidden = false;
+  box.textContent = Object.entries(dati).map(([k, v]) => k + ': ' + v).join('\n')
+    + '\nschermo: ' + window.innerWidth + 'x' + window.innerHeight
+    + ' dpr' + (window.devicePixelRatio || 1);
 }
 
 let composizioneInCorso = false;
@@ -601,28 +711,53 @@ async function componi() {
   if (composizioneInCorso) return;
   composizioneInCorso = true;
 
-  document.getElementById('composizione').hidden = false;
+  const avviso = document.getElementById('composizione');
+  avviso.textContent = 'Composizione in corso…';
+  avviso.hidden = false;
   document.getElementById('facciate').hidden = true;
   document.getElementById('punti').hidden = true;
 
-  fotoRitagliata = ritaglio();
+  try {
+    fotoRitagliata = ritaglio();
 
-  await fontiPronte();
+    await fontiPronte();
 
-  if (cFronte) { cFronte.dispose(); cFronte = null; }
-  if (cRetro)  { cRetro.dispose();  cRetro = null; }
+    if (cFronte) { cFronte.dispose(); cFronte = null; }
+    if (cRetro)  { cRetro.dispose();  cRetro = null; }
 
-  cFronte = await nuovoLato('canvas-fronte', TEMPLATE.fronte);
-  await applicaFoto(cFronte);
-  cRetro = await nuovoLato('canvas-retro', TEMPLATE.retro);
+    cFronte = await nuovoLato(TEMPLATE.fronte);
+    await applicaFoto(cFronte);
+    cRetro = await nuovoLato(TEMPLATE.retro);
 
-  document.getElementById('facciate').hidden = false;
-  document.getElementById('punti').hidden = false;
-  adatta(cFronte, document.getElementById('canvas-fronte'));
-  adatta(cRetro, document.getElementById('canvas-retro'));
-  document.getElementById('composizione').hidden = true;
+    const fronteJpg = immagineDi(cFronte);
+    const retroJpg  = immagineDi(cRetro);
 
-  composizioneInCorso = false;
+    document.getElementById('img-fronte').src = fronteJpg;
+    document.getElementById('img-retro').src  = retroJpg;
+
+    document.getElementById('facciate').hidden = false;
+    document.getElementById('punti').hidden = false;
+    avviso.hidden = true;
+
+    diagnostica({
+      'fabric':   fabric.version,
+      'tela':     CANVAS_W + 'x' + CANVAS_H,
+      'oggetti':  cFronte.getObjects().length + ' fronte / ' + cRetro.getObjects().length + ' retro',
+      'foto':     fotoRitagliata ? (Math.round(fotoRitagliata.length / 1024) + ' KB') : 'nessuna',
+      'anteprime': Math.round(fronteJpg.length / 1024) + ' KB / ' + Math.round(retroJpg.length / 1024) + ' KB',
+    });
+  } catch (errore) {
+    // Una composizione che non riesce deve dirlo, non restare a fissare il
+    // vuoto: il messaggio serve anche a noi per capire cosa è successo.
+    console.error('Composizione fallita:', errore);
+    avviso.hidden = false;
+    avviso.innerHTML = 'Non riesco a comporre il ricordino su questo telefono.<br>'
+      + '<span style="font-size:.78rem;opacity:.75">' + (errore && errore.message ? errore.message : errore) + '</span>';
+    document.getElementById('conferma').disabled = true;
+    diagnostica({ 'errore': (errore && errore.message) ? errore.message : String(errore) });
+  } finally {
+    composizioneInCorso = false;
+  }
 }
 
 // pallini che seguono lo scorrimento fra le due facciate
@@ -631,6 +766,7 @@ nastro.addEventListener('scroll', () => {
   const indice = nastro.scrollLeft > nastro.clientWidth / 3 ? 1 : 0;
   document.querySelectorAll('#punti .punto').forEach((p, i) =>
     p.toggleAttribute('data-attivo', i === indice));
+  document.getElementById('suggerimento').style.visibility = indice ? 'hidden' : 'visible';
 });
 
 // ─────────────────────────────── conferma ────────────────────────────────
@@ -689,11 +825,7 @@ document.getElementById('conferma').addEventListener('click', async function () 
   }
 });
 
-// ricalcola la scala delle anteprime quando il telefono ruota
-window.addEventListener('resize', () => {
-  if (cFronte) adatta(cFronte, document.getElementById('canvas-fronte'));
-  if (cRetro)  adatta(cRetro,  document.getElementById('canvas-retro'));
-});
+// Le anteprime sono immagini a larghezza piena: la rotazione le adatta da sé.
 </script>
 </body>
 </html>
