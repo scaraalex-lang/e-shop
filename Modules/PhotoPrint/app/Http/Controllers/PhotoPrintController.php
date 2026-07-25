@@ -92,18 +92,29 @@ class PhotoPrintController extends Controller
     /**
      * Da dove si è entrati, e quindi dove si torna uscendo.
      *
-     * Gli editor si aprono a schermo pieno e portano fuori dal sito: chi ci
-     * arriva dalla lavorazione di un ordine deve poterci rientrare, non
-     * ritrovarsi in vetrina con il lavoro a metà. Staff e agenzie, che entrano
-     * senza un ordine, tornano al sito come prima.
+     * Gli editor si aprono a schermo pieno e portano fuori dal sito: si torna
+     * da dove si è entrati, non in vetrina con il lavoro a metà.
+     *
+     * Ognuno ha la sua porta: dalla lavorazione si rientra nell'ordine,
+     * l'agenzia e il privato nella propria area account, lo staff nella
+     * gestione. In vetrina finisce solo chi non ha fatto accesso — e non
+     * dovrebbe nemmeno essere qui.
      *
      * @return array{url: string, etichetta: string}
      */
     private function ritorno(?Ordine $ordine): array
     {
-        return $ordine
-            ? ['url' => route('lavorazione', $ordine), 'etichetta' => 'Torna all\'ordine']
-            : ['url' => url('/'), 'etichetta' => 'Torna al sito'];
+        if ($ordine) {
+            return ['url' => route('lavorazione', $ordine), 'etichetta' => 'Torna all\'ordine'];
+        }
+
+        $utente = auth()->user();
+
+        return match (true) {
+            $utente?->eStaff() === true => ['url' => route('gestione.agenzie.index'), 'etichetta' => 'Torna alla gestione'],
+            $utente !== null => ['url' => route('account'), 'etichetta' => 'Torna al mio account'],
+            default => ['url' => url('/'), 'etichetta' => 'Torna al sito'],
+        };
     }
 
     /**
