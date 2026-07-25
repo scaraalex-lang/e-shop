@@ -122,7 +122,7 @@ input[type=file]{display:none}
 }
 .facciata{scroll-snap-align:center;flex:0 0 100%;max-width:100%}
 .facciata figure{border:2px solid var(--caffe);background:#fff;overflow:hidden;min-height:6rem}
-.facciata img{display:block;width:100%;height:auto}
+.facciata img{display:block;width:100%;height:auto;aspect-ratio:{{ (int) $canvasW }}/{{ (int) $canvasH }}}
 .facciata figcaption{
   margin-top:.5rem;text-align:center;font-size:.66rem;letter-spacing:.22em;
   text-transform:uppercase;color:var(--soft)
@@ -285,11 +285,13 @@ input[type=file]{display:none}
              sotto pressione di memoria. Un'immagine no. --}}
         <div class="facciate" id="facciate" hidden>
             <div class="facciata">
-                <figure><img id="img-fronte" alt="Fronte del ricordino"></figure>
+                <figure><img id="img-fronte" width="{{ (int) $canvasW }}" height="{{ (int) $canvasH }}"
+                             alt="Fronte del ricordino"></figure>
                 <figcaption>Fronte</figcaption>
             </div>
             <div class="facciata">
-                <figure><img id="img-retro" alt="Retro del ricordino"></figure>
+                <figure><img id="img-retro" width="{{ (int) $canvasW }}" height="{{ (int) $canvasH }}"
+                             alt="Retro del ricordino"></figure>
                 <figcaption>Retro</figcaption>
             </div>
         </div>
@@ -683,10 +685,15 @@ function applicaFoto(canvas) {
   });
 }
 
-/** Esporta un lato come immagine per l'anteprima a schermo. */
+/**
+ * Esporta un lato come immagine per l'anteprima a schermo.
+ * ~2x la larghezza della card: nitido sul retina, leggero in memoria.
+ * Verificato su iPhone: il data URL qui si mostra senza storie.
+ */
 function immagineDi(canvas) {
-  // ~2x la larghezza della card: nitido sul retina, leggero in memoria.
-  return canvas.toDataURL({ format: 'jpeg', quality: .85, multiplier: 800 / CANVAS_W });
+  const dati = canvas.toDataURL({ format: 'jpeg', quality: .85, multiplier: 800 / CANVAS_W });
+
+  return { url: dati, tipo: Math.round(dati.length / 1024) + ' KB' };
 }
 
 /**
@@ -729,11 +736,11 @@ async function componi() {
     await applicaFoto(cFronte);
     cRetro = await nuovoLato(TEMPLATE.retro);
 
-    const fronteJpg = immagineDi(cFronte);
-    const retroJpg  = immagineDi(cRetro);
+    const fronteImg = immagineDi(cFronte);
+    const retroImg  = immagineDi(cRetro);
 
-    document.getElementById('img-fronte').src = fronteJpg;
-    document.getElementById('img-retro').src  = retroJpg;
+    document.getElementById('img-fronte').src = fronteImg.url;
+    document.getElementById('img-retro').src  = retroImg.url;
 
     document.getElementById('facciate').hidden = false;
     document.getElementById('punti').hidden = false;
@@ -744,7 +751,7 @@ async function componi() {
       'tela':     CANVAS_W + 'x' + CANVAS_H,
       'oggetti':  cFronte.getObjects().length + ' fronte / ' + cRetro.getObjects().length + ' retro',
       'foto':     fotoRitagliata ? (Math.round(fotoRitagliata.length / 1024) + ' KB') : 'nessuna',
-      'anteprime': Math.round(fronteJpg.length / 1024) + ' KB / ' + Math.round(retroJpg.length / 1024) + ' KB',
+      'anteprime': fronteImg.tipo + ' / ' + retroImg.tipo,
     });
   } catch (errore) {
     // Una composizione che non riesce deve dirlo, non restare a fissare il
@@ -759,6 +766,15 @@ async function componi() {
     composizioneInCorso = false;
   }
 }
+
+// Un'immagine che non si carica non deve restare un riquadro muto.
+['img-fronte', 'img-retro'].forEach(id => {
+  const img = document.getElementById(id);
+  img.addEventListener('error', () => {
+    console.error('Anteprima non visualizzabile:', id);
+    diagnostica({ 'errore immagine': id + ' non si carica (src ' + (img.src || '').slice(0, 24) + '…)' });
+  });
+});
 
 // pallini che seguono lo scorrimento fra le due facciate
 const nastro = document.getElementById('facciate');
