@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.nudo')
 
 @php
     $nome = $defunto->nomeCompleto();
@@ -9,11 +9,14 @@
             .($necrologio->trigesimo_luogo ? ", {$necrologio->trigesimo_luogo}" : '').'.'
         : "In ricordo di {$nome}.";
     $immagine = $necrologio->og_image ? asset('storage/'.$necrologio->og_image) : null;
+
+    $testoCondivisione = $quando
+        ? "{$titolo} — {$quando->translatedFormat('j F')} alle {$quando->format('H:i')}"
+        : $titolo;
 @endphp
 
 @section('title', $titolo.' — MemorAI')
 @section('meta_description', $descrizione)
-@section('senza-sidebar', 1)
 
 @push('meta')
     {{-- WhatsApp e Facebook non eseguono JavaScript: prendono questi meta e
@@ -36,45 +39,46 @@
 @endpush
 
 @section('content')
-<div class="mx-auto w-full max-w-2xl">
+<div class="w-full max-w-md">
 
     {{-- ============ la card ============ --}}
-    <article class="border border-caffe/15 bg-panna/50">
+    <article class="bg-bianco border border-caffe/15 shadow-[0_24px_70px_rgba(58,46,34,0.14)]">
+
         @if ($immagine)
-            <figure class="border-b border-caffe/15 bg-bianco">
+            <figure class="border-b border-caffe/10 bg-panna/40">
                 <img src="{{ $immagine }}" alt="Ritratto di {{ $nome }}"
-                     class="mx-auto max-h-[26rem] w-auto">
+                     class="mx-auto max-h-[22rem] w-auto">
             </figure>
         @endif
 
-        <div class="px-8 py-10 text-center">
-            <span class="font-sans text-[11px] tracking-[0.35em] uppercase text-oro-scuro">
+        <div class="px-8 py-9 text-center">
+            <span class="font-sans text-[10px] tracking-[0.32em] uppercase text-oro-scuro">
                 Nel trigesimo della scomparsa
             </span>
 
-            <h1 class="mt-4 font-serif text-3xl md:text-4xl font-medium leading-tight">{{ $nome }}</h1>
+            <h1 class="mt-4 font-serif text-3xl font-medium leading-tight">{{ $nome }}</h1>
 
             @if ($defunto->data_nascita || $defunto->data_morte)
-                <p class="mt-3 font-sans font-light text-[14px] tabular-nums text-testo-soft">
+                <p class="mt-2.5 font-sans font-light text-[13px] tabular-nums text-testo-soft">
                     {{ $defunto->data_nascita?->format('d/m/Y') }}
                     @if ($defunto->data_nascita && $defunto->data_morte) — @endif
                     {{ $defunto->data_morte?->format('d/m/Y') }}
                 </p>
             @endif
 
-            <span class="mx-auto mt-6 block h-px w-16 bg-oro"></span>
+            <span class="mx-auto mt-6 block h-px w-14 bg-oro"></span>
 
             @if ($quando)
-                <div class="mt-8">
-                    <p class="font-serif text-2xl leading-snug">
+                <div class="mt-7">
+                    <p class="font-serif text-[1.6rem] leading-snug">
                         {{ $quando->translatedFormat('l j F Y') }}
                     </p>
-                    <p class="mt-1 font-serif text-2xl text-oro-scuro tabular-nums">
+                    <p class="mt-0.5 font-serif text-[1.6rem] text-oro-scuro tabular-nums">
                         ore {{ $quando->format('H:i') }}
                     </p>
 
                     @if ($necrologio->trigesimo_luogo)
-                        <p class="mt-4 font-sans font-light text-[15px] leading-relaxed text-testo">
+                        <p class="mt-4 font-sans font-light text-[14px] leading-relaxed text-testo">
                             {{ $necrologio->trigesimo_luogo }}
                             @if ($necrologio->trigesimo_indirizzo)
                                 <span class="block text-testo-soft">{{ $necrologio->trigesimo_indirizzo }}</span>
@@ -85,50 +89,52 @@
             @endif
 
             @if ($necrologio->testo)
-                <p class="mt-8 mx-auto max-w-md font-sans font-light text-[15px] leading-relaxed text-testo-soft whitespace-pre-line">
+                <p class="mt-7 font-sans font-light text-[14px] leading-relaxed text-testo-soft whitespace-pre-line">
                     {{ $necrologio->testo }}
                 </p>
             @endif
+
+            @if ($necrologio->manifesto)
+                <div class="mt-8">
+                    <a href="{{ asset('storage/'.$necrologio->manifesto) }}" target="_blank" rel="noopener"
+                       class="font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro
+                              hover:text-caffe transition-colors duration-300
+                              underline underline-offset-4 decoration-oro/40">
+                        Guarda il manifesto
+                    </a>
+                </div>
+            @endif
+        </div>
+
+        {{-- ============ condivisione, dentro la card ============ --}}
+        <div class="border-t border-caffe/10 bg-panna/50 px-8 py-6 text-center">
+            <p class="font-sans text-[10px] tracking-[0.24em] uppercase text-testo-soft">
+                Fatelo sapere a chi vorrebbe esserci
+            </p>
+
+            <div class="mt-4 flex flex-wrap justify-center gap-3">
+                <a href="{{ 'https://wa.me/?text='.rawurlencode($testoCondivisione.' '.$indirizzo) }}"
+                   target="_blank" rel="noopener"
+                   class="inline-flex items-center justify-center font-sans uppercase text-[11px]
+                          tracking-[0.2em] px-6 py-3 bg-oro text-bianco
+                          hover:bg-oro-scuro transition-colors duration-300">
+                    WhatsApp
+                </a>
+                <a href="{{ 'https://www.facebook.com/sharer/sharer.php?u='.rawurlencode($indirizzo) }}"
+                   target="_blank" rel="noopener"
+                   class="inline-flex items-center justify-center font-sans uppercase text-[11px]
+                          tracking-[0.2em] px-6 py-3 border border-caffe/30 text-caffe
+                          hover:bg-caffe hover:text-bianco transition-colors duration-300">
+                    Facebook
+                </a>
+            </div>
         </div>
     </article>
 
-    {{-- ============ il manifesto ============ --}}
-    @if ($necrologio->manifesto)
-        <div class="mt-8 text-center">
-            <x-button variant="contornata" :href="asset('storage/'.$necrologio->manifesto)" target="_blank" rel="noopener">
-                Guarda il manifesto
-            </x-button>
-        </div>
-    @endif
-
-    {{-- ============ condivisione ============ --}}
-    @php
-        $testoCondivisione = $quando
-            ? "{$titolo} — {$quando->translatedFormat('j F')} alle {$quando->format('H:i')}"
-            : $titolo;
-    @endphp
-    <section class="mt-12 border-t border-caffe/15 pt-8 text-center">
-        <p class="font-sans text-[11px] tracking-[0.25em] uppercase text-testo-soft">
-            Fatelo sapere a chi vorrebbe esserci
-        </p>
-
-        <div class="mt-5 flex flex-wrap justify-center gap-4">
-            <x-button :href="'https://wa.me/?text='.rawurlencode($testoCondivisione.' '.$indirizzo)"
-                      target="_blank" rel="noopener">
-                Condividi su WhatsApp
-            </x-button>
-            <x-button variant="contornata"
-                      :href="'https://www.facebook.com/sharer/sharer.php?u='.rawurlencode($indirizzo)"
-                      target="_blank" rel="noopener">
-                Condividi su Facebook
-            </x-button>
-        </div>
-    </section>
-
-    <p class="mt-12 text-center font-sans font-light text-[12px] leading-relaxed text-testo-soft">
+    <p class="mt-6 text-center font-sans font-light text-[11px] leading-relaxed text-testo-soft">
         Pubblicato da {{ $agenzia->ragione_sociale }} con il consenso della famiglia.
         @if ($necrologio->pubblicato_fino_al)
-            Questa pagina resterà online fino al {{ $necrologio->pubblicato_fino_al->format('d/m/Y') }}.
+            <span class="block">Online fino al {{ $necrologio->pubblicato_fino_al->format('d/m/Y') }}.</span>
         @endif
     </p>
 </div>
