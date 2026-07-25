@@ -635,6 +635,33 @@ window.onload = function() {
   fabric.Object.prototype.padding = isTouch ? 16 : 4;
   fabric.Object.prototype.touchCornerSize = isTouch ? 40 : 24;
 
+  /*
+   * Niente salti dell'area quando si entra a scrivere in un blocco.
+   *
+   * Entrando in modifica Fabric crea una textarea invisibile e la piazza dove
+   * sta il cursore. Sulla SECONDA riga di un blocco che sta in fondo al foglio
+   * quel punto cade oltre il bordo visibile, e il browser fa scorrere l'area
+   * per portarcelo: da qui il salto che si vede cliccando la seconda riga e
+   * non la prima. Chi scrive non l'ha chiesto, ed è solo fastidio.
+   *
+   * `preventScroll` toglie l'inseguimento lasciando la textarea dov'è, così la
+   * scrittura e la composizione da tastiera continuano a funzionare.
+   */
+  if (fabric.IText && fabric.IText.prototype.initHiddenTextarea) {
+    const creaTextareaOriginale = fabric.IText.prototype.initHiddenTextarea;
+    fabric.IText.prototype.initHiddenTextarea = function () {
+      creaTextareaOriginale.call(this);
+      const ta = this.hiddenTextarea;
+      if (ta && !ta.__senzaInseguimento) {
+        const fuocoOriginale = ta.focus.bind(ta);
+        ta.focus = function (opzioni) {
+          fuocoOriginale(Object.assign({}, opzioni || {}, { preventScroll: true }));
+        };
+        ta.__senzaInseguimento = true;
+      }
+    };
+  }
+
   // A schermo il foglio bianco è lo sfondo CSS sotto un canvas trasparente.
   // I due canvas nascono bianchi, ma loadFromJSON sostituisce lo sfondo con
   // quello (assente) del JSON salvato: da lì in poi il canvas è trasparente e
