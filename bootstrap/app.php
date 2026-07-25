@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'admin/api/*',
         ]);
+
+        $middleware->alias([
+            'staff' => \Modules\Commerce\Http\Middleware\SoloStaff::class,
+            'agenzia.approvata' => \Modules\Commerce\Http\Middleware\AgenziaApprovata::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

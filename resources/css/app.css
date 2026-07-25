@@ -91,6 +91,8 @@
     --color-oro-scuro: #a5863f;   /* oro scuro: hover, dettagli         */
     --color-testo: #3a2e22;       /* testo principale                   */
     --color-testo-soft: #6b6152;  /* testo secondario                   */
+    --color-errore: #9c3b2e;      /* errori di validazione (terracotta) */
+    --color-successo: #5c6b4a;    /* conferme (verde salvia)            */
 }
 
 /* Impostazioni tipografiche di base della vetrina */

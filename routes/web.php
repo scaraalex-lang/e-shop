@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Modules\Catalog\Models\Product;
 use Modules\Catalog\Models\Category;
@@ -45,3 +46,18 @@ Route::get('/categoria/{slug}', function (string $slug) {
 
     return view('categoria', compact('categoria', 'prodotti'));
 })->name('categoria');
+
+/*
+|--------------------------------------------------------------------------
+| Area account (privati e agenzie)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth')->prefix('account')->group(function () {
+    Route::view('/', 'account.index')->name('account');
+
+    Route::get('profilo', [ProfileController::class, 'edit'])->name('account.profilo');
+    Route::patch('profilo', [ProfileController::class, 'update'])->name('account.profilo.update');
+    Route::delete('profilo', [ProfileController::class, 'destroy'])->name('account.profilo.destroy');
+});
+
+require __DIR__.'/auth.php';

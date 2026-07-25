@@ -28,6 +28,8 @@ Thumbs.db
 
 # Claude Code local settings
 /.claude/settings.local.json
+/.claude/settings.local.json.tmp.*
+/.claude/worktrees/
 
 # Cartella di scambio con l'utente (sorgenti memoraiengine, font, foto, screenshot)
 /FileMemorai/

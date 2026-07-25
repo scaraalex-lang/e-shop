@@ -71,7 +71,9 @@
                 <button type="button" aria-label="Cerca" class="hover:text-oro-scuro transition-colors duration-300">
                     <x-icon.search class="w-5 h-5" />
                 </button>
-                <a href="#" aria-label="Il mio account" class="hover:text-oro-scuro transition-colors duration-300">
+                <a href="{{ auth()->check() ? route('account') : route('login') }}"
+                   aria-label="{{ auth()->check() ? 'Il mio account' : 'Accedi' }}"
+                   class="hover:text-oro-scuro transition-colors duration-300">
                     <x-icon.account class="w-5 h-5" />
                 </a>
                 <a href="#" aria-label="Carrello" class="hover:text-oro-scuro transition-colors duration-300">
@@ -85,21 +87,29 @@
     @yield('hero')
 
     {{-- ============ CORPO: sidebar categorie + contenuto ============ --}}
+    {{-- Le pagine che non c'entrano con la vetrina (accesso, area account)  --}}
+    {{-- dichiarano @section('senza-sidebar', 1) e occupano tutta la colonna. --}}
     <div class="flex-1 mx-auto w-full max-w-7xl px-6">
-        <div class="flex gap-10">
-
-            {{-- accesso diretto alle categorie (sinistra, sticky) --}}
-            <aside class="hidden lg:block w-56 shrink-0 py-12">
-                <div class="sticky top-[4.5rem]">
-                    <x-category-sidebar />
-                </div>
-            </aside>
-
-            {{-- contenuto della pagina --}}
-            <main class="flex-1 min-w-0 py-12">
+        @hasSection('senza-sidebar')
+            <main class="py-12">
                 @yield('content')
             </main>
-        </div>
+        @else
+            <div class="flex gap-10">
+
+                {{-- accesso diretto alle categorie (sinistra, sticky) --}}
+                <aside class="hidden lg:block w-56 shrink-0 py-12">
+                    <div class="sticky top-[4.5rem]">
+                        <x-category-sidebar />
+                    </div>
+                </aside>
+
+                {{-- contenuto della pagina --}}
+                <main class="flex-1 min-w-0 py-12">
+                    @yield('content')
+                </main>
+            </div>
+        @endif
     </div>
 
     {{-- ============ FOOTER ============ --}}
