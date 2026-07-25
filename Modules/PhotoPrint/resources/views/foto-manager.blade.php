@@ -240,8 +240,8 @@ input[type=file]{display:none}
 <script>
 const praticaId = {{ $praticaId }};
 const csrfToken = '{{ csrf_token() }}';
-const studioToken = '{{ config('photoprint.studio_token') }}';
-// Allega automaticamente il token a ogni chiamata verso /admin/api/ (guard Fase 1).
+// Allega CSRF e sessione a ogni chiamata verso /admin/api/: gli endpoint sono
+// protetti dall'autenticazione dell'area studio, non più da un token condiviso.
 (function () {
     const _fetch = window.fetch;
     window.fetch = function (input, init) {
@@ -249,7 +249,9 @@ const studioToken = '{{ config('photoprint.studio_token') }}';
         if (url.indexOf('/admin/api/') !== -1) {
             init = init || {};
             init.headers = new Headers(init.headers || {});
-            init.headers.set('X-Studio-Token', studioToken);
+            init.headers.set('X-CSRF-TOKEN', csrfToken);
+            init.headers.set('X-Requested-With', 'XMLHttpRequest');
+            init.credentials = init.credentials || 'same-origin';
         }
         return _fetch.call(this, input, init);
     };

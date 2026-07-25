@@ -551,8 +551,9 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
 const praticaData = @json($praticaData ?? []);
 const agenziaData = @json($agenziaData ?? []);
 const gdprData = @json($gdpr ?? ['consenso' => false]);
-const studioToken = '{{ config('photoprint.studio_token') }}';
-// Allega il token guard a tutte le chiamate /admin/api/ (Fase 1).
+const csrfToken = '{{ csrf_token() }}';
+// Allega CSRF e sessione a tutte le chiamate /admin/api/: gli endpoint sono
+// protetti dall'autenticazione dell'area studio, non più da un token condiviso.
 (function () {
     const _fetch = window.fetch;
     window.fetch = function (input, init) {
@@ -560,7 +561,9 @@ const studioToken = '{{ config('photoprint.studio_token') }}';
         if (url.indexOf('/admin/api/') !== -1) {
             init = init || {};
             init.headers = new Headers(init.headers || {});
-            init.headers.set('X-Studio-Token', studioToken);
+            init.headers.set('X-CSRF-TOKEN', csrfToken);
+            init.headers.set('X-Requested-With', 'XMLHttpRequest');
+            init.credentials = init.credentials || 'same-origin';
         }
         return _fetch.call(this, input, init);
     };

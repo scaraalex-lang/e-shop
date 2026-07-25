@@ -4,22 +4,32 @@ use Illuminate\Support\Facades\Route;
 use Modules\PhotoPrint\Http\Controllers\PhotoPrintController;
 use Modules\PhotoPrint\Http\Controllers\WizardApiController;
 use Modules\PhotoPrint\Http\Controllers\RicordinoApiController;
-use Modules\PhotoPrint\Http\Middleware\VerifyStudioToken;
+use Modules\PhotoPrint\Http\Middleware\AccessoStudio;
 
 /*
- | FASE 1 — PORTING: route pubbliche per vedere i due editor girare.
- | In seguito andranno protette e collocate nell'area cliente B2C / staff.
+ | Area studio: i due editor.
+ |
+ | Protetta dall'autenticazione vera (staff e agenzie approvate). Prima era
+ | pubblica, con un token condiviso iniettato nella pagina: si leggeva dal
+ | sorgente, quindi teneva fuori gli scanner ma non una persona.
+ |
+ | `auth` gestisce chi non ha fatto login: redirect alla pagina di accesso,
+ | oppure 401 JSON per le chiamate degli editor, che si annunciano come XHR.
  */
-Route::get('/studio/foto', [PhotoPrintController::class, 'fotoManager'])->name('studio.foto');
-Route::get('/studio/ricordino', [PhotoPrintController::class, 'ricordinoDesigner'])->name('studio.ricordino');
+Route::middleware(['auth', AccessoStudio::class])->group(function () {
+    Route::get('/studio/foto', [PhotoPrintController::class, 'fotoManager'])->name('studio.foto');
+    Route::get('/studio/ricordino', [PhotoPrintController::class, 'ricordinoDesigner'])->name('studio.ricordino');
+});
 
 /*
  | Endpoint AI del Foto Manager. I path /admin/api/... rispecchiano quelli
  | attesi dal frontend importato. I bfl/* proxano al microservizio Python vivo.
- | FASE 1: protetti da token condiviso (X-Studio-Token) + rate-limit, così la
- | porta pubblica verso il proxy BFL non è abusabile. In Fase 2 → auth cliente/staff.
+ |
+ | Stesso guard delle pagine, più il rate-limit: la porta verso il proxy BFL
+ | non deve essere abusabile nemmeno da un account legittimo. Il CSRF vale
+ | anche qui: il wrapper su window.fetch dei due blade allega l'header.
  */
-Route::prefix('admin/api')->middleware([VerifyStudioToken::class, 'throttle:30,1'])->group(function () {
+Route::prefix('admin/api')->middleware(['auth', AccessoStudio::class, 'throttle:30,1'])->group(function () {
     Route::post('bfl/enhance',   [WizardApiController::class, 'enhance']);
     Route::post('bfl/outpaint',  [WizardApiController::class, 'outpaint']);
     Route::post('bfl/remove-bg', [WizardApiController::class, 'removeBg']);

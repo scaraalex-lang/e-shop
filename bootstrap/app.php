@@ -12,19 +12,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Endpoint proxy/API del Foto Manager: stateless, esclusi dal CSRF.
-        // FASE 1 — da proteggere (auth area cliente/staff) in Fase 2.
-        $middleware->validateCsrfTokens(except: [
-            'admin/api/*',
-        ]);
-
         $middleware->alias([
             'staff' => \Modules\Commerce\Http\Middleware\SoloStaff::class,
             'agenzia.approvata' => \Modules\Commerce\Http\Middleware\AgenziaApprovata::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Anche gli endpoint degli editor (/admin/api/*) sono chiamati solo via
+        // JS: gli errori devono arrivare come JSON. Senza questo, una sessione
+        // scaduta risponderebbe con il redirect HTML alla pagina di accesso e
+        // il Foto Manager si troverebbe a interpretare una pagina come dati.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*', 'admin/api/*'),
         );
     })->create();

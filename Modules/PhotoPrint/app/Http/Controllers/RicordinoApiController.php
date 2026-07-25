@@ -12,11 +12,11 @@ use Modules\Memorial\Models\RicordinoTemplate;
 use Modules\Memorial\Models\Santo;
 
 /**
- * Endpoint del Ricordino Designer (FASE 1).
+ * Endpoint del Ricordino Designer.
  *
  * Collega il designer ai dati Memorial: galleria santi condivisa, salvataggio
  * del ricordino legato al defunto, e registrazione del consenso GDPR in-app.
- * Protetti dallo stesso guard token del Foto Manager [[VerifyStudioToken]].
+ * Protetti dallo stesso guard delle pagine degli editor: `auth` + AccessoStudio.
  */
 class RicordinoApiController extends Controller
 {
