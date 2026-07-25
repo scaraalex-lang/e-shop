@@ -116,6 +116,9 @@ input[type=file]{display:none}
 </head>
 <body>
 
+@include('photoprint::partials.gate-mobile')
+
+
 <nav>
     <div class="logo">MemorAI — Gestione Foto</div>
     <div style="display:flex;align-items:center;gap:1rem">
@@ -233,8 +236,8 @@ input[type=file]{display:none}
 
 <!-- BOTTOM BAR -->
 <div class="bottom-bar">
-    <span class="status-msg" id="status-msg">Seleziona una foto dalla galleria o caricane una nuova</span>
-    <a href="{{ url('/studio/ricordino') }}" class="btn-secondary" style="font-size:.75rem">→ Ricordino</a>
+    <span class="status-msg" id="status-msg">{{ session('prenotazione_ok') ?: 'Seleziona una foto dalla galleria o caricane una nuova' }}</span>
+    <a href="{{ $linkRicordino ?? url('/studio/ricordino') }}" class="btn-secondary" style="font-size:.75rem">→ Ricordino</a>
 </div>
 
 <script>

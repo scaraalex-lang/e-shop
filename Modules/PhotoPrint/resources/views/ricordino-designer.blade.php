@@ -103,6 +103,9 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 </head>
 <body>
 
+@include('photoprint::partials.gate-mobile')
+
+
 <nav>
   <div class="logo">MemorAI — Designer Ricordini</div>
   <div style="display:flex;align-items:center;gap:.5rem">
@@ -122,7 +125,7 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
     <button class="nav-btn btn-ghost" onclick="saveAsTemplate()" title="Salva l'impaginazione come template riusabile">⭐ Template</button>
     {{-- Necrologio e Invia-approvazione: flussi B2B → FASE 2 --}}
     <button class="nav-btn btn-green" onclick="saveToPratica()">💾 Salva</button>
-    <a href="/studio/foto" class="nav-btn btn-ghost">← Foto Manager</a>
+    <a href="{{ $linkFotoManager ?? '/studio/foto' }}" class="nav-btn btn-ghost">← Foto Manager</a>
   </div>
 </nav>
 

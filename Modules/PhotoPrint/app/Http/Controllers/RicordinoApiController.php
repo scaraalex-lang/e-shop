@@ -62,12 +62,19 @@ class RicordinoApiController extends Controller
         $fronte = $this->decodeCanvas($request->input('canvas_fronte'));
         $retro  = $this->decodeCanvas($request->input('canvas_retro'));
 
+        // Lo stato lo dichiara il chiamante: il designer completo salva bozze,
+        // il Designer Smart manda in approvazione quando il cliente conferma.
+        $stato = (string) $request->input('stato', 'bozza');
+        if (! in_array($stato, ['bozza', 'in_approvazione', 'approvato'], true)) {
+            $stato = 'bozza';
+        }
+
         $ricordino = $defunto->ricordini()->firstOrNew([]);
         $ricordino->fill([
             'formato'          => (string) $request->input('format', '7x10'),
             'fronte'           => $fronte,
             'retro'            => $retro,
-            'stato'            => 'bozza',
+            'stato'            => $stato,
             'anteprima_fronte' => $this->storeDataUrl($request->input('preview')),
             'anteprima_retro'  => $this->storeDataUrl($request->input('preview_retro')),
         ]);

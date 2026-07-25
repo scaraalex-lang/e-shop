@@ -53,6 +53,20 @@ class RicordinoTemplateSeeder extends Seeder
                 );
             }
         }
+
+        // Quale layout usa lo Smart lo decide la dashboard. Qui ci limitiamo a
+        // garantire che una scelta esista: se per un formato nessuno è ancora
+        // segnato, vince il layout "Smart". Una scelta già fatta non si tocca.
+        foreach (array_keys(self::FORMATI) as $formato) {
+            $giaScelto = RicordinoTemplate::where('formato', $formato)
+                ->where('is_smart_default', true)->exists();
+
+            if (! $giaScelto) {
+                RicordinoTemplate::where('formato', $formato)
+                    ->where('nome', 'Smart')
+                    ->update(['is_smart_default' => true]);
+            }
+        }
     }
 
     /**
@@ -64,6 +78,25 @@ class RicordinoTemplateSeeder extends Seeder
     private function layouts(): array
     {
         return [
+            [
+                // Impaginazione del Designer Smart: sede della foto in alto
+                // (riquadro invisibile, customType photo-slot), dati sotto.
+                'nome'   => 'Smart',
+                'ordine' => 5,
+                'fronte' => [
+                    ['foto',   'y' => 0.06, 'h' => 0.34, 'w' => 0.46, 'maschera' => 'ovale'],
+                    ['blocco', 'nome',  'y' => 0.46, 'size' => 15, 'peso' => 'bold'],
+                    ['blocco', 'date',  'y' => 0.63, 'size' => 9],
+                    ['blocco', 'eta',   'y' => 0.69, 'size' => 10, 'stile' => 'italic'],
+                    ['linea',  'y' => 0.76],
+                    ['blocco', 'frase', 'y' => 0.80, 'size' => 9, 'stile' => 'italic'],
+                ],
+                'retro' => [
+                    ['simbolo', 'y' => 0.10, 'char' => '✝', 'size' => 16],
+                    ['blocco',  'preghiera', 'y' => 0.22, 'size' => 8, 'stile' => 'italic'],
+                    ['simbolo', 'y' => 0.88, 'char' => '— ✦ —', 'size' => 10],
+                ],
+            ],
             [
                 'nome'   => 'Classico',
                 'ordine' => 10,
@@ -152,6 +185,29 @@ class RicordinoTemplateSeeder extends Seeder
             ];
         }
 
+        // Sede della foto: riquadro invisibile che il Designer Smart legge per
+        // sapere dove mettere lo scatto. Non selezionabile e trasparente, così
+        // nel designer completo non dà fastidio a nessuno.
+        if ($e[0] === 'foto') {
+            $larghezza = round($w * $e['w'], 2);
+            $altezza   = round($h * $e['h'], 2);
+
+            return [
+                'type'       => 'rect',
+                'version'    => '5.3.1',
+                'left'       => round(($w - $larghezza) / 2, 2),
+                'top'        => $top,
+                'width'      => $larghezza,
+                'height'     => $altezza,
+                'fill'       => 'rgba(0,0,0,0)',
+                'opacity'    => 0,
+                'selectable' => false,
+                'evented'    => false,
+                'customType' => 'photo-slot',
+                'maschera'   => $e['maschera'] ?? null,
+            ];
+        }
+
         // Simbolo religioso: centrato orizzontalmente, come insertSimbolo().
         if ($e[0] === 'simbolo') {
             return [
@@ -166,6 +222,10 @@ class RicordinoTemplateSeeder extends Seeder
                 'fontFamily' => 'serif',
                 'fill'       => self::ORO,
                 'editable'   => false,
+                // Fabric sovrascrive il default con quello che trova nel JSON:
+                // senza questa chiave i testi arrivano con styles undefined e
+                // la successiva toJSON() del designer va in errore.
+                'styles'     => [],
             ];
         }
 
@@ -187,6 +247,7 @@ class RicordinoTemplateSeeder extends Seeder
             'fill'       => self::INK,
             'editable'   => true,
             'customType' => $tipo,
+            'styles'     => [],
         ];
     }
 

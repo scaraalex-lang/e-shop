@@ -1,5 +1,12 @@
 <?php
 
+use App\Http\Controllers\Gestione\AccessoController;
+use App\Http\Controllers\Gestione\PannelloController;
+use App\Http\Controllers\Gestione\PreghiereController;
+use App\Http\Controllers\Gestione\SlideController;
+use App\Http\Controllers\Gestione\TemplateSmartController;
+use App\Http\Middleware\VerificaAccessoGestione;
+use App\Models\HomeSlide;
 use Illuminate\Support\Facades\Route;
 use Modules\Catalog\Models\Product;
 use Modules\Catalog\Models\Category;
@@ -7,14 +14,17 @@ use Modules\Catalog\Models\Category;
 Route::get('/', function () {
     $hero = Product::with('primaryImage')->where('sku', 'COR-MET-ORO')->first();
 
+    // Slide del carosello d'apertura: gestite da /gestione/slide, non nel codice.
+    $slide = HomeSlide::attive()->get();
+
     $evidenza = Product::with('category', 'primaryImage')
         ->where('is_active', true)
         ->whereIn('sku', ['COR-PRL-CHA', 'COR-VTR-ROS', 'ROS-BRC-CRI-BLU'])
         ->orderByRaw("FIELD(sku, 'COR-PRL-CHA', 'COR-VTR-ROS', 'ROS-BRC-CRI-BLU')")
         ->get();
 
-    return view('home', compact('hero', 'evidenza'));
-});
+    return view('home', compact('hero', 'slide', 'evidenza'));
+})->name('home');
 
 // Pagina di prova del design system MemorAI
 Route::get('/styleguide', function () {
@@ -45,3 +55,46 @@ Route::get('/categoria/{slug}', function (string $slug) {
 
     return view('categoria', compact('categoria', 'prodotti'));
 })->name('categoria');
+
+/*
+ | ============ DASHBOARD OPERATIVA ============
+ | Governo della vetrina: slide della home e pratiche aperte.
+ | FASE 1: accesso con password condivisa (config/gestione.php). Quando
+ | Commerce porterà gli account staff, il gate va sostituito dall'auth vera.
+ */
+Route::prefix('gestione')->name('gestione.')->group(function () {
+
+    Route::get('entra', [AccessoController::class, 'mostra'])->name('entra');
+    Route::post('entra', [AccessoController::class, 'entra'])
+        ->middleware('throttle:5,1')->name('entra.post');
+    Route::post('esci', [AccessoController::class, 'esci'])->name('esci');
+
+    Route::middleware(VerificaAccessoGestione::class)->group(function () {
+        Route::get('/', [PannelloController::class, 'index'])->name('pannello');
+        Route::get('pratiche', [PannelloController::class, 'pratiche'])->name('pratiche');
+
+        Route::get('slide', [SlideController::class, 'index'])->name('slide.index');
+        Route::get('slide/nuova', [SlideController::class, 'create'])->name('slide.create');
+        Route::post('slide', [SlideController::class, 'store'])->name('slide.store');
+        Route::get('slide/{slide}/modifica', [SlideController::class, 'edit'])->name('slide.edit');
+        Route::put('slide/{slide}', [SlideController::class, 'update'])->name('slide.update');
+        Route::delete('slide/{slide}', [SlideController::class, 'destroy'])->name('slide.destroy');
+
+        Route::post('slide/{slide}/attiva', [SlideController::class, 'attiva'])->name('slide.attiva');
+        Route::post('slide/{slide}/sposta/{direzione}', [SlideController::class, 'sposta'])
+            ->whereIn('direzione', ['su', 'giu'])->name('slide.sposta');
+
+        // Archivio preghiere: la galleria che si apre nel Designer Smart.
+        Route::get('preghiere', [PreghiereController::class, 'index'])->name('preghiere.index');
+        Route::get('preghiere/nuova', [PreghiereController::class, 'create'])->name('preghiere.create');
+        Route::post('preghiere', [PreghiereController::class, 'store'])->name('preghiere.store');
+        Route::get('preghiere/{preghiera}/modifica', [PreghiereController::class, 'edit'])->name('preghiere.edit');
+        Route::put('preghiere/{preghiera}', [PreghiereController::class, 'update'])->name('preghiere.update');
+        Route::delete('preghiere/{preghiera}', [PreghiereController::class, 'destroy'])->name('preghiere.destroy');
+        Route::post('preghiere/{preghiera}/attiva', [PreghiereController::class, 'attiva'])->name('preghiere.attiva');
+
+        // Impaginazione usata dal Designer Smart, formato per formato.
+        Route::get('template-smart', [TemplateSmartController::class, 'index'])->name('template-smart');
+        Route::put('template-smart', [TemplateSmartController::class, 'aggiorna'])->name('template-smart.aggiorna');
+    });
+});

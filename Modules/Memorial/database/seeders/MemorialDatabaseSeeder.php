@@ -32,5 +32,8 @@ class MemorialDatabaseSeeder extends Seeder
 
         // Impaginazioni di partenza del Ricordino Designer.
         $this->call(RicordinoTemplateSeeder::class);
+
+        // Archivio testi di preghiera (galleria del Designer Smart).
+        $this->call(PreghieraSeeder::class);
     }
 }
