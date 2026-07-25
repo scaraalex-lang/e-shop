@@ -112,9 +112,12 @@ Sostituire `VerifyStudioToken` con l'auth dell'area agenzia/staff.
   su `PUT`/`DELETE`. Ipotesi di lavoro: `agenzia_id`, dato che il B2C non ha
   archivio; passare a un `owner_id` polimorfo solo se servirà davvero.
 
-**4. Persistenza foto/pratica legata all'ordine.** Oggi `PhotoPrintController`
-serve dati mock e un solo defunto (`Defunto::firstOrFail()`): va sostituito con
-il defunto dell'ordine in lavorazione, e le foto vanno legate alla pratica.
+**4. Persistenza foto/pratica legata all'ordine.** Entrambi gli editor accettano
+ora `?defunto=ID` (`PhotoPrintController::defuntoDaRichiesta()`): il flusso
+`/prenota/ricordino` crea il Defunto e li incatena, e i link fra i due editor si
+portano dietro la pratica. Restano da fare: **le foto legate alla pratica** (le
+`photos` sono ancora mock) e l'aggancio all'ordine quando ci sarà Commerce.
+Senza `?defunto` gli editor ricadono sul primo defunto a DB, come in Fase 1.
 
 **5. Bozza condivisibile con la famiglia** (il flusso che vende il B2B). Link con
 token che l'agenzia manda alla famiglia per l'approvazione, storico revisioni,

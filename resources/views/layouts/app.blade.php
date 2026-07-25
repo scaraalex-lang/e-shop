@@ -38,23 +38,19 @@
          class="sticky top-0 z-50 bg-bianco/95 backdrop-blur-sm border-y-2 border-caffe">
         <div class="mx-auto max-w-7xl px-6 relative flex items-center justify-center min-h-[3.25rem] py-2">
 
+            {{-- menu laterale: qui solo il bottone (sotto lg) --}}
+            <x-nav-drawer-bottone />
+
             {{-- brand compatto (sinistra) --}}
             <a href="{{ url('/') }}"
-               class="absolute left-6 hidden md:block font-serif text-oro text-lg tracking-[0.2em] pl-[0.2em]">
+               class="absolute left-6 hidden lg:block font-serif text-oro text-lg tracking-[0.2em] pl-[0.2em]">
                 MemorAI
             </a>
 
-            {{-- voci principali (centro) --}}
-            <ul class="flex flex-wrap items-center justify-center gap-x-7 gap-y-1
+            {{-- voci principali (centro): sotto lg stanno nel drawer --}}
+            <ul class="hidden lg:flex flex-wrap items-center justify-center gap-x-7 gap-y-1
                        font-sans text-[12px] tracking-[0.16em] uppercase">
-                @foreach ([
-                    ['Trigesimali',   '#'],
-                    ['Devozionali',   '#'],
-                    ['Photoceramiche','#'],
-                    ['Personalizza',  '#'],
-                    ['Stampa foto',   '#'],
-                    ['QR Memoria',    '#'],
-                ] as [$voce, $href])
+                @foreach (config('vetrina.voci', []) as ['etichetta' => $voce, 'href' => $href])
                     <li>
                         <a href="{{ $href }}"
                            class="relative inline-block text-testo hover:text-oro-scuro transition-colors duration-300
@@ -65,6 +61,12 @@
                     </li>
                 @endforeach
             </ul>
+
+            {{-- sotto lg il centro della barra porta il marchio --}}
+            <a href="{{ url('/') }}"
+               class="lg:hidden font-serif text-oro text-xl tracking-[0.28em] pl-[0.28em]">
+                MemorAI
+            </a>
 
             {{-- icone (destra) --}}
             <div class="absolute right-6 hidden sm:flex items-center gap-4 text-caffe">
@@ -80,6 +82,10 @@
             </div>
         </div>
     </nav>
+
+    {{-- Pannello del menu laterale: fuori dalla barra, che con backdrop-filter
+         farebbe da containing block e lo terrebbe incastrato dentro di sé. --}}
+    <x-nav-drawer />
 
     {{-- ============ HERO A TUTTA LARGHEZZA (opzionale) ============ --}}
     @yield('hero')

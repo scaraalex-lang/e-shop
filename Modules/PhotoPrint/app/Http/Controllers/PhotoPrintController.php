@@ -14,8 +14,12 @@ class PhotoPrintController extends Controller
      * Le foto demo puntano a immagini prodotto reali per far vedere il canvas
      * funzionante; upload/salvataggio/BFL richiederanno il backend (fase 2).
      */
-    public function fotoManager()
+    public function fotoManager(Request $request)
     {
+        // Pratica in lavorazione: arriva dal flusso di prenotazione
+        // (/prenota/ricordino) come ?defunto=ID. Senza, si resta sulla demo.
+        $defunto = $this->defuntoDaRichiesta($request);
+
         $photos = collect([
             // Foto di test reale caricata dall'utente (Sacro Cuore, 1254x1254):
             // apre il canvas Fabric.js su un'immagine vera per la verifica visiva.
@@ -30,9 +34,13 @@ class PhotoPrintController extends Controller
         ]);
 
         return view('photoprint::foto-manager', [
-            'praticaId'   => 1,
-            'nomePratica' => 'Anteprima demo',
+            'praticaId'   => $defunto?->id ?? 1,
+            'nomePratica' => $defunto?->nomeCompleto() ?? 'Anteprima demo',
             'photos'      => $photos,
+            // link al passo successivo, con la pratica al seguito
+            'linkRicordino' => $defunto
+                ? route('studio.ricordino', ['defunto' => $defunto->id])
+                : route('studio.ricordino'),
         ]);
     }
 
@@ -43,12 +51,14 @@ class PhotoPrintController extends Controller
      * praticaId = null così i pulsanti solo-backend (approvazione, necrologio)
      * restano nascosti. La "Dedica AI" è stata rimossa in questa fase.
      */
-    public function ricordinoDesigner()
+    public function ricordinoDesigner(Request $request)
     {
-        // Carica un defunto reale dal modulo Memorial (dati che precompilano il
-        // ricordino) + eventuale ricordino già salvato. Il consenso GDPR è
-        // registrabile in-app dal designer stesso.
-        $defunto = \Modules\Memorial\Models\Defunto::query()->firstOrFail();
+        // Defunto della pratica in lavorazione (?defunto=ID dal Foto Manager o
+        // dalla dashboard); in mancanza, il primo a DB come in Fase 1. I dati
+        // precompilano i blocchi testo; il consenso GDPR è registrabile in-app.
+        $defunto = $this->defuntoDaRichiesta($request)
+            ?? \Modules\Memorial\Models\Defunto::query()->firstOrFail();
+
         $ricordino = $defunto->ricordini()->latest()->first();
 
         return view('photoprint::ricordino-designer', [
@@ -60,6 +70,8 @@ class PhotoPrintController extends Controller
             'savedFronte'   => $ricordino?->fronte,
             'savedRetro'    => $ricordino?->retro,
             'savedFormat'   => $ricordino?->formato ?? '7x10',
+            // ritorno al passo precedente senza perdere la pratica
+            'linkFotoManager' => route('studio.foto', ['defunto' => $defunto->id]),
 
             // Stato consenso GDPR per il banner/modale del designer.
             'gdpr' => [
@@ -70,6 +82,18 @@ class PhotoPrintController extends Controller
                 'autorizzato_at' => $defunto->gdpr_autorizzato_at?->format('d/m/Y H:i'),
             ],
         ]);
+    }
+
+    /**
+     * Defunto indicato dalla richiesta (?defunto=ID), se esiste.
+     * Null quando il parametro manca o punta a una pratica inesistente: gli
+     * editor restano visitabili in modalità dimostrativa come in Fase 1.
+     */
+    private function defuntoDaRichiesta(Request $request): ?\Modules\Memorial\Models\Defunto
+    {
+        $id = $request->integer('defunto');
+
+        return $id ? \Modules\Memorial\Models\Defunto::find($id) : null;
     }
 
     private function mockPhoto(int $id, string $file, bool $principale, string $tipo): object

@@ -2,19 +2,24 @@
 
 @section('title', 'MemorAI — Articoli · Memoria · Devozione')
 
-{{-- ============ HERO (a tutta larghezza, sopra la colonna) ============ --}}
+{{-- ============ APERTURA (a tutta larghezza, sopra la colonna) ============ --}}
+{{-- Carosello se ci sono slide pubblicate, altrimenti l'hero statico di sempre. --}}
 @section('hero')
-    <x-hero
-        occhiello="Artigianato memoriale dal 2026"
-        sottotitolo="Rosari, corone e ricordini di fattura artigianale, in materiali nobili. Piccoli oggetti da tenere fra le mani e tramandare — mai lutto, sempre cura."
-        :immagine="$hero?->primaryImage ? asset('storage/'.$hero->primaryImage->path) : null"
-        :immagineAlt="$hero?->name ?? 'MemorAI'"
-        primario="Scopri le collezioni" primarioHref="#"
-        secondario="Personalizza" secondarioHref="#"
-        class="border-b-2 border-caffe">
-        Custodire la memoria<br>
-        con <em class="italic text-oro">bellezza</em>
-    </x-hero>
+    @if ($slide->isNotEmpty())
+        <x-home-carousel :slide="$slide" class="border-b-2 border-caffe" />
+    @else
+        <x-hero
+            occhiello="Artigianato memoriale dal 2026"
+            sottotitolo="Rosari, corone e ricordini di fattura artigianale, in materiali nobili. Piccoli oggetti da tenere fra le mani e tramandare — mai lutto, sempre cura."
+            :immagine="$hero?->primaryImage ? asset('storage/'.$hero->primaryImage->path) : null"
+            :immagineAlt="$hero?->name ?? 'MemorAI'"
+            primario="Scopri le collezioni" primarioHref="#"
+            secondario="Personalizza" secondarioHref="#"
+            class="border-b-2 border-caffe">
+            Custodire la memoria<br>
+            con <em class="italic text-oro">bellezza</em>
+        </x-hero>
+    @endif
 @endsection
 
 @section('content')

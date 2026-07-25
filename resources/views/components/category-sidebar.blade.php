@@ -1,3 +1,10 @@
+@props([
+    // Prefisso degli id dei pannelli: la sidebar compare due volte nella stessa
+    // pagina (colonna desktop + drawer mobile) e gli id devono restare unici,
+    // altrimenti il chevron del drawer aprirebbe il pannello della colonna.
+    'idPrefisso' => 'reparto',
+])
+
 @php
     use Modules\Catalog\Models\Category;
 
@@ -26,7 +33,7 @@
                 $haFigli = $radice->children->isNotEmpty();
                 // Il ramo si apre di default se la radice o un suo figlio è attivo.
                 $aperto  = $rAttiva || ($haFigli && $radice->children->contains('slug', $attivo));
-                $panelId = 'reparto-' . $radice->slug;
+                $panelId = $idPrefisso . '-' . $radice->slug;
             @endphp
             <li>
                 <div class="flex items-center">
