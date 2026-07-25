@@ -116,6 +116,9 @@ input[type=file]{display:none}
 </head>
 <body>
 
+@include('photoprint::partials.gate-mobile')
+
+
 <nav>
     <div class="logo">MemorAI — Gestione Foto</div>
     <div style="display:flex;align-items:center;gap:1rem">

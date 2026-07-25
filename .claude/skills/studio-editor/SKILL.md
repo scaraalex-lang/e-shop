@@ -15,6 +15,8 @@ reale collegato. La persistenza vera (foto/ordini) è Fase 2 e dipende da Commer
 |---|---|
 | Foto Manager (view, ~1040 righe, HTML+CSS+JS inline) | `Modules/PhotoPrint/resources/views/foto-manager.blade.php` |
 | Ricordino Designer (view, ~1780 righe, idem) | `Modules/PhotoPrint/resources/views/ricordino-designer.blade.php` |
+| **Designer Smart** (versione da telefono, B2C) | `Modules/PhotoPrint/resources/views/ricordino-smart.blade.php` |
+| Cancello per schermi stretti sui due editor | `Modules/PhotoPrint/resources/views/partials/gate-mobile.blade.php` |
 | Route + guard | `Modules/PhotoPrint/routes/web.php` |
 | Proxy BFL + upload temp | `app/Http/Controllers/WizardApiController.php` (PhotoPrint) |
 | API ricordino/santi/GDPR | `app/Http/Controllers/RicordinoApiController.php` (PhotoPrint) |
@@ -26,6 +28,37 @@ reale collegato. La persistenza vera (foto/ordini) è Fase 2 e dipende da Commer
 Dettagli operativi:
 - **Avvio ambiente, verifica a schermo, trappole** → `references/dev-setup.md`
 - **Endpoint, tabelle, contratti dati blade** → `references/api-e-dati.md`
+
+## Designer Smart (`/studio/ricordino/smart`)
+
+La versione da telefono, per il B2C. **Non è l'editor completo con i pannelli
+tolti**: è un percorso diverso, in tre passi — foto, testi, conferma.
+
+- **Layout deciso in dashboard**, non dal cliente: il template con
+  `is_smart_default` per quel formato (`RicordinoTemplate::perSmart()`),
+  scelto in `/gestione/template-smart`.
+- **Sede della foto**: il template la dichiara con un rettangolo invisibile
+  `customType: 'photo-slot'` (più `maschera`). Ce l'ha il predefinito *Smart*
+  generato dal seeder; un template senza slot dà un ricordino di solo testo.
+- **Ritaglio** = la cornice stessa: si trascina e si ingrandisce, quello che
+  esce è tagliato. Esce alla risoluzione della slot con `toDataURL`.
+- **Anagrafica ereditata** dalla pratica (nome, date, età): non si riscrive.
+  **Preghiera scelta** dall'archivio `preghiere` (galleria in un modale),
+  gestito in `/gestione/preghiere`.
+- Chi ha bisogno di lavorare la foto sul serio va alla web app **Kerachrom**
+  (`config/kerachrom.php`, anche iOS/Android), elabora, scarica e reimporta.
+- Conferma → stesso endpoint del designer completo, con `stato: in_approvazione`
+  (il parametro `stato` è validato lato server). Consenso GDPR mancante ⇒ si
+  raccoglie prima di salvare.
+- I due editor completi, sotto i 900px, **non si mostrano affatto**: il
+  cancello li sostituisce e manda allo Smart. Non è overlay ma sostituzione,
+  perché un `fixed; inset:0` lì si dimensiona sulla pagina traboccante.
+
+**Trappola già pagata due volte**: un testo che arriva da JSON *senza la chiave
+`styles`* fa esplodere la `toJSON()` successiva di Fabric
+(`Cannot read properties of undefined`). I template del seeder ora la scrivono,
+e sia `riempiConDefunto` sia il caricamento dello Smart la normalizzano
+all'ingresso. Se generi altro stato canvas lato PHP, includi `styles`.
 
 ## Regole da rispettare
 

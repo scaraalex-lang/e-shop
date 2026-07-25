@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\Gestione\AccessoController;
 use App\Http\Controllers\Gestione\PannelloController;
+use App\Http\Controllers\Gestione\PreghiereController;
 use App\Http\Controllers\Gestione\SlideController;
+use App\Http\Controllers\Gestione\TemplateSmartController;
 use App\Http\Middleware\VerificaAccessoGestione;
 use App\Models\HomeSlide;
 use Illuminate\Support\Facades\Route;
@@ -81,5 +83,18 @@ Route::prefix('gestione')->name('gestione.')->group(function () {
         Route::post('slide/{slide}/attiva', [SlideController::class, 'attiva'])->name('slide.attiva');
         Route::post('slide/{slide}/sposta/{direzione}', [SlideController::class, 'sposta'])
             ->whereIn('direzione', ['su', 'giu'])->name('slide.sposta');
+
+        // Archivio preghiere: la galleria che si apre nel Designer Smart.
+        Route::get('preghiere', [PreghiereController::class, 'index'])->name('preghiere.index');
+        Route::get('preghiere/nuova', [PreghiereController::class, 'create'])->name('preghiere.create');
+        Route::post('preghiere', [PreghiereController::class, 'store'])->name('preghiere.store');
+        Route::get('preghiere/{preghiera}/modifica', [PreghiereController::class, 'edit'])->name('preghiere.edit');
+        Route::put('preghiere/{preghiera}', [PreghiereController::class, 'update'])->name('preghiere.update');
+        Route::delete('preghiere/{preghiera}', [PreghiereController::class, 'destroy'])->name('preghiere.destroy');
+        Route::post('preghiere/{preghiera}/attiva', [PreghiereController::class, 'attiva'])->name('preghiere.attiva');
+
+        // Impaginazione usata dal Designer Smart, formato per formato.
+        Route::get('template-smart', [TemplateSmartController::class, 'index'])->name('template-smart');
+        Route::put('template-smart', [TemplateSmartController::class, 'aggiorna'])->name('template-smart.aggiorna');
     });
 });

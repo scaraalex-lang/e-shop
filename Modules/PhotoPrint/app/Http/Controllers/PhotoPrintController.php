@@ -41,6 +41,10 @@ class PhotoPrintController extends Controller
             'linkRicordino' => $defunto
                 ? route('studio.ricordino', ['defunto' => $defunto->id])
                 : route('studio.ricordino'),
+            // schermi stretti: dirottati sul Designer Smart
+            'linkSmart' => $defunto
+                ? route('studio.ricordino.smart', ['defunto' => $defunto->id])
+                : route('studio.ricordino.smart'),
         ]);
     }
 
@@ -72,6 +76,7 @@ class PhotoPrintController extends Controller
             'savedFormat'   => $ricordino?->formato ?? '7x10',
             // ritorno al passo precedente senza perdere la pratica
             'linkFotoManager' => route('studio.foto', ['defunto' => $defunto->id]),
+            'linkSmart'       => route('studio.ricordino.smart', ['defunto' => $defunto->id]),
 
             // Stato consenso GDPR per il banner/modale del designer.
             'gdpr' => [
@@ -80,6 +85,49 @@ class PhotoPrintController extends Controller
                 'autorizzato_da' => $defunto->gdpr_autorizzato_da,
                 'parentela'      => $defunto->gdpr_parentela,
                 'autorizzato_at' => $defunto->gdpr_autorizzato_at?->format('d/m/Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
+     * Designer Smart: la versione da telefono, per il B2C.
+     *
+     * Non è un editor ridotto, è un percorso diverso: l'impaginazione la decide
+     * la dashboard (template con is_smart_default), i dati anagrafici arrivano
+     * dalla pratica, la preghiera si sceglie da un archivio e alla persona
+     * restano tre gesti — foto, testi, conferma. Chi ha bisogno di lavorare la
+     * fotografia sul serio viene mandato alla web app Kerachrom e torna qui con
+     * l'immagine pronta.
+     */
+    public function ricordinoSmart(Request $request)
+    {
+        $defunto = $this->defuntoDaRichiesta($request)
+            ?? \Modules\Memorial\Models\Defunto::query()->firstOrFail();
+
+        $formati = config('photoprint.formati');
+        $formato = $request->query('formato');
+        $formato = isset($formati[$formato]) ? $formato : array_key_first($formati);
+
+        $template = \Modules\Memorial\Models\RicordinoTemplate::perSmart($formato);
+        abort_if(! $template, 503, 'Nessuna impaginazione disponibile per il formato ' . $formato . '.');
+
+        $scala = (float) config('photoprint.scala');
+        [$larghezza, $altezza] = $formati[$formato];
+
+        return view('photoprint::ricordino-smart', [
+            'defunto'     => $defunto,
+            'praticaId'   => $defunto->id,
+            'praticaData' => $defunto->toPraticaData(),
+            'formato'     => $formato,
+            'canvasW'     => $larghezza * $scala,
+            'canvasH'     => $altezza * $scala,
+            'template'    => $template,
+            'preghiere'   => \Modules\Memorial\Models\Preghiera::attive()->get()
+                ->groupBy(fn ($p) => $p->categoria ?: 'Preghiere'),
+            'appKerachrom' => config('kerachrom.app_url'),
+            'gdpr' => [
+                'consenso' => $defunto->gdpr_consenso,
+                'defunto'  => $defunto->nomeCompleto(),
             ],
         ]);
     }

@@ -13,6 +13,10 @@ use Modules\PhotoPrint\Http\Middleware\VerifyStudioToken;
 Route::get('/studio/foto', [PhotoPrintController::class, 'fotoManager'])->name('studio.foto');
 Route::get('/studio/ricordino', [PhotoPrintController::class, 'ricordinoDesigner'])->name('studio.ricordino');
 
+// Versione da telefono (B2C): template deciso dalla dashboard, tre passi.
+Route::get('/studio/ricordino/smart', [PhotoPrintController::class, 'ricordinoSmart'])
+    ->name('studio.ricordino.smart');
+
 /*
  | Endpoint AI del Foto Manager. I path /admin/api/... rispecchiano quelli
  | attesi dal frontend importato. I bfl/* proxano al microservizio Python vivo.

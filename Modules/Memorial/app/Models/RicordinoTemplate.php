@@ -16,12 +16,13 @@ class RicordinoTemplate extends Model
 {
     protected $table = 'ricordino_templates';
 
-    protected $fillable = ['nome', 'formato', 'is_predefinito', 'sort_order', 'fronte', 'retro', 'anteprima'];
+    protected $fillable = ['nome', 'formato', 'is_predefinito', 'is_smart_default', 'sort_order', 'fronte', 'retro', 'anteprima'];
 
     protected $casts = [
         'fronte'         => 'array',
         'retro'          => 'array',
-        'is_predefinito' => 'boolean',
+        'is_predefinito'   => 'boolean',
+        'is_smart_default' => 'boolean',
     ];
 
     /**
@@ -31,6 +32,20 @@ class RicordinoTemplate extends Model
     public function scopeInOrdineDiElenco($query)
     {
         return $query->orderByDesc('is_predefinito')->orderBy('sort_order')->orderByDesc('id');
+    }
+
+    /**
+     * Impaginazione che il Designer Smart usa per questo formato.
+     * Se la dashboard non ne ha ancora scelta una, ripiega sul primo
+     * predefinito MemorAI: lo Smart deve funzionare comunque.
+     */
+    public static function perSmart(string $formato): ?self
+    {
+        return static::where('formato', $formato)
+            ->orderByDesc('is_smart_default')
+            ->orderByDesc('is_predefinito')
+            ->orderBy('sort_order')
+            ->first();
     }
 
     /**

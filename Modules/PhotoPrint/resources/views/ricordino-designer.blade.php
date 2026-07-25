@@ -103,6 +103,9 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 </head>
 <body>
 
+@include('photoprint::partials.gate-mobile')
+
+
 <nav>
   <div class="logo">MemorAI — Designer Ricordini</div>
   <div style="display:flex;align-items:center;gap:.5rem">

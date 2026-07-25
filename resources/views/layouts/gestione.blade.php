@@ -23,6 +23,8 @@
                         ['Pannello', route('gestione.pannello')],
                         ['Slide home', route('gestione.slide.index')],
                         ['Pratiche', route('gestione.pratiche')],
+                        ['Preghiere', route('gestione.preghiere.index')],
+                        ['Smart', route('gestione.template-smart')],
                     ] as [$voce, $href])
                         <a href="{{ $href }}"
                            class="{{ url()->current() === $href ? 'text-oro' : 'text-bianco/70 hover:text-oro' }} transition-colors">
