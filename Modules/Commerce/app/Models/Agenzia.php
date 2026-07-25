@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Modules\Commerce\Enums\StatoAgenzia;
 
 class Agenzia extends Model
@@ -17,7 +18,7 @@ class Agenzia extends Model
     protected $table = 'agenzie';
 
     protected $fillable = [
-        'ragione_sociale', 'partita_iva', 'codice_fiscale',
+        'ragione_sociale', 'slug', 'partita_iva', 'codice_fiscale',
         'codice_sdi', 'pec',
         'indirizzo', 'cap', 'citta', 'provincia', 'nazione', 'telefono',
         'ordine_minimo_pezzi',
@@ -40,6 +41,36 @@ class Agenzia extends Model
     public function user(): HasOne
     {
         return $this->hasOne(User::class);
+    }
+
+    /**
+     * Lo spicchio di indirizzo pubblico: /ricordi/{slug}/...
+     * Si genera alla creazione se non è stato deciso a mano.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $agenzia) {
+            if (blank($agenzia->slug)) {
+                $agenzia->slug = static::slugLibero($agenzia->ragione_sociale, $agenzia->citta);
+            }
+        });
+    }
+
+    public static function slugLibero(string $ragioneSociale, ?string $citta = null): string
+    {
+        $base = Str::slug($ragioneSociale) ?: 'agenzia';
+
+        if (! static::where('slug', $base)->exists()) {
+            return $base;
+        }
+
+        $conCitta = Str::slug($base.'-'.$citta);
+
+        if ($citta && ! static::where('slug', $conCitta)->exists()) {
+            return $conCitta;
+        }
+
+        return $base.'-'.Str::lower(Str::random(4));
     }
 
     public function scopeInAttesa(Builder $query): Builder

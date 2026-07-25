@@ -17,6 +17,12 @@
         ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']],
     ];
 
+    // I necrologi sono uno strumento dell'agenzia, non un prodotto: non
+    // passano dall'ordine e stanno accanto agli editor.
+    if ($utente->eAgenzia()) {
+        $voci[] = ['Necrologi', route('necrologi.index'), 'necrologi.*'];
+    }
+
     // Gli editor compaiono solo a chi li apre di mestiere: il cliente ci
     // arriva dalla lavorazione del proprio ordine (vedi AccessoStudio).
     if ($utente->eStaff() || $utente->eAgenziaApprovata()) {

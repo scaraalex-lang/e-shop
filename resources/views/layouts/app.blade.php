@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'MemorAI — Articoli · Memoria · Devozione')</title>
     <meta name="description" content="@yield('meta_description', 'MemorAI: articoli memoriali e devozionali di fattura artigianale — trigesimali, rosari e corone, photoceramiche.')">
+
+    {{-- Anteprime per WhatsApp e Facebook: le pagine che vanno condivise
+         spingono qui i propri meta Open Graph. --}}
+    @stack('meta')
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen flex flex-col bg-bianco text-testo antialiased">
