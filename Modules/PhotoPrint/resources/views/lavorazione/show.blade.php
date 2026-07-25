@@ -167,6 +167,35 @@
 
         @if ($ricordino)
             <x-bozza-ricordino :ricordino="$ricordino" class="mt-5" />
+
+            {{-- I giri di approvazione con la famiglia --}}
+            @php $revisioni = $ricordino->revisioni; @endphp
+            @if ($revisioni->isNotEmpty())
+                <section class="mt-7 border-l-2 border-caffe/20 pl-5">
+                    <h3 class="font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro">
+                        Con la famiglia
+                    </h3>
+                    <ol class="mt-3 space-y-3">
+                        @foreach ($revisioni as $revisione)
+                            <li class="font-sans font-light text-[13px] leading-relaxed">
+                                <span class="text-testo-soft">
+                                    {{ $revisione->inviata_at->format('d/m/Y H:i') }} ·
+                                    inviata a {{ $revisione->inviata_a }} ·
+                                </span>
+                                <span @class([
+                                    'text-successo' => $revisione->esito === \Modules\Memorial\Models\RevisioneRicordino::APPROVATA,
+                                    'text-oro-scuro' => $revisione->esito === \Modules\Memorial\Models\RevisioneRicordino::MODIFICHE,
+                                    'text-testo-soft' => $revisione->inAttesa(),
+                                ])>{{ $revisione->esitoLeggibile() }}</span>
+
+                                @if ($revisione->nota)
+                                    <span class="mt-1 block text-testo">“{{ $revisione->nota }}”</span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ol>
+                </section>
+            @endif
         @endif
 
         <div class="mt-6">

@@ -120,7 +120,11 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
     <button class="nav-btn btn-gold" onclick="exportPNG()" style="font-size:.75rem">📥 PNG</button>
         <button onclick="apriImpaginatorePDF()" style="background:rgba(200,169,110,.15);color:#c8a96e;border:1px solid rgba(200,169,110,.3);padding:.4rem .75rem;border-radius:6px;font-size:.75rem;cursor:pointer;font-family:Inter,sans-serif">📄 Stampa PDF</button>
     <button class="nav-btn btn-ghost" onclick="saveAsTemplate()" title="Salva l'impaginazione come template riusabile">⭐ Template</button>
-    {{-- Necrologio e Invia-approvazione: flussi B2B → FASE 2 --}}
+    {{-- Necrologio: FASE successiva (card condivisibile con orario del trigesimo) --}}
+    @if (!empty($ricordinoId))
+      <button class="nav-btn" style="background:#0f3460;color:#fff" onclick="inviaApprovazione()"
+              title="Manda la bozza alla famiglia perché la approvi">📤 Invia alla famiglia</button>
+    @endif
     <button class="nav-btn btn-green" onclick="saveToPratica()">💾 Salva</button>
     <a href="/studio/foto" class="nav-btn btn-ghost">← Foto Manager</a>
     <a href="{{ $ritorno['url'] }}" class="nav-btn btn-ghost">← {{ $ritorno['etichetta'] }}</a>
@@ -2165,19 +2169,31 @@ window.addEventListener('load', function() {
   </div>
 </div>
 <script>
-function inviaApprovazione(tipo) {
-  var praticaId = {{ $praticaId ?? 'null' }};
-  if (!praticaId) { alert('Salva prima il documento'); return; }
-  document.getElementById('confirm-invio-tipo').textContent = tipo;
+function inviaApprovazione() {
+  var ricordinoId = {{ $ricordinoId ?? 'null' }};
+  if (!ricordinoId) { alert('Salva prima il ricordino'); return; }
+
+  document.getElementById('confirm-invio-tipo').textContent = 'ricordino';
   document.getElementById('confirm-invio-modal').style.display='flex';
+  setTimeout(function(){ document.getElementById('confirm-invio-email').focus(); }, 50);
+
   document.getElementById('confirm-invio-btn').onclick = function() {
+    var email = (document.getElementById('confirm-invio-email').value || '').trim();
+    var avviso = document.getElementById('confirm-invio-errore');
+    if (!email) { avviso.textContent = 'Serve l\'indirizzo email della famiglia.'; avviso.style.display='block'; return; }
+    avviso.style.display = 'none';
     document.getElementById('confirm-invio-modal').style.display='none';
-    var canvas = document.getElementById('canvasFronte') || document.getElementById('canvas');
-    var imgData = canvas ? canvas.toDataURL('image/png') : null;
-    fetch('/admin/pratiche/' + praticaId + '/invia-approvazione', {
+
+    // L'anteprima di ciò che la famiglia vedrà: si congela sulla revisione,
+    // così resta scritto cosa aveva davanti quando ha risposto.
+    assicuraSfondo(canvasFronte);
+    var imgData = canvasFronte.toDataURL({format:'png', multiplier:0.5});
+
+    // Sotto /admin/api/, dove il wrapper su window.fetch mette CSRF e sessione.
+    fetch('/admin/api/ricordino/' + ricordinoId + '/invia-approvazione', {
     method: 'POST',
-    headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]')?.content||''},
-    body: JSON.stringify({tipo: tipo, immagine: imgData})
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({email: email, immagine: imgData})
   }).then(r => r.json()).then(res => {
     if (res.success) {
       document.getElementById('invio-modal-email').textContent = res.email || '';
@@ -2203,8 +2219,15 @@ function inviaApprovazione(tipo) {
     </div>
     <div style="padding:1.5rem">
       <div style="font-size:.95rem;font-weight:600;color:#1a1a2e;margin-bottom:.5rem">Inviare il <span id="confirm-invio-tipo"></span> alla famiglia?</div>
-      <div style="font-size:.82rem;color:#8a7f72;margin-bottom:1.5rem">La famiglia riceverà un link per visualizzare e approvare il documento. Potranno anche richiedere modifiche.</div>
-      <div style="display:flex;gap:.75rem;justify-content:flex-end">
+      <div style="font-size:.82rem;color:#8a7f72;margin-bottom:1rem">Riceveranno un link per guardarlo e approvarlo. Potranno anche chiedere una correzione.</div>
+
+      {{-- L'indirizzo lo sa l'agenzia, non noi: qui non si indovina. --}}
+      <label for="confirm-invio-email" style="display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#8a7f72;margin-bottom:.35rem">Email della famiglia</label>
+      <input id="confirm-invio-email" type="email" autocomplete="off" placeholder="nome@esempio.it"
+             style="width:100%;padding:.6rem .75rem;border:1px solid #e0dbd4;border-radius:7px;font-size:.9rem;font-family:inherit;margin-bottom:.4rem">
+      <div id="confirm-invio-errore" style="display:none;color:#c44b3a;font-size:.78rem;margin-bottom:.75rem"></div>
+
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1rem">
         <button onclick="document.getElementById('confirm-invio-modal').style.display='none'" style="background:#f5f0eb;border:1px solid #e0dbd4;color:#1a1a2e;padding:.6rem 1.25rem;border-radius:7px;font-size:.85rem;cursor:pointer;font-family:inherit">Annulla</button>
         <button id="confirm-invio-btn" style="background:#1a1a2e;color:#c8a96e;border:none;padding:.6rem 1.5rem;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit">📤 Invia</button>
       </div>

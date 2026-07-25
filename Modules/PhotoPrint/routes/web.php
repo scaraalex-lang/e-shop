@@ -5,7 +5,20 @@ use Modules\PhotoPrint\Http\Controllers\PhotoPrintController;
 use Modules\PhotoPrint\Http\Controllers\WizardApiController;
 use Modules\PhotoPrint\Http\Controllers\RicordinoApiController;
 use Modules\PhotoPrint\Http\Controllers\LavorazioneController;
+use Modules\PhotoPrint\Http\Controllers\ApprovazioneController;
+use Modules\PhotoPrint\Http\Controllers\BozzaPubblicaController;
 use Modules\PhotoPrint\Http\Middleware\AccessoStudio;
+
+/*
+ | La bozza vista dalla famiglia: nessun account, il link E' la credenziale.
+ |
+ | Pubbliche di proposito. Chi le riceve sta attraversando un lutto:
+ | chiedergli di registrarsi per dire "va bene" sarebbe un ostacolo inutile.
+ | Il link vale finche' l'ordine e' aperto (controllo nel controller).
+ */
+Route::get('bozza/{revisione}', [BozzaPubblicaController::class, 'show'])->name('bozza');
+Route::post('bozza/{revisione}/approva', [BozzaPubblicaController::class, 'approva'])->name('bozza.approva');
+Route::post('bozza/{revisione}/modifiche', [BozzaPubblicaController::class, 'chiediModifiche'])->name('bozza.modifiche');
 
 /*
  | Area studio: i due editor.
@@ -45,6 +58,10 @@ Route::middleware('auth')->prefix('account/ordini/{ordine}')->group(function () 
  | anche qui: il wrapper su window.fetch dei due blade allega l'header.
  */
 Route::prefix('admin/api')->middleware(['auth', AccessoStudio::class, 'throttle:30,1'])->group(function () {
+    // Invio della bozza alla famiglia. Sta QUI e non fuori dal prefisso:
+    // e' /admin/api/ che il wrapper su window.fetch copre con CSRF e sessione.
+    Route::post('ricordino/{ricordino}/invia-approvazione', [ApprovazioneController::class, 'invia']);
+
     Route::post('bfl/enhance',   [WizardApiController::class, 'enhance']);
     Route::post('bfl/outpaint',  [WizardApiController::class, 'outpaint']);
     Route::post('bfl/remove-bg', [WizardApiController::class, 'removeBg']);

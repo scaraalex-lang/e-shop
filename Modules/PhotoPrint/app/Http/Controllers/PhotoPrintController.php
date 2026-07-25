@@ -69,6 +69,9 @@ class PhotoPrintController extends Controller
 
         return view('photoprint::ricordino-designer', [
             'praticaId' => $defunto->id,
+            // Serve all'invio alla famiglia: il pulsante compare solo quando
+            // una bozza esiste davvero.
+            'ricordinoId' => $ricordino?->id,
             'praticaData' => $defunto->toPraticaData(),
             'agenziaData' => ['name' => $ordine?->agenzia?->ragione_sociale ?? 'MemorAI'],
             'fotoElaborata' => $principale?->url() ?? '/storage/photoprint-demo/test-sacro-cuore.jpg',
