@@ -1,0 +1,180 @@
+<?php
+
+namespace Modules\Commerce\Models;
+
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Modules\Commerce\Enums\MetodoPagamento;
+use Modules\Commerce\Enums\StatoOrdine;
+use Modules\Commerce\Enums\StatoPagamento;
+
+class Ordine extends Model
+{
+    use SoftDeletes;
+
+    protected $table = 'ordini';
+
+    protected $fillable = [
+        'numero', 'user_id', 'agenzia_id',
+        'metodo_pagamento',
+        'totale_pieno', 'totale_merce', 'spedizione', 'totale',
+        'consegna_nome', 'consegna_telefono', 'consegna_indirizzo',
+        'consegna_cap', 'consegna_citta', 'consegna_provincia', 'note',
+        'richiede_lavorazione',
+    ];
+
+    protected $casts = [
+        'stato' => StatoOrdine::class,
+        'metodo_pagamento' => MetodoPagamento::class,
+        'stato_pagamento' => StatoPagamento::class,
+        'pagato_at' => 'datetime',
+        'totale_pieno' => 'integer',
+        'totale_merce' => 'integer',
+        'spedizione' => 'integer',
+        'totale' => 'integer',
+        'richiede_lavorazione' => 'boolean',
+    ];
+
+    protected $attributes = [
+        'stato' => 'nuovo',
+        'stato_pagamento' => 'in_attesa',
+    ];
+
+    public function getRouteKeyName(): string
+    {
+        return 'numero';
+    }
+
+    public function righe(): HasMany
+    {
+        return $this->hasMany(RigaOrdine::class)->orderBy('id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function agenzia(): BelongsTo
+    {
+        return $this->belongsTo(Agenzia::class);
+    }
+
+    public function scopeDi(Builder $query, User $utente): Builder
+    {
+        return $query->where('user_id', $utente->id);
+    }
+
+    /**
+     * Il prossimo numero d'ordine dell'anno: MEM-2026-0001.
+     *
+     * Il conteggio è dentro una transazione con lock: due checkout nello
+     * stesso istante non devono ottenere lo stesso numero.
+     */
+    public static function prossimoNumero(?int $anno = null): string
+    {
+        $anno ??= (int) date('Y');
+
+        $ultimo = DB::table('ordini')
+            ->where('numero', 'like', "MEM-{$anno}-%")
+            ->lockForUpdate()
+            ->orderByDesc('numero')
+            ->value('numero');
+
+        $progressivo = $ultimo ? ((int) substr($ultimo, -4)) + 1 : 1;
+
+        return sprintf('MEM-%d-%04d', $anno, $progressivo);
+    }
+
+    public function risparmio(): int
+    {
+        return $this->totale_pieno - $this->totale_merce;
+    }
+
+    public function haSconti(): bool
+    {
+        return $this->risparmio() > 0;
+    }
+
+    public function pezzi(): int
+    {
+        return (int) $this->righe->sum('quantita');
+    }
+
+    /** Le righe che devono passare dalla lavorazione fotografica. */
+    public function righeDaLavorare(): iterable
+    {
+        return $this->righe->where('richiede_foto', true);
+    }
+
+    /**
+     * L'ordine è ancora aperto: è la condizione che tiene in piedi l'accesso
+     * del cliente alla lavorazione e, in seguito, la validità del link di
+     * approvazione mandato alla famiglia.
+     */
+    public function aperto(): bool
+    {
+        return ! $this->stato->concluso();
+    }
+
+    /**
+     * Il cliente può entrare nella lavorazione fotografica di questo ordine.
+     *
+     * È la condizione che apre gli editor a chi ha comprato: non "sei
+     * un'agenzia", ma "hai un ordine aperto che ha bisogno di questa
+     * lavorazione". Vale identica per il privato e per l'agenzia.
+     */
+    public function lavorazioneApribile(): bool
+    {
+        return $this->richiede_lavorazione
+            && $this->aperto()
+            && $this->stato !== StatoOrdine::Nuovo;
+    }
+
+    public function registraPagamento(string $riferimento): void
+    {
+        $this->forceFill([
+            'stato_pagamento' => StatoPagamento::Pagato,
+            'pagato_at' => Carbon::now(),
+            'riferimento_pagamento' => $riferimento,
+        ])->save();
+    }
+
+    public function segnaPagamentoFallito(): void
+    {
+        $this->forceFill(['stato_pagamento' => StatoPagamento::Fallito])->save();
+    }
+
+    public function passaA(StatoOrdine $stato): void
+    {
+        $this->forceFill(['stato' => $stato])->save();
+    }
+
+    /**
+     * Dove va l'ordine appena confermato: in lavorazione se c'è una foto da
+     * preparare, altrimenti dritto in produzione.
+     */
+    public function avvia(): void
+    {
+        $this->passaA($this->richiede_lavorazione ? StatoOrdine::InLavorazione : StatoOrdine::InProduzione);
+    }
+
+    /** Le tappe del tracciamento, con quella raggiunta. */
+    public function percorso(): array
+    {
+        $tappe = StatoOrdine::percorso($this->richiede_lavorazione);
+        $indice = array_search($this->stato, $tappe, true);
+
+        return array_map(fn ($tappa, $i) => [
+            'stato' => $tappa,
+            'fatta' => $indice !== false && $i <= $indice,
+            'attuale' => $tappa === $this->stato,
+        ], $tappe, array_keys($tappe));
+    }
+}

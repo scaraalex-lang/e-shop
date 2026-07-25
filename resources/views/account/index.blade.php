@@ -13,14 +13,8 @@
             [
                 'titolo' => 'I miei ordini',
                 'testo'  => 'Stato di lavorazione, spedizioni e storico degli acquisti.',
-                'azione' => 'Presto disponibile',
-                'href'   => null,
-            ],
-            [
-                'titolo' => 'Le mie bozze',
-                'testo'  => 'I ricordini in lavorazione, pronti da rivedere e approvare.',
-                'azione' => 'Presto disponibile',
-                'href'   => null,
+                'azione' => 'Vedi gli ordini',
+                'href'   => route('ordini'),
             ],
             [
                 'titolo' => 'Profilo e accesso',

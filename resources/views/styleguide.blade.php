@@ -149,7 +149,7 @@
                     :prezzo="$p->price"
                     :badge="$badge"
                     :immagine="$p->primaryImage ? asset('storage/'.$p->primaryImage->path) : null"
-                    href="#" />
+                    :href="route('prodotto', $p->slug)" />
             @empty
                 <p class="col-span-full font-sans text-testo-soft">
                     Nessun prodotto nel catalogo. Esegui il seeder del modulo Catalog.

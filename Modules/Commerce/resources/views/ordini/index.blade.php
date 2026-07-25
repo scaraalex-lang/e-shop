@@ -1,0 +1,53 @@
+@extends('layouts.account')
+
+@section('title', 'I miei ordini — MemorAI')
+@section('titolo', 'I miei ordini')
+@section('sottotitolo', 'Ogni ordine con il suo stato, dalla conferma alla consegna.')
+
+@section('account')
+@if ($ordini->isEmpty())
+    <div class="border border-caffe/15 bg-panna/50 px-8 py-14 text-center">
+        <p class="font-serif text-2xl">Non hai ancora ordinato nulla</p>
+        <p class="mt-3 font-sans font-light text-[15px] text-testo-soft">
+            Quando farai il primo ordine lo troverai qui, con tutti i passaggi.
+        </p>
+        <div class="mt-8">
+            <x-button :href="url('/')">Sfoglia le collezioni</x-button>
+        </div>
+    </div>
+@else
+    <div class="border border-caffe/15">
+        @foreach ($ordini as $ordine)
+            <article class="flex flex-wrap items-center gap-x-8 gap-y-3 px-6 py-5
+                            border-b border-caffe/10 last:border-b-0
+                            hover:bg-panna/40 transition-colors duration-200">
+                <div class="min-w-[9rem]">
+                    <a href="{{ route('ordine', $ordine) }}"
+                       class="font-serif text-lg text-testo hover:text-oro-scuro transition-colors duration-300 tabular-nums">
+                        {{ $ordine->numero }}
+                    </a>
+                    <p class="mt-0.5 font-sans font-light text-[12px] text-testo-soft tabular-nums">
+                        {{ $ordine->created_at->format('d/m/Y') }}
+                    </p>
+                </div>
+
+                <p class="flex-1 min-w-[10rem] font-sans font-light text-[13px] text-testo-soft">
+                    {{ $ordine->righe->count() }} {{ $ordine->righe->count() === 1 ? 'articolo' : 'articoli' }}
+                    · {{ $ordine->pezzi() }} pezzi
+                    @if ($ordine->richiede_lavorazione)
+                        <span class="text-oro-scuro">· con fotografia</span>
+                    @endif
+                </p>
+
+                <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-oro-scuro min-w-[8rem]">
+                    {{ $ordine->stato->etichetta() }}
+                </span>
+
+                <x-prezzo :centesimi="$ordine->totale" class="font-serif text-lg text-right min-w-[6rem]" />
+            </article>
+        @endforeach
+    </div>
+
+    <div class="mt-8">{{ $ordini->links() }}</div>
+@endif
+@endsection

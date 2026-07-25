@@ -37,6 +37,22 @@ class CommerceServiceProvider extends ModuleServiceProvider
     ];
 
     /**
+     * Il driver d'incasso. Oggi c'è solo quello simulato; Stripe si aggiunge
+     * qui senza toccare checkout, ordine o tracciamento.
+     */
+    public function register(): void
+    {
+        parent::register();
+
+        $this->app->bind(
+            \Modules\Commerce\Pagamenti\Pagamento::class,
+            fn () => match (config('commerce.pagamento', 'simulato')) {
+                default => new \Modules\Commerce\Pagamenti\PagamentoSimulato,
+            },
+        );
+    }
+
+    /**
      * Define module schedules.
      * 
      * @param $schedule

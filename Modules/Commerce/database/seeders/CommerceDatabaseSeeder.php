@@ -11,6 +11,8 @@ class CommerceDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            ScaglioniPrezzoSeeder::class,
+        ]);
     }
 }

@@ -33,7 +33,7 @@
                     :prezzo="$p->price"
                     :badge="$badge"
                     :immagine="$p->primaryImage ? asset('storage/'.$p->primaryImage->path) : null"
-                    href="#" />
+                    :href="route('prodotto', $p->slug)" />
             @endforeach
         </div>
     @else

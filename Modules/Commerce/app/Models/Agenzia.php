@@ -95,4 +95,13 @@ class Agenzia extends Model
     {
         return "{$this->indirizzo}, {$this->cap} {$this->citta} ({$this->provincia})";
     }
+
+    /**
+     * Minimo d'ordine in NUMERO DI PEZZI: quello concordato con questa agenzia,
+     * altrimenti il valore generale di configurazione.
+     */
+    public function ordineMinimoPezzi(): int
+    {
+        return $this->ordine_minimo_pezzi ?? (int) config('commerce.ordine_minimo_pezzi', 0);
+    }
 }

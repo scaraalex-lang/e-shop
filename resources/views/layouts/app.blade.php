@@ -76,8 +76,22 @@
                    class="hover:text-oro-scuro transition-colors duration-300">
                     <x-icon.account class="w-5 h-5" />
                 </a>
-                <a href="#" aria-label="Carrello" class="hover:text-oro-scuro transition-colors duration-300">
+                @php
+                    // Legge il carrello senza crearlo: aprire la home non deve
+                    // lasciare una riga a database per ogni visitatore.
+                    $pezziCarrello = app(\Modules\Commerce\Servizi\GestoreCarrello::class)->pezzi();
+                @endphp
+                <a href="{{ route('carrello') }}"
+                   aria-label="Carrello{{ $pezziCarrello ? ": {$pezziCarrello} pezzi" : ' (vuoto)' }}"
+                   class="relative hover:text-oro-scuro transition-colors duration-300">
                     <x-icon.cart class="w-5 h-5" />
+                    @if ($pezziCarrello > 0)
+                        {{-- appoggiato all'angolo dell'icona: più in alto verrebbe
+                             tagliato dal bordo superiore della barra --}}
+                        <span class="absolute -top-1 -right-2 min-w-[1rem] px-1
+                                     bg-oro text-bianco font-sans text-[9px] leading-4
+                                     text-center tabular-nums">{{ $pezziCarrello }}</span>
+                    @endif
                 </a>
             </div>
         </div>

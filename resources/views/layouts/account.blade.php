@@ -13,12 +13,12 @@
     $utente = auth()->user();
 
     $voci = [
-        ['Panoramica', route('account'),         'account'],
-        ['I miei ordini', '#',                   null],
-        ['Le mie bozze', '#',                    null],
+        ['Panoramica', route('account'),  'account'],
+        ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']],
     ];
 
-    // Gli editor compaiono solo a chi può davvero aprirli (vedi AccessoStudio).
+    // Gli editor compaiono solo a chi li apre di mestiere: il cliente ci
+    // arriva dalla lavorazione del proprio ordine (vedi AccessoStudio).
     if ($utente->eStaff() || $utente->eAgenziaApprovata()) {
         $voci[] = ['Studio ricordini', route('studio.ricordino'), 'studio.*'];
     }
@@ -45,7 +45,7 @@
                 <nav aria-label="Menu account" class="mt-6">
                     <ul class="flex flex-col gap-3 font-sans text-[12px] tracking-[0.16em] uppercase">
                         @foreach ($voci as [$voce, $href, $rotta])
-                            @php $attiva = $rotta && request()->routeIs($rotta); @endphp
+                            @php $attiva = $rotta && request()->routeIs(...(array) $rotta); @endphp
                             <li>
                                 <a href="{{ $href }}"
                                    @class([

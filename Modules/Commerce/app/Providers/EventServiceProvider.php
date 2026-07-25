@@ -2,7 +2,9 @@
 
 namespace Modules\Commerce\Providers;
 
+use Illuminate\Auth\Events\Login;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Modules\Commerce\Listeners\UnisciCarrelloOspite;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,11 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<string, array<int, string>>
      */
-    protected $listen = [];
+    protected $listen = [
+        Login::class => [
+            UnisciCarrelloOspite::class,
+        ],
+    ];
 
     /**
      * Indicates if events should be discovered.

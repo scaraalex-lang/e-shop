@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProdottoController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Modules\Catalog\Models\Product;
@@ -46,6 +47,9 @@ Route::get('/categoria/{slug}', function (string $slug) {
 
     return view('categoria', compact('categoria', 'prodotti'));
 })->name('categoria');
+
+// Scheda prodotto: il catalogo descrive, Commerce stabilisce il prezzo.
+Route::get('/prodotto/{slug}', [ProdottoController::class, 'show'])->name('prodotto');
 
 /*
 |--------------------------------------------------------------------------
