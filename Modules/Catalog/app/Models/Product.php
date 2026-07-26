@@ -19,7 +19,7 @@ class Product extends Model
         'price', 'compare_at_price',
         'material', 'color', 'attributes',
         'is_configurable', 'is_photo_printable', 'has_qr_memorial',
-        'is_kit', 'included_units', 'extra_unit_price',
+        'is_kit', 'included_units', 'extra_unit_price', 'crediti',
         'stock', 'is_active', 'sort_order',
     ];
 
@@ -33,6 +33,7 @@ class Product extends Model
         'is_kit'             => 'boolean',
         'included_units'     => 'integer',
         'extra_unit_price'   => 'integer',
+        'crediti'            => 'integer',
         'stock'              => 'integer',
         'is_active'          => 'boolean',
     ];

@@ -34,7 +34,7 @@ class CheckoutController extends Controller
         $utente = $request->user();
         $agenzia = $utente->eAgenziaApprovata() ? $utente->agenzia : null;
 
-        if ($mancante = $this->pezziMancanti($carrello->pezzi(), $agenzia?->ordineMinimoPezzi() ?? 0)) {
+        if (! $carrello->soloCrediti() && ($mancante = $this->pezziMancanti($carrello->pezzi(), $agenzia?->ordineMinimoPezzi() ?? 0))) {
             return redirect()->route('carrello')->with(
                 'stato',
                 "Per il tuo account servono almeno {$mancante['minimo']} pezzi: ne mancano {$mancante['mancano']}.",
@@ -60,7 +60,7 @@ class CheckoutController extends Controller
         $utente = $request->user();
         $agenzia = $utente->eAgenziaApprovata() ? $utente->agenzia : null;
 
-        if ($this->pezziMancanti($carrello->pezzi(), $agenzia?->ordineMinimoPezzi() ?? 0)) {
+        if (! $carrello->soloCrediti() && $this->pezziMancanti($carrello->pezzi(), $agenzia?->ordineMinimoPezzi() ?? 0)) {
             return redirect()->route('carrello');
         }
 

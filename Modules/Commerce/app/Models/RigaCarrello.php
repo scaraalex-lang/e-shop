@@ -32,10 +32,12 @@ class RigaCarrello extends Model
      * Quanti pezzi conta questa riga per il minimo d'ordine B2B.
      *
      * Per un kit la quantità È già il numero di ricordini, quindi vale così
-     * com'è: non si moltiplica per i pezzi inclusi.
+     * com'è: non si moltiplica per i pezzi inclusi. Un pacchetto crediti non
+     * è un pezzo da spedire: non deve contribuire al minimo, altrimenti
+     * un'agenzia non potrebbe mai comprare solo crediti senza un kit.
      */
     public function pezzi(): int
     {
-        return $this->quantita;
+        return $this->product?->crediti ? 0 : $this->quantita;
     }
 }

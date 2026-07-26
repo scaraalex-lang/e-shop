@@ -5,6 +5,7 @@ namespace Modules\PhotoPrint\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Modules\Catalog\Models\Product;
 use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
 
@@ -43,9 +44,16 @@ class PraticheController extends Controller
 
         $defunti = Defunto::whereIn('id', $ordini->pluck('defunto_id')->filter())->get()->keyBy('id');
 
+        // I crediti sono un percorso solo per le agenzie: accesso ai servizi
+        // editor senza comprare un kit. Il consumo non è ancora costruito,
+        // qui si vede solo il saldo e si compra la ricarica.
+        $agenzia = $utente->agenzia;
+
         return view('photoprint::pratiche.index', [
             'ordini' => $ordini,
             'defunti' => $defunti,
+            'creditiSaldo' => $agenzia?->creditiSaldo(),
+            'prodottoCrediti' => $agenzia ? Product::active()->where('sku', 'SRV-CREDITI-100')->first() : null,
         ]);
     }
 }

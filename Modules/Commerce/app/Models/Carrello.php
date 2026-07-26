@@ -38,6 +38,16 @@ class Carrello extends Model
     }
 
     /**
+     * Solo pacchetti crediti, nessun pezzo fisico: il minimo d'ordine B2B non
+     * si applica, non c'è niente da spedire in blocco (vedi CheckoutController).
+     */
+    public function soloCrediti(): bool
+    {
+        return $this->righe->isNotEmpty()
+            && $this->righe->every(fn (RigaCarrello $r) => (bool) $r->product?->crediti);
+    }
+
+    /**
      * Il conto del carrello con il listino di questo account: righe, costi e
      * totali, calcolati una volta sola e con una sola query sugli scaglioni.
      */

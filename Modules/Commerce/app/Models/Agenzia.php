@@ -5,6 +5,7 @@ namespace Modules\Commerce\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -41,6 +42,20 @@ class Agenzia extends Model
     public function user(): HasOne
     {
         return $this->hasOne(User::class);
+    }
+
+    public function movimentiCredito(): HasMany
+    {
+        return $this->hasMany(MovimentoCredito::class);
+    }
+
+    /**
+     * Il saldo crediti: somma della storia dei movimenti, mai un numero a
+     * parte da tenere sincronizzato a mano (vedi [[MovimentoCredito]]).
+     */
+    public function creditiSaldo(): int
+    {
+        return (int) $this->movimentiCredito()->sum('quantita');
     }
 
     /**

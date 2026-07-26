@@ -40,6 +40,29 @@
     <div class="mt-8">{{ $ordini->links() }}</div>
 @endif
 
+@if (! is_null($creditiSaldo))
+    {{-- ============ crediti (solo agenzia) ============ --}}
+    <div class="mt-10 border border-caffe/15 bg-panna/40 px-6 py-5">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <p class="font-sans text-[11px] tracking-[0.2em] uppercase text-oro-scuro">Crediti servizi</p>
+                <p class="mt-1 font-serif text-2xl tabular-nums">{{ $creditiSaldo }}</p>
+                <p class="mt-1 font-sans font-light text-[12px] text-testo-soft">
+                    Per usare Ricordino Designer e necrologio senza comprare un kit fisico.
+                </p>
+            </div>
+            @if ($prodottoCrediti)
+                <form method="POST" action="{{ route('carrello.aggiungi') }}">
+                    @csrf
+                    <input type="hidden" name="product_id" value="{{ $prodottoCrediti->id }}">
+                    <input type="hidden" name="quantita" value="1">
+                    <x-button type="submit">Ricarica crediti</x-button>
+                </form>
+            @endif
+        </div>
+    </div>
+@endif
+
 <div class="mt-10 border-t border-caffe/10 pt-6">
     <p class="font-sans font-light text-[12px] text-testo-soft">
         Solo per una prova rapida, senza una pratica vera:

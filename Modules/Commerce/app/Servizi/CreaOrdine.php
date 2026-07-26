@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Modules\Commerce\Enums\MetodoPagamento;
 use Modules\Commerce\Models\Carrello;
+use Modules\Commerce\Models\MovimentoCredito;
 use Modules\Commerce\Models\Ordine;
 use Modules\Commerce\Prezzi\Listino;
 use Modules\Commerce\Prezzi\VoceConto;
@@ -70,6 +71,20 @@ class CreaOrdine
                     'sconto_percentuale' => $voce->prezzo->scaglione?->sconto_percentuale,
                     'richiede_foto' => (bool) $prodotto->is_photo_printable,
                 ]);
+
+                // Pacchetto crediti: accredita subito, come richiede_foto —
+                // qui non c'è un incasso da aspettare, la fattura a termini è
+                // già un credito di fiducia verso l'agenzia in tutto il resto
+                // del checkout. Un privato che comprasse questo SKU (oggi non
+                // linkato da nessuna parte) non ha un'agenzia: niente da accreditare.
+                if ($agenzia && $prodotto->crediti) {
+                    MovimentoCredito::create([
+                        'agenzia_id' => $agenzia->id,
+                        'ordine_id' => $ordine->id,
+                        'quantita' => $prodotto->crediti * $voce->riga->quantita,
+                        'causale' => "Acquisto: {$prodotto->name}",
+                    ]);
+                }
             }
 
             // Il carrello ha finito il suo compito: se restasse pieno, il
