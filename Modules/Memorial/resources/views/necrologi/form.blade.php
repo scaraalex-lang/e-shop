@@ -30,7 +30,7 @@
                                    focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40">
                         <option value="">— scegli —</option>
                         @foreach ($defunti as $d)
-                            <option value="{{ $d->id }}" @selected(old('defunto_id') == $d->id)>{{ $d->nomeCompleto() }}</option>
+                            <option value="{{ $d->id }}" @selected(old('defunto_id', $defuntoPreselezionato) == $d->id)>{{ $d->nomeCompleto() }}</option>
                         @endforeach
                     </select>
                     <x-input-error :messages="$errors->get('defunto_id')" />
@@ -87,6 +87,33 @@
     </section>
 
     @unless ($nuovo)
+        {{-- ============ card social ============ --}}
+        <section class="bg-bianco px-7 py-8">
+            <h2 class="font-serif text-2xl font-medium">La card</h2>
+            <p class="mt-2 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+                Quello che si vede su WhatsApp e Facebook prima ancora di aprire il link.
+            </p>
+
+            <div class="mt-5 flex flex-wrap items-end gap-6">
+                @if ($necrologio->og_image)
+                    <img src="{{ asset('storage/'.$necrologio->og_image) }}" alt="Anteprima della card"
+                         class="h-40 w-auto border border-caffe/15">
+                @else
+                    <div class="flex h-40 w-32 items-center justify-center border border-dashed border-caffe/25 bg-panna/40
+                                font-sans text-[11px] text-testo-soft text-center px-3">
+                        Nessuna card ancora
+                    </div>
+                @endif
+
+                <a href="{{ route('necrologi.designer', $necrologio) }}"
+                   class="inline-flex items-center justify-center font-sans uppercase text-[11px]
+                          tracking-[0.2em] px-6 py-3 bg-caffe text-bianco
+                          hover:bg-oro-scuro transition-colors duration-300">
+                    {{ $necrologio->og_image ? 'Modifica la card' : 'Disegna la card' }}
+                </a>
+            </div>
+        </section>
+
         {{-- ============ consenso ============ --}}
         <section class="bg-bianco px-7 py-8">
             <div class="flex flex-wrap items-baseline justify-between gap-3">

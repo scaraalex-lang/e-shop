@@ -3,12 +3,16 @@
 namespace Modules\Memorial\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\Necrologio;
+use Modules\Memorial\Models\NecrologioCardTemplate;
 
 /**
  * I necrologi visti dall'agenzia che li pubblica.
@@ -33,9 +37,13 @@ class NecrologiController extends Controller
     public function create(Request $request): View
     {
         return view('memorial::necrologi.form', [
-            'necrologio' => new Necrologio,
+            // Il Ricordino Designer arriva qui con ?defunto_id=&testo= quando
+            // non trova ancora un necrologio per quel defunto (vedi
+            // esistePerDefunto): precompila invece di far ricopiare a mano.
+            'necrologio' => new Necrologio(['testo' => $request->query('testo')]),
             'defunti' => $this->defuntiDisponibili($request),
             'agenzia' => $this->agenzia($request),
+            'defuntoPreselezionato' => $request->integer('defunto_id') ?: null,
         ]);
     }
 
@@ -154,6 +162,156 @@ class NecrologiController extends Controller
             ->with('stato', 'Pagina ritirata. Ricorda: quello che è già stato condiviso resta nelle chat.');
     }
 
+    /**
+     * Il card designer: disegna e salva come file l'anteprima social.
+     *
+     * WhatsApp e Facebook non eseguono JavaScript, quindi non basta comporre
+     * la card a video: serve un PNG pronto a un indirizzo. La foto di
+     * partenza è la stessa usata come anteprima predefinita alla creazione.
+     */
+    public function designer(Request $request, Necrologio $necrologio): View
+    {
+        $this->soloSuo($request, $necrologio);
+        $necrologio->load('defunto');
+
+        $fotoPrincipale = $this->immaginePredefinita($necrologio->defunto);
+
+        return view('memorial::necrologi.card-designer', [
+            'necrologio' => $necrologio,
+            'defunto' => $necrologio->defunto,
+            'templates' => NecrologioCardTemplate::where('agenzia_id', $this->agenzia($request)->id)->latest()->get(),
+            'fotoPrincipale' => $fotoPrincipale ? '/storage/'.ltrim($fotoPrincipale, '/') : null,
+        ]);
+    }
+
+    public function templatesIndex(Request $request): JsonResponse
+    {
+        $templates = NecrologioCardTemplate::where('agenzia_id', $this->agenzia($request)->id)
+            ->latest()
+            ->get()
+            ->map(fn (NecrologioCardTemplate $t) => ['id' => $t->id, 'nome' => $t->nome, 'url' => $t->url()]);
+
+        return response()->json($templates);
+    }
+
+    public function templatesStore(Request $request): JsonResponse
+    {
+        $agenzia = $this->agenzia($request);
+
+        $dati = $request->validate([
+            'nome' => ['required', 'string', 'max:100'],
+            'template' => ['required', 'image', 'mimes:png', 'max:8192'],
+        ], [
+            'template.mimes' => 'Il template dev\'essere un PNG.',
+        ]);
+
+        $template = NecrologioCardTemplate::create([
+            'agenzia_id' => $agenzia->id,
+            'nome' => $dati['nome'],
+            'path' => $request->file('template')->store('necrologi/card-templates', 'public'),
+        ]);
+
+        return response()->json(['success' => true, 'id' => $template->id, 'nome' => $template->nome, 'url' => $template->url()]);
+    }
+
+    public function templatesDestroy(Request $request, NecrologioCardTemplate $template): JsonResponse
+    {
+        abort_unless($template->agenzia_id === $this->agenzia($request)->id, 403);
+
+        Storage::disk('public')->delete($template->path);
+        $template->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Salva il PNG composto sul canvas come `og_image` del necrologio.
+     *
+     * Nome file nuovo a ogni salvataggio (non si riscrive lo stesso path):
+     * WhatsApp e Facebook mettono in cache l'anteprima per indirizzo, quindi
+     * un file rifatto con lo stesso nome rischia di restare quello vecchio
+     * negli occhi di chi ha già aperto il link una volta.
+     */
+    public function salvaCard(Request $request, Necrologio $necrologio): JsonResponse
+    {
+        $this->soloSuo($request, $necrologio);
+
+        $dati = $request->validate(['image_data' => ['required', 'string']]);
+
+        if (! preg_match('/^data:image\/png;base64,(.+)$/', $dati['image_data'], $m)) {
+            abort(422, 'Immagine non valida.');
+        }
+
+        $binario = base64_decode($m[1], true);
+        abort_if($binario === false, 422, 'Immagine non valida.');
+
+        $vecchia = $necrologio->og_image;
+
+        $path = 'necrologi/og-image/'.$necrologio->id.'-'.Str::lower(Str::random(8)).'.png';
+        Storage::disk('public')->put($path, $binario);
+
+        $necrologio->update(['og_image' => $path]);
+
+        if ($vecchia) {
+            Storage::disk('public')->delete($vecchia);
+        }
+
+        return response()->json(['success' => true, 'url' => '/storage/'.$path]);
+    }
+
+    /**
+     * Il Ricordino Designer chiede questo prima di offrire "aggiorna la
+     * preghiera nel necrologio": dice solo se QUESTA agenzia ne ha già uno
+     * per questo defunto, così il designer sa se aggiornarlo o mandare a
+     * crearne uno nuovo.
+     */
+    public function esistePerDefunto(Request $request, Defunto $defunto): JsonResponse
+    {
+        $necrologio = Necrologio::where('defunto_id', $defunto->id)
+            ->where('agenzia_id', $this->agenzia($request)->id)
+            ->first();
+
+        return response()->json(['exists' => $necrologio !== null, 'id' => $necrologio?->id]);
+    }
+
+    /**
+     * Il testo in corsivo scritto nel ricordino (letto come preghiera) può
+     * diventare l'annuncio del necrologio dello stesso defunto — ma il
+     * Ricordino Designer chiama questo a ogni bozza salvata, quindi solo se
+     * l'agenzia non ha già scritto il proprio: altrimenti un annuncio curato
+     * verrebbe sovrascritto in silenzio ogni volta che si sposta una foto.
+     *
+     * Chi apre il designer non è detto abbia un'agenzia (privato, staff sulla
+     * pratica di esempio): per loro non esiste un necrologio da aggiornare,
+     * quindi si risponde "niente da fare" invece di un errore — il designer
+     * chiama questo endpoint a ogni salvataggio, non deve rompersi per chi
+     * i necrologi non li usa.
+     */
+    public function salvaPreghiera(Request $request): JsonResponse
+    {
+        $agenzia = $request->user()?->agenzia;
+        if (! $agenzia) {
+            return response()->json(['success' => false]);
+        }
+
+        $dati = $request->validate([
+            'pratica_id' => ['required', 'integer', 'exists:defunti,id'],
+            'prayer' => ['required', 'string', 'max:1500'],
+        ]);
+
+        $necrologio = Necrologio::where('defunto_id', $dati['pratica_id'])
+            ->where('agenzia_id', $agenzia->id)
+            ->first();
+
+        if (! $necrologio || filled($necrologio->testo)) {
+            return response()->json(['success' => false]);
+        }
+
+        $necrologio->update(['testo' => $dati['prayer']]);
+
+        return response()->json(['success' => true]);
+    }
+
     // ---- aiuti ------------------------------------------------------------
 
     private function valida(Request $request, ?Necrologio $necrologio = null): array
@@ -181,10 +339,8 @@ class NecrologiController extends Controller
     }
 
     /**
-     * L'anteprima social di partenza: il ritratto già elaborato.
-     *
-     * Quando ci sarà il card designer sarà lui a comporre la card vera; per
-     * ora una fotografia è già una card valida su WhatsApp.
+     * L'anteprima social di partenza, prima che l'agenzia apra il designer:
+     * il ritratto già elaborato è già una card valida su WhatsApp.
      */
     private function immaginePredefinita(Defunto $defunto): ?string
     {

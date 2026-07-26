@@ -28,6 +28,32 @@ Route::middleware('auth')->prefix('account/necrologi')->name('necrologi.')->grou
     Route::post('{necrologio}/revoca', [NecrologiController::class, 'revoca'])->name('revoca');
     Route::post('{necrologio}/pubblica', [NecrologiController::class, 'pubblica'])->name('pubblica');
     Route::post('{necrologio}/ritira', [NecrologiController::class, 'ritira'])->name('ritira');
+
+    Route::get('{necrologio}/designer', [NecrologiController::class, 'designer'])->name('designer');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Chiamate JS del card designer
+|--------------------------------------------------------------------------
+| Sotto /admin/api/ per la stessa ragione degli editor di PhotoPrint: è il
+| prefisso che le pagine JSON del sistema (401 in JSON, CSRF verificato)
+| riconoscono già in bootstrap/app.php. L'ownership si controlla nel
+| controller, come per il resto dei necrologi — niente AccessoStudio qui:
+| quel middleware ragiona per pratica/ordine, i necrologi ragionano per
+| agenzia.
+*/
+Route::middleware('auth')->prefix('admin/api')->group(function () {
+    Route::get('necrologio-card-templates', [NecrologiController::class, 'templatesIndex']);
+    Route::post('necrologio-card-templates', [NecrologiController::class, 'templatesStore']);
+    Route::delete('necrologio-card-templates/{template}', [NecrologiController::class, 'templatesDestroy']);
+    Route::post('necrologi/{necrologio}/salva-card', [NecrologiController::class, 'salvaCard']);
+
+    // Chiamati anche dal Ricordino Designer (Modules/PhotoPrint): lì "pratica"
+    // è il defunto (PhotoPrintController::ricordinoDesigner passa
+    // $defunto->id come praticaId), non un ordine.
+    Route::get('necrologio-pratica/{defunto}', [NecrologiController::class, 'esistePerDefunto']);
+    Route::post('salva-preghiera', [NecrologiController::class, 'salvaPreghiera']);
 });
 
 /*

@@ -1751,8 +1751,8 @@ function salvaPreghieraNecrologio() {
         });
       } else {
         // Necrologio non esiste - vai alla creazione con dati precompilati
-        var url = '/admin/necrologi/nuovo?pratica_id='+pid;
-        if (prayerText) url += '&prayer='+encodeURIComponent(prayerText);
+        var url = '{{ route('necrologi.nuovo') }}?defunto_id='+pid;
+        if (prayerText) url += '&testo='+encodeURIComponent(prayerText);
         window.location.href = url;
       }
     });
