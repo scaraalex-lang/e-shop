@@ -108,20 +108,29 @@ class RicordinoApiController extends Controller
     // ---- Template di ricordino -------------------------------------------
 
     /**
-     * Elenco dei template salvati. Le chiavi rispecchiano quelle attese dal JS
-     * del designer (name/format/thumbnail/canvas_*), importato da memoraiengine.
+     * Elenco dei template visibili a chi chiama: i globali sempre, i propri
+     * (se ha un'agenzia) in più — vedi [[RicordinoTemplate::scopeVisibiliPer]].
+     * Le chiavi rispecchiano quelle attese dal JS del designer
+     * (name/format/thumbnail/canvas_*), importato da memoraiengine.
      */
-    public function templatesIndex()
+    public function templatesIndex(Request $request)
     {
-        $templates = RicordinoTemplate::inOrdineDiElenco()->get()->map(fn (RicordinoTemplate $t) => [
-            'id'            => $t->id,
-            'name'          => $t->nome,
-            'format'        => $t->formato,
-            'predefinito'   => $t->is_predefinito,
-            'thumbnail'     => $t->anteprimaUrl(),
-            'canvas_fronte' => $t->fronte,
-            'canvas_retro'  => $t->retro,
-        ]);
+        $agenziaId = $request->user()?->agenzia?->id;
+
+        $templates = RicordinoTemplate::visibiliPer($agenziaId)
+            ->inOrdineDiElenco()
+            ->get()
+            ->map(fn (RicordinoTemplate $t) => [
+                'id'            => $t->id,
+                'name'          => $t->nome,
+                'format'        => $t->formato,
+                'predefinito'   => $t->is_predefinito,
+                'globale'       => $t->agenzia_id === null,
+                'editabile'     => $this->editabile($request, $t),
+                'thumbnail'     => $t->anteprimaUrl(),
+                'canvas_fronte' => $t->fronte,
+                'canvas_retro'  => $t->retro,
+            ]);
 
         return response()->json($templates);
     }
@@ -132,9 +141,17 @@ class RicordinoApiController extends Controller
      * Il designer invia i canvas già ripuliti: testi personali riportati a
      * segnaposto e foto del defunto esclusa (vedi canvasTemplateJSON nel
      * blade). Qui si rifiuta solo un template senza alcun contenuto.
+     *
+     * Il proprietario decide chi lo vede: un'agenzia salva nel proprio
+     * archivio, lo staff salva un layout globale (visibile a tutti, ma non
+     * un predefinito MemorAI vero — resta modificabile, la promozione a
+     * predefinito è un'azione a parte). Un privato non ha un archivio
+     * personale: parte da un predefinito, punto.
      */
     public function templatesStore(Request $request)
     {
+        $agenziaId = $this->proprietario($request);
+
         $validated = $request->validate([
             'name'   => ['required', 'string', 'max:120'],
             'format' => ['nullable', 'string', 'in:7x10,6x9'],
@@ -148,11 +165,12 @@ class RicordinoApiController extends Controller
         }
 
         $template = RicordinoTemplate::create([
-            'nome'      => $validated['name'],
-            'formato'   => $validated['format'] ?? '7x10',
-            'fronte'    => $fronte,
-            'retro'     => $retro,
-            'anteprima' => $this->storeDataUrl($request->input('thumbnail'), self::TEMPLATE_DIR),
+            'nome'       => $validated['name'],
+            'formato'    => $validated['format'] ?? '7x10',
+            'agenzia_id' => $agenziaId,
+            'fronte'     => $fronte,
+            'retro'      => $retro,
+            'anteprima'  => $this->storeDataUrl($request->input('thumbnail'), self::TEMPLATE_DIR),
         ]);
 
         return response()->json(['success' => true, 'id' => $template->id]);
@@ -161,13 +179,15 @@ class RicordinoApiController extends Controller
     /**
      * Aggiorna un template esistente col layout corrente (ed eventualmente lo
      * rinomina): è il "salva sopra" dopo aver ritoccato un template applicato.
-     * I predefiniti MemorAI non si sovrascrivono, si duplicano.
+     * I predefiniti MemorAI non si sovrascrivono, si duplicano; il template
+     * di un'altra agenzia (o globale, se non si è staff) non si tocca.
      */
     public function templatesUpdate(Request $request, RicordinoTemplate $template)
     {
         if ($template->is_predefinito) {
             return response()->json(['error' => 'I template predefiniti MemorAI non si modificano: salvalo come nuovo template.'], 403);
         }
+        abort_unless($this->appartieneA($request, $template), 403, 'Questo template non è tuo.');
 
         $validated = $request->validate([
             'name'   => ['required', 'string', 'max:120'],
@@ -203,11 +223,12 @@ class RicordinoApiController extends Controller
     }
 
     /** Elimina un template dell'utente e la sua anteprima. I predefiniti restano. */
-    public function templatesDestroy(RicordinoTemplate $template)
+    public function templatesDestroy(Request $request, RicordinoTemplate $template)
     {
         if ($template->is_predefinito) {
             return response()->json(['error' => 'I template predefiniti MemorAI non si possono eliminare.'], 403);
         }
+        abort_unless($this->appartieneA($request, $template), 403, 'Questo template non è tuo.');
 
         if ($template->anteprima) {
             Storage::disk('public')->delete($template->anteprima);
@@ -218,6 +239,48 @@ class RicordinoApiController extends Controller
     }
 
     // ---- Helper ----------------------------------------------------------
+
+    /**
+     * Chi possiede un nuovo template: un'agenzia salva nel proprio archivio,
+     * lo staff salva un layout globale (`agenzia_id` null, ma NON un
+     * predefinito MemorAI: quello resta solo nel seeder). Un privato non ha
+     * un archivio personale — è la decisione presa per il B2C.
+     */
+    private function proprietario(Request $request): ?int
+    {
+        $user = $request->user();
+
+        if ($user?->eStaff()) {
+            return null;
+        }
+
+        if ($agenzia = $user?->agenzia) {
+            return $agenzia->id;
+        }
+
+        abort(403, 'Serve un account agenzia per salvare un template: un privato parte da un predefinito.');
+    }
+
+    /**
+     * Chi può toccare (modificare/eliminare) un template già esistente: un
+     * globale (`agenzia_id` null) è di staff, il resto è di chi ne è
+     * proprietario. Non entra qui un template `is_predefinito`: quel caso si
+     * ferma prima, in templatesUpdate/templatesDestroy.
+     */
+    private function appartieneA(Request $request, RicordinoTemplate $template): bool
+    {
+        $user = $request->user();
+
+        return $template->agenzia_id === null
+            ? (bool) $user?->eStaff()
+            : $user?->agenzia?->id === $template->agenzia_id;
+    }
+
+    /** Quello che l'elenco espone al designer per decidere se mostrare "elimina". */
+    private function editabile(Request $request, RicordinoTemplate $template): bool
+    {
+        return ! $template->is_predefinito && $this->appartieneA($request, $template);
+    }
 
     private function decodeCanvas($raw): ?array
     {

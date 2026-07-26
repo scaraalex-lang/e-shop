@@ -16,7 +16,7 @@ class RicordinoTemplate extends Model
 {
     protected $table = 'ricordino_templates';
 
-    protected $fillable = ['nome', 'formato', 'is_predefinito', 'sort_order', 'fronte', 'retro', 'anteprima'];
+    protected $fillable = ['nome', 'formato', 'agenzia_id', 'is_predefinito', 'sort_order', 'fronte', 'retro', 'anteprima'];
 
     protected $casts = [
         'fronte'         => 'array',
@@ -31,6 +31,21 @@ class RicordinoTemplate extends Model
     public function scopeInOrdineDiElenco($query)
     {
         return $query->orderByDesc('is_predefinito')->orderBy('sort_order')->orderByDesc('id');
+    }
+
+    /**
+     * Cosa vede chi chiama: i globali (`agenzia_id` null — predefiniti MemorAI
+     * o creati da staff per tutti) sempre; i propri, se ha un'agenzia, si
+     * aggiungono. Quelli di un'altra agenzia restano invisibili — sono
+     * informazione commerciale loro, come per [[Necrologio]].
+     */
+    public function scopeVisibiliPer($query, ?int $agenziaId)
+    {
+        return $query->when(
+            $agenziaId,
+            fn ($q) => $q->where(fn ($q2) => $q2->whereNull('agenzia_id')->orWhere('agenzia_id', $agenziaId)),
+            fn ($q) => $q->whereNull('agenzia_id'),
+        );
     }
 
     /**

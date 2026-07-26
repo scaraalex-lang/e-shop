@@ -1421,9 +1421,12 @@ function loadSavedTemplates() {
       container.innerHTML='<div style="color:var(--gray);font-size:.75rem;font-style:italic;padding:.4rem">Nessun template</div>';
       return;
     }
-    // Predefiniti MemorAI in cima, poi i template salvati dall'utente.
-    const predefiniti = templates.filter(t => t.predefinito);
-    const miei        = templates.filter(t => !t.predefinito);
+    // Globali (predefiniti MemorAI + layout dello staff) in cima, poi i
+    // template salvati dalla propria agenzia. "globale" è agenzia_id=null
+    // lato server: non coincide con "predefinito" (un layout di staff non
+    // ancora promosso è globale ma resta modificabile, da staff).
+    const predefiniti = templates.filter(t => t.globale);
+    const miei        = templates.filter(t => !t.globale);
     container.innerHTML = (predefiniti.length ? gruppoTemplate('Predefiniti MemorAI', predefiniti) : '')
                         + (miei.length ? gruppoTemplate('I miei', miei) : '');
 
@@ -1451,7 +1454,7 @@ function gruppoTemplate(titolo, lista) {
         </div>
         <div style="display:flex;flex-direction:column;gap:2px">
           <button title="Applica al ricordino" onclick="loadSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--ink);color:#fff;cursor:pointer">↓</button>
-          ${t.predefinito ? '' : `<button title="Elimina template" onclick="deleteSavedTemplate(${t.id}, ${_lyEsc(JSON.stringify(t.name))})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>`}
+          ${t.editabile ? `<button title="Elimina template" onclick="deleteSavedTemplate(${t.id}, ${_lyEsc(JSON.stringify(t.name))})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -1505,7 +1508,7 @@ async function saveAsTemplate() {
     return;
   }
 
-  const modificabile = !!templateCorrente && !templateCorrente.predefinito;
+  const modificabile = !!templateCorrente && templateCorrente.editabile;
 
   const azioni = [{ testo: 'Annulla', valore: null, tipo: 'neutro' }];
   if (modificabile) azioni.push({ testo: 'Salva come nuovo', valore: 'nuovo', tipo: 'neutro' });
@@ -1518,7 +1521,7 @@ async function saveAsTemplate() {
     testo = 'Stai lavorando sul template <strong>' + _lyEsc(templateCorrente.name) + '</strong>: puoi aggiornarlo con le modifiche fatte oppure salvarne una copia nuova.';
     nomeIniziale = templateCorrente.name;
   } else if (templateCorrente) {
-    testo = 'I predefiniti MemorAI non si modificano: le tue modifiche diventano un template nuovo, tutto tuo.';
+    testo = 'Questo template non si sovrascrive da qui: le tue modifiche diventano un template nuovo, tutto tuo.';
     nomeIniziale = templateCorrente.name + ' (copia)';
   } else {
     testo = 'Viene salvata solo l\'impaginazione: nome, date, frase e preghiera tornano segnaposto e la foto del defunto non viene inclusa.';
@@ -1554,7 +1557,7 @@ async function saveAsTemplate() {
         modale({ titolo: 'Salvataggio non riuscito', testo: _lyEsc(res.error || 'Riprova fra un momento.') });
         return;
       }
-      templateCorrente = { id: res.id, name: scelta.valore, predefinito: false };
+      templateCorrente = { id: res.id, name: scelta.valore, editabile: true };
       const sez = document.getElementById('acc-template');
       if (sez) sez.open = true;                 // mostra subito dove è finito
       loadSavedTemplates();
@@ -1589,7 +1592,7 @@ async function loadSavedTemplate(id) {
   canvasRetro.loadFromJSON(t.canvas_retro, () => { assicuraSfondo(canvasRetro); riempiConDefunto(canvasRetro); });
   autoZoom();
 
-  templateCorrente = { id: t.id, name: t.name, predefinito: !!t.predefinito };
+  templateCorrente = { id: t.id, name: t.name, editabile: !!t.editabile };
   loadSavedTemplates();                          // evidenzia quello in lavorazione
 }
 
