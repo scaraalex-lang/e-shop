@@ -66,6 +66,19 @@ class Ordine extends Model
         return $this->belongsTo(Agenzia::class);
     }
 
+    /**
+     * Chi può considerare questo ordine "suo" per lavorarci: chi l'ha
+     * comprato, lo staff (lavora su qualunque pratica), o un altro referente
+     * della stessa agenzia — un ordine B2B è dell'agenzia, non del singolo
+     * login che l'ha creato ("un login per agenzia" è tipico, non garantito).
+     */
+    public function diChi(User $utente): bool
+    {
+        return $this->user_id === $utente->id
+            || $utente->eStaff()
+            || ($this->agenzia_id !== null && $utente->agenzia?->id === $this->agenzia_id);
+    }
+
     public function scopeDi(Builder $query, User $utente): Builder
     {
         return $query->where('user_id', $utente->id);

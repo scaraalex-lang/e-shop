@@ -48,7 +48,7 @@ class LavorazioneCorrente
 
         $ordine = Ordine::find($id);
 
-        if (! $ordine || $ordine->user_id !== $utente->id || ! $ordine->lavorazioneApribile()) {
+        if (! $ordine || ! $ordine->diChi($utente) || ! $ordine->lavorazioneApribile()) {
             return null;
         }
 

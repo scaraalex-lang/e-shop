@@ -3,6 +3,7 @@
 namespace Modules\PhotoPrint\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
 use Modules\PhotoPrint\Models\FotoPratica;
@@ -13,14 +14,15 @@ use Modules\PhotoPrint\Servizi\LavorazioneCorrente;
  *
  * Quando si arriva dalla lavorazione di un ordine, lavorano sui dati veri di
  * quella pratica: le foto caricate dal cliente e il defunto dell'ordine.
- * Staff e agenzie che entrano direttamente trovano ancora la pratica di
- * esempio — l'archivio per account è un passo successivo.
+ * Staff e agenzie che entrano senza un ordine in sessione vanno a scegliere
+ * da PraticheController — la pratica di esempio resta un'uscita esplicita
+ * (?demo=1), non più l'atterraggio automatico.
  */
 class PhotoPrintController extends Controller
 {
     public function __construct(private LavorazioneCorrente $lavorazione) {}
 
-    public function fotoManager()
+    public function fotoManager(Request $request)
     {
         if ($ordine = $this->lavorazione->ordine()) {
             $foto = FotoPratica::where('ordine_id', $ordine->id)
@@ -38,6 +40,12 @@ class PhotoPrintController extends Controller
             ]);
         }
 
+        // Senza un ordine in sessione si sceglie da chi ha una pratica vera:
+        // l'atterraggio automatico sulla demo resta un'uscita esplicita.
+        if (! $request->boolean('demo')) {
+            return redirect()->route('pratiche.index');
+        }
+
         return view('photoprint::foto-manager', [
             'praticaId' => 1,
             'nomePratica' => 'Anteprima demo',
@@ -47,9 +55,13 @@ class PhotoPrintController extends Controller
         ]);
     }
 
-    public function ricordinoDesigner()
+    public function ricordinoDesigner(Request $request)
     {
         $ordine = $this->lavorazione->ordine();
+
+        if (! $ordine && ! $request->boolean('demo')) {
+            return redirect()->route('pratiche.index');
+        }
 
         $defunto = $ordine?->defunto_id
             ? Defunto::find($ordine->defunto_id)

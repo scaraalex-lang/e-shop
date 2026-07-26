@@ -117,10 +117,13 @@ class LavorazioneController extends Controller
             ->with('stato', 'Bozza approvata: il tuo ordine va in produzione.');
     }
 
-    /** Un ordine si lavora solo se è il proprio ed è ancora aperto. */
+    /**
+     * Un ordine si lavora solo se è "suo" (proprio, o della propria agenzia,
+     * o si è staff — vedi Ordine::diChi) ed è ancora aperto.
+     */
     private function soloSuo(Request $request, Ordine $ordine): void
     {
-        abort_unless($ordine->user_id === $request->user()->id, 404);
+        abort_unless($ordine->diChi($request->user()), 404);
         abort_unless($ordine->lavorazioneApribile(), 403, 'Questo ordine non è (più) in lavorazione.');
     }
 }

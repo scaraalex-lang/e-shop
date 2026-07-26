@@ -24,9 +24,10 @@
     }
 
     // Gli editor compaiono solo a chi li apre di mestiere: il cliente ci
-    // arriva dalla lavorazione del proprio ordine (vedi AccessoStudio).
+    // arriva dalla lavorazione del proprio ordine (vedi AccessoStudio). Si
+    // entra dall'archivio delle pratiche, non dritti nel designer.
     if ($utente->eStaff() || $utente->eAgenziaApprovata()) {
-        $voci[] = ['Studio ricordini', route('studio.ricordino'), 'studio.*'];
+        $voci[] = ['Studio ricordini', route('pratiche.index'), ['pratiche.*', 'studio.*']];
     }
 
     $voci[] = ['Profilo e accesso', route('account.profilo'), 'account.profilo'];

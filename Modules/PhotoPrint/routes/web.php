@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\PhotoPrint\Http\Controllers\PhotoPrintController;
+use Modules\PhotoPrint\Http\Controllers\PraticheController;
 use Modules\PhotoPrint\Http\Controllers\WizardApiController;
 use Modules\PhotoPrint\Http\Controllers\RicordinoApiController;
 use Modules\PhotoPrint\Http\Controllers\LavorazioneController;
@@ -33,6 +34,11 @@ Route::post('bozza/{revisione}/modifiche', [BozzaPubblicaController::class, 'chi
 Route::middleware(['auth', AccessoStudio::class])->group(function () {
     Route::get('/studio/foto', [PhotoPrintController::class, 'fotoManager'])->name('studio.foto');
     Route::get('/studio/ricordino', [PhotoPrintController::class, 'ricordinoDesigner'])->name('studio.ricordino');
+
+    // L'archivio delle pratiche: sostituisce l'atterraggio automatico sulla
+    // pratica di esempio quando si entra negli editor senza un ordine in
+    // sessione (vedi PhotoPrintController).
+    Route::get('/studio/pratiche', [PraticheController::class, 'index'])->name('pratiche.index');
 });
 
 /*
