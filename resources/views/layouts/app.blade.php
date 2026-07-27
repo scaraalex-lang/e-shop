@@ -90,7 +90,7 @@
                     <x-icon.search class="w-5 h-5" />
                 </button>
                 <a href="{{ auth()->check() ? route('account') : route('login') }}"
-                   aria-label="{{ auth()->check() ? 'Il mio account' : 'Accedi' }}"
+                   aria-label="{{ auth()->user()?->eStaff() ? 'Area staff' : (auth()->check() ? 'Il mio account' : 'Accedi') }}"
                    class="hover:text-oro-scuro transition-colors duration-300">
                     <x-icon.account class="w-5 h-5" />
                 </a>
