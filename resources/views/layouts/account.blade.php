@@ -12,10 +12,18 @@
 @php
     $utente = auth()->user();
 
-    $voci = [
-        ['Panoramica', route('account'),  'account'],
-        ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']],
-    ];
+    // Lo staff non è un cliente: non fa ordini a se stesso, quindi la voce
+    // non porta al proprio elenco ordini (vuoto) ma al pannello di tutti
+    // gli ordini della piattaforma.
+    $voci = $utente->eStaff()
+        ? [
+            ['Panoramica', route('account'), 'account'],
+            ['Ordini', route('gestione.ordini.index'), ['gestione.ordini.*']],
+        ]
+        : [
+            ['Panoramica', route('account'), 'account'],
+            ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']],
+        ];
 
     // I necrologi sono uno strumento dell'agenzia, non un prodotto: non
     // passano dall'ordine e stanno accanto agli editor.
@@ -44,7 +52,7 @@
         <aside class="lg:w-60 shrink-0">
             <div class="lg:sticky lg:top-[4.5rem]">
                 <span class="font-sans text-[11px] tracking-[0.35em] uppercase text-oro-scuro">
-                    Il mio account
+                    {{ $utente->eStaff() ? 'Area staff' : 'Il mio account' }}
                 </span>
                 <p class="mt-3 font-serif text-2xl leading-tight">{{ auth()->user()->name }}</p>
                 <span class="mt-4 block h-px w-12 bg-oro"></span>
