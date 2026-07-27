@@ -68,7 +68,7 @@ class CreaOrdine
                     'quantita' => $voce->riga->quantita,
                     'prezzo_pieno' => $voce->prezzo->pieno,
                     'prezzo' => $voce->prezzo->scontato,
-                    'sconto_percentuale' => $voce->prezzo->scaglione?->sconto_percentuale,
+                    'sconto_percentuale' => $voce->prezzo->fonteSconto?->sconto_percentuale,
                     'richiede_foto' => (bool) $prodotto->is_photo_printable,
                 ]);
 

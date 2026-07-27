@@ -77,6 +77,27 @@
                 </form>
             </section>
 
+            <section class="bg-bianco px-7 py-7">
+                <h2 class="font-serif text-xl font-medium">Sconto personale</h2>
+                <p class="mt-2 font-sans font-light text-[14px] text-testo-soft">
+                    Una percentuale unica su tutto: se impostata, sostituisce gli scaglioni generici dei singoli prodotti.
+                </p>
+                <form method="POST" action="{{ route('gestione.agenzie.sconto', $agenzia) }}" class="mt-4 flex flex-wrap items-end gap-4">
+                    @csrf
+                    <div>
+                        <x-input-label for="sconto_percentuale" value="Percentuale (vuoto = nessuno)" />
+                        <div class="flex items-center gap-2">
+                            <x-text-input id="sconto_percentuale" type="number" step="0.01" min="0" max="100"
+                                          name="sconto_percentuale" value="{{ $agenzia->sconto_percentuale }}"
+                                          class="w-32" placeholder="es. 12" />
+                            <span class="font-sans text-[14px] text-testo-soft">%</span>
+                        </div>
+                        <x-input-error :messages="$errors->get('sconto_percentuale')" class="mt-2" />
+                    </div>
+                    <x-secondary-button type="submit">Salva</x-secondary-button>
+                </form>
+            </section>
+
             @if ($agenzia->note_interne || $agenzia->motivo_rifiuto)
                 <section class="bg-bianco px-7 py-7">
                     <h2 class="font-serif text-xl font-medium">Annotazioni</h2>

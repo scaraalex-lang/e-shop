@@ -127,7 +127,7 @@ class ListinoTest extends TestCase
 
         $prezzo = $this->listino->perRiga($prodotto, 120, $this->referenteAgenzia());
 
-        $this->assertSame(20.0, (float) $prezzo->scaglione->sconto_percentuale);
+        $this->assertSame(20.0, (float) $prezzo->fonteSconto->sconto_percentuale);
         // 120 x 26,00 = 3.120,00 -> -20% = 2.496,00
         $this->assertSame(249_600, $prezzo->scontato);
     }
@@ -160,5 +160,48 @@ class ListinoTest extends TestCase
 
         $this->assertSame(15_900, $prezzo->pieno);
         $this->assertSame(14_628, $prezzo->scontato);
+    }
+
+    public function test_lagenzia_con_uno_sconto_personale_lo_paga_indipendentemente_dalla_quantita(): void
+    {
+        $prodotto = $this->prodotto();
+        $referente = $this->referenteAgenzia();
+        $referente->agenzia->impostaScontoPersonale(12.0);
+
+        // Anche a 1 pezzo solo, ben sotto qualunque scaglione tipico: 26,00 -> -12% = 22,88
+        $prezzo = $this->listino->perRiga($prodotto, 1, $referente->fresh());
+
+        $this->assertSame(2288, $prezzo->scontato);
+        $this->assertSame('12%', $prezzo->fonteSconto->scontoLeggibile());
+    }
+
+    public function test_lo_sconto_personale_sostituisce_lo_scaglione_generico_non_si_somma(): void
+    {
+        $prodotto = $this->prodotto();
+        ScaglionePrezzo::create([
+            'product_id' => $prodotto->id, 'quantita_minima' => 25, 'sconto_percentuale' => 10,
+        ]);
+        $referente = $this->referenteAgenzia();
+        $referente->agenzia->impostaScontoPersonale(30.0);
+
+        // 25 pezzi raggiungerebbero anche lo scaglione del 10%, ma vince il personale: 650,00 -> -30% = 455,00
+        $prezzo = $this->listino->perRiga($prodotto, 25, $referente->fresh());
+
+        $this->assertSame(45_500, $prezzo->scontato);
+        $this->assertSame('30%', $prezzo->fonteSconto->scontoLeggibile());
+    }
+
+    public function test_senza_sconto_personale_lagenzia_continua_a_usare_gli_scaglioni(): void
+    {
+        $prodotto = $this->prodotto();
+        ScaglionePrezzo::create([
+            'product_id' => $prodotto->id, 'quantita_minima' => 25, 'sconto_percentuale' => 10,
+        ]);
+        $referente = $this->referenteAgenzia(); // sconto_percentuale resta null
+
+        $prezzo = $this->listino->perRiga($prodotto, 25, $referente->fresh());
+
+        $this->assertSame(58_500, $prezzo->scontato);
+        $this->assertInstanceOf(ScaglionePrezzo::class, $prezzo->fonteSconto);
     }
 }

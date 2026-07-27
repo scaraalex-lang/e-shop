@@ -27,13 +27,15 @@ class Agenzia extends Model
     ];
 
     /**
-     * Stato, note interne e agente non sono mai assegnabili in massa:
-     * cambiano solo dai metodi qui sotto, che tengono traccia di chi e quando.
+     * Stato, note interne, agente e sconto personale non sono mai
+     * assegnabili in massa: cambiano solo dai metodi qui sotto, che tengono
+     * traccia di chi e quando.
      */
     protected $casts = [
         'stato' => StatoAgenzia::class,
         'stato_aggiornato_at' => 'datetime',
         'ordine_minimo_pezzi' => 'integer',
+        'sconto_percentuale' => 'decimal:2',
     ];
 
     protected $attributes = [
@@ -59,6 +61,16 @@ class Agenzia extends Model
     public function assegnaAgente(?AgenteVendita $agente): void
     {
         $this->forceFill(['agente_vendita_id' => $agente?->id])->save();
+    }
+
+    /**
+     * La percentuale personale di questa agenzia: sostituisce gli scaglioni
+     * generici sul prodotto (vedi Listino::scontoApplicabile), non si somma.
+     * Null per tornare agli scaglioni standard.
+     */
+    public function impostaScontoPersonale(?float $percentuale): void
+    {
+        $this->forceFill(['sconto_percentuale' => $percentuale])->save();
     }
 
     /**

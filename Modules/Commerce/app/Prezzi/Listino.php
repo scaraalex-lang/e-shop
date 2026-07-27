@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Modules\Catalog\Models\Product;
 use Modules\Commerce\Models\ScaglionePrezzo;
+use Modules\Commerce\Prezzi\Contracts\FonteSconto;
 
 /**
  * Quanto costa un prodotto, a questa quantità, per questo account.
@@ -13,10 +14,13 @@ use Modules\Commerce\Models\ScaglionePrezzo;
  * Un unico posto in cui si decide un prezzo. Vetrina, carrello e (a breve)
  * ordine passano tutti di qui: se la regola cambia, cambia in un punto solo.
  *
- * Due regole di business, in quest'ordine:
+ * Tre regole di business, in quest'ordine:
  *  1. il prezzo pieno lo calcola il prodotto — è lui a sapere se è un kit e
  *     quanti pezzi comprende (Product::priceForQuantity);
- *  2. lo sconto a scaglioni si applica sopra, e SOLO a un'agenzia approvata.
+ *  2. se l'agenzia ha una percentuale personale, è quella a valere — SOSTITUISCE
+ *     gli scaglioni generici, non si somma (deciso col committente);
+ *  3. altrimenti si applica lo sconto a scaglioni del prodotto, e SOLO a
+ *     un'agenzia approvata.
  *
  * Tutti i conti sono in aritmetica intera sui centesimi: la percentuale entra
  * come centesimi di punto, così il denaro non passa mai da un float.
@@ -31,15 +35,33 @@ class Listino
         $quantita = max($quantita, 0);
         $pieno = $prodotto->priceForQuantity($quantita);
 
-        $scaglione = $this->scaglioneApplicabile($prodotto, $quantita, $utente);
+        $fonte = $this->scontoApplicabile($prodotto, $quantita, $utente);
 
-        if (! $scaglione) {
+        if (! $fonte) {
             return Prezzo::senzaSconto($pieno);
         }
 
-        $scontato = intdiv($pieno * (10_000 - $scaglione->scontoInCentesimiDiPunto()), 10_000);
+        $scontato = intdiv($pieno * (10_000 - $fonte->scontoInCentesimiDiPunto()), 10_000);
 
-        return new Prezzo($pieno, $scontato, $scaglione);
+        return new Prezzo($pieno, $scontato, $fonte);
+    }
+
+    /**
+     * La fonte di sconto che vale per questa riga: prima lo sconto personale
+     * dell'agenzia (se impostato), altrimenti lo scaglione generico più
+     * vantaggioso. Null se l'account non ha diritto alle condizioni riservate.
+     */
+    private function scontoApplicabile(Product $prodotto, int $quantita, ?User $utente): ?FonteSconto
+    {
+        if (! $this->condizioniRiservate($utente)) {
+            return null;
+        }
+
+        if ($percentuale = $utente?->agenzia?->sconto_percentuale) {
+            return new ScontoAgenzia($percentuale);
+        }
+
+        return $this->scaglioneApplicabile($prodotto, $quantita, $utente);
     }
 
     /**

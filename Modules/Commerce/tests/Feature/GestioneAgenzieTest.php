@@ -185,6 +185,28 @@ class GestioneAgenzieTest extends TestCase
             ->assertRedirect(route('account'));
     }
 
+    public function test_lo_staff_imposta_lo_sconto_personale_di_unagenzia(): void
+    {
+        $agenzia = $this->agenziaConReferente();
+
+        $this->actingAs($this->staff())
+            ->post(route('gestione.agenzie.sconto', $agenzia), ['sconto_percentuale' => '12.5'])
+            ->assertRedirect(route('gestione.agenzie.show', $agenzia));
+
+        $this->assertSame('12.50', (string) $agenzia->fresh()->sconto_percentuale);
+    }
+
+    public function test_lo_staff_rimuove_lo_sconto_personale_lasciando_vuoto_il_campo(): void
+    {
+        $agenzia = $this->agenziaConReferente();
+        $agenzia->impostaScontoPersonale(15.0);
+
+        $this->actingAs($this->staff())
+            ->post(route('gestione.agenzie.sconto', $agenzia), ['sconto_percentuale' => '']);
+
+        $this->assertNull($agenzia->fresh()->sconto_percentuale);
+    }
+
     public function test_il_comando_promuove_a_staff(): void
     {
         $user = User::factory()->create(['email' => 'staff@memorai.test']);

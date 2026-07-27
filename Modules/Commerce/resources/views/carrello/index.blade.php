@@ -70,7 +70,7 @@
 
                         @if ($voce->prezzo->haSconto())
                             <p class="mt-2 font-sans text-[11px] tracking-[0.18em] uppercase text-successo">
-                                Sconto agenzia −{{ $voce->prezzo->scaglione->scontoLeggibile() }}
+                                Sconto agenzia −{{ $voce->prezzo->fonteSconto->scontoLeggibile() }}
                             </p>
                         @endif
 

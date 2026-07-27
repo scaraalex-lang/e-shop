@@ -65,6 +65,7 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
     Route::post('agenzie/{agenzia}/rifiuta', [GestioneAgenzieController::class, 'rifiuta'])->name('agenzie.rifiuta');
     Route::post('agenzie/{agenzia}/sospendi', [GestioneAgenzieController::class, 'sospendi'])->name('agenzie.sospendi');
     Route::post('agenzie/{agenzia}/agente', [GestioneAgenzieController::class, 'assegnaAgente'])->name('agenzie.agente');
+    Route::post('agenzie/{agenzia}/sconto', [GestioneAgenzieController::class, 'impostaSconto'])->name('agenzie.sconto');
 
     Route::get('agenti', [GestioneAgentiController::class, 'index'])->name('agenti.index');
     Route::get('agenti/nuovo', [GestioneAgentiController::class, 'create'])->name('agenti.create');

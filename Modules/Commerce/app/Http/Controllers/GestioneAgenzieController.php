@@ -125,6 +125,22 @@ class GestioneAgenzieController extends Controller
             ->with('stato', "Richiesta di {$agenzia->ragione_sociale} non approvata.");
     }
 
+    public function impostaSconto(Request $request, Agenzia $agenzia): RedirectResponse
+    {
+        $dati = $request->validate([
+            'sconto_percentuale' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $percentuale = $dati['sconto_percentuale'] ?? null;
+        $agenzia->impostaScontoPersonale($percentuale !== null ? (float) $percentuale : null);
+
+        return redirect()
+            ->route('gestione.agenzie.show', $agenzia)
+            ->with('stato', $percentuale !== null
+                ? "Sconto personale impostato al {$percentuale}%."
+                : 'Sconto personale rimosso: torna agli scaglioni generici.');
+    }
+
     public function sospendi(Request $request, Agenzia $agenzia): RedirectResponse
     {
         $dati = $request->validate([

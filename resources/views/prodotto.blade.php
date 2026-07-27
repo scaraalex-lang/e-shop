@@ -88,7 +88,7 @@
                 @if ($prezzo->haSconto())
                     <x-prezzo :centesimi="$prezzo->pieno" barrato class="font-sans text-lg" />
                     <span class="font-sans text-[11px] tracking-[0.2em] uppercase text-successo">
-                        Riservato agenzie · −{{ $prezzo->scaglione->scontoLeggibile() }}
+                        Riservato agenzie · −{{ $prezzo->fonteSconto->scontoLeggibile() }}
                     </span>
                 @elseif ($prodotto->compare_at_price)
                     <x-prezzo :centesimi="$prodotto->compare_at_price" barrato class="font-sans text-lg" />
