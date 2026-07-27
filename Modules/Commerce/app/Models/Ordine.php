@@ -169,6 +169,13 @@ class Ordine extends Model
         $this->forceFill(['stato' => $stato])->save();
     }
 
+    /** Lo staff segna la spedizione: corriere e tracking insieme al passaggio di stato. */
+    public function spedisci(string $corriere, string $trackingNumero): void
+    {
+        $this->forceFill(['corriere' => $corriere, 'tracking_numero' => $trackingNumero])->save();
+        $this->passaA(StatoOrdine::Spedito);
+    }
+
     /**
      * Dove va l'ordine appena confermato: in lavorazione se c'è una foto da
      * preparare, altrimenti dritto in produzione.

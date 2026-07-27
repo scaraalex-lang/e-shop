@@ -5,6 +5,7 @@ use Modules\Commerce\Http\Controllers\CarrelloController;
 use Modules\Commerce\Http\Controllers\CheckoutController;
 use Modules\Commerce\Http\Controllers\GestioneAgentiController;
 use Modules\Commerce\Http\Controllers\GestioneAgenzieController;
+use Modules\Commerce\Http\Controllers\GestioneOrdiniController;
 use Modules\Commerce\Http\Controllers\OrdiniController;
 use Modules\Commerce\Http\Controllers\RegistrazioneAgenziaController;
 
@@ -73,4 +74,9 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
     Route::get('agenti/{agente}/modifica', [GestioneAgentiController::class, 'edit'])->name('agenti.edit');
     Route::put('agenti/{agente}', [GestioneAgentiController::class, 'update'])->name('agenti.update');
     Route::delete('agenti/{agente}', [GestioneAgentiController::class, 'destroy'])->name('agenti.destroy');
+
+    Route::get('ordini', [GestioneOrdiniController::class, 'index'])->name('ordini.index');
+    Route::get('ordini/{ordine}', [GestioneOrdiniController::class, 'show'])->name('ordini.show');
+    Route::post('ordini/{ordine}/spedisci', [GestioneOrdiniController::class, 'spedisci'])->name('ordini.spedisci');
+    Route::post('ordini/{ordine}/consegnato', [GestioneOrdiniController::class, 'segnaConsegnato'])->name('ordini.consegnato');
 });
