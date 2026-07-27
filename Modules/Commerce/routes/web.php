@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Commerce\Http\Controllers\CarrelloController;
 use Modules\Commerce\Http\Controllers\CheckoutController;
+use Modules\Commerce\Http\Controllers\GestioneAgentiController;
 use Modules\Commerce\Http\Controllers\GestioneAgenzieController;
 use Modules\Commerce\Http\Controllers\OrdiniController;
 use Modules\Commerce\Http\Controllers\RegistrazioneAgenziaController;
@@ -63,4 +64,12 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
     Route::post('agenzie/{agenzia}/approva', [GestioneAgenzieController::class, 'approva'])->name('agenzie.approva');
     Route::post('agenzie/{agenzia}/rifiuta', [GestioneAgenzieController::class, 'rifiuta'])->name('agenzie.rifiuta');
     Route::post('agenzie/{agenzia}/sospendi', [GestioneAgenzieController::class, 'sospendi'])->name('agenzie.sospendi');
+    Route::post('agenzie/{agenzia}/agente', [GestioneAgenzieController::class, 'assegnaAgente'])->name('agenzie.agente');
+
+    Route::get('agenti', [GestioneAgentiController::class, 'index'])->name('agenti.index');
+    Route::get('agenti/nuovo', [GestioneAgentiController::class, 'create'])->name('agenti.create');
+    Route::post('agenti', [GestioneAgentiController::class, 'store'])->name('agenti.store');
+    Route::get('agenti/{agente}/modifica', [GestioneAgentiController::class, 'edit'])->name('agenti.edit');
+    Route::put('agenti/{agente}', [GestioneAgentiController::class, 'update'])->name('agenti.update');
+    Route::delete('agenti/{agente}', [GestioneAgentiController::class, 'destroy'])->name('agenti.destroy');
 });

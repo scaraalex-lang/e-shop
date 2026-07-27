@@ -14,6 +14,7 @@
         ['Agenzie', route('gestione.agenzie.index'), 'gestione.agenzie.*'],
         ['Prodotti', route('gestione.prodotti.index'), 'gestione.prodotti.*'],
         ['Kit', route('gestione.kit.index'), 'gestione.kit.*'],
+        ['Agenti', route('gestione.agenti.index'), 'gestione.agenti.*'],
         ['Studio', route('studio.ricordino'), 'studio.*'],
     ];
 @endphp

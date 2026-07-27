@@ -5,6 +5,7 @@ namespace Modules\Commerce\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -26,8 +27,8 @@ class Agenzia extends Model
     ];
 
     /**
-     * Stato e note interne non sono mai assegnabili in massa: cambiano solo
-     * dai metodi qui sotto, che tengono traccia di chi e quando.
+     * Stato, note interne e agente non sono mai assegnabili in massa:
+     * cambiano solo dai metodi qui sotto, che tengono traccia di chi e quando.
      */
     protected $casts = [
         'stato' => StatoAgenzia::class,
@@ -47,6 +48,17 @@ class Agenzia extends Model
     public function movimentiCredito(): HasMany
     {
         return $this->hasMany(MovimentoCredito::class);
+    }
+
+    public function agenteVendita(): BelongsTo
+    {
+        return $this->belongsTo(AgenteVendita::class);
+    }
+
+    /** Chi segue quest'agenzia. Null per toglierlo senza assegnarne un altro. */
+    public function assegnaAgente(?AgenteVendita $agente): void
+    {
+        $this->forceFill(['agente_vendita_id' => $agente?->id])->save();
     }
 
     /**

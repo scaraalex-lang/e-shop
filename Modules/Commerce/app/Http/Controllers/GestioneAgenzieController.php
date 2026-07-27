@@ -12,6 +12,7 @@ use Modules\Commerce\Enums\RuoloUtente;
 use Modules\Commerce\Enums\StatoAgenzia;
 use Modules\Commerce\Http\Requests\RegistrazioneAgenziaRequest;
 use Modules\Commerce\Models\Agenzia;
+use Modules\Commerce\Models\AgenteVendita;
 
 /**
  * Area staff: approvazione manuale delle richieste di account agenzia.
@@ -75,8 +76,26 @@ class GestioneAgenzieController extends Controller
     public function show(Agenzia $agenzia): View
     {
         return view('commerce::gestione.agenzie.show', [
-            'agenzia' => $agenzia->load('user'),
+            'agenzia' => $agenzia->load('user', 'agenteVendita'),
+            'agenti' => AgenteVendita::orderBy('nome')->get(),
         ]);
+    }
+
+    public function assegnaAgente(Request $request, Agenzia $agenzia): RedirectResponse
+    {
+        $dati = $request->validate([
+            'agente_vendita_id' => ['nullable', 'exists:agenti_vendita,id'],
+        ]);
+
+        $agenzia->assegnaAgente(
+            isset($dati['agente_vendita_id']) ? AgenteVendita::find($dati['agente_vendita_id']) : null
+        );
+
+        return redirect()
+            ->route('gestione.agenzie.show', $agenzia)
+            ->with('stato', $agenzia->agenteVendita
+                ? "Agente assegnato: {$agenzia->agenteVendita->nome}."
+                : 'Agente tolto dall\'agenzia.');
     }
 
     public function approva(Request $request, Agenzia $agenzia): RedirectResponse

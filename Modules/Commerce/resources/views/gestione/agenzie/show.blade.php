@@ -56,6 +56,27 @@
                 </dl>
             </section>
 
+            <section class="bg-bianco px-7 py-7">
+                <h2 class="font-serif text-xl font-medium">Agente di vendita</h2>
+                <p class="mt-2 font-sans font-light text-[14px] text-testo-soft">
+                    Chi segue questa agenzia — serve anche per lo sconto personalizzato.
+                </p>
+                <form method="POST" action="{{ route('gestione.agenzie.agente', $agenzia) }}" class="mt-4 flex flex-wrap items-end gap-4">
+                    @csrf
+                    <div class="flex-1 min-w-[12rem]">
+                        <select name="agente_vendita_id"
+                                class="block w-full bg-bianco border border-caffe/25 px-4 py-3 font-sans font-light text-[14px]
+                                       focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40">
+                            <option value="">Nessuno</option>
+                            @foreach ($agenti as $agente)
+                                <option value="{{ $agente->id }}" @selected($agenzia->agente_vendita_id === $agente->id)>{{ $agente->nome }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <x-secondary-button type="submit">Assegna</x-secondary-button>
+                </form>
+            </section>
+
             @if ($agenzia->note_interne || $agenzia->motivo_rifiuto)
                 <section class="bg-bianco px-7 py-7">
                     <h2 class="font-serif text-xl font-medium">Annotazioni</h2>
