@@ -23,9 +23,9 @@
         </div>
     </div>
 
-    {{-- ============ MASTHEAD EDITORIALE (logo, scorre via) ============ --}}
-    <header class="bg-bianco">
-        <div class="mx-auto max-w-7xl px-6 py-8 text-center">
+    {{-- ============ MASTHEAD EDITORIALE (hero con foto, scorre via) ============ --}}
+    <header class="bg-bianco bg-[url('/images/hero.jpg')] bg-cover bg-center bg-no-repeat">
+        <div class="mx-auto max-w-7xl px-6 py-16 md:py-24 text-center">
             <a href="{{ url('/') }}" class="inline-block">
                 <span class="block font-serif text-oro text-4xl md:text-5xl font-medium tracking-[0.35em] leading-none pl-[0.35em]">
                     MemorAI
@@ -34,32 +34,53 @@
                     Articoli · Memoria · Devozione
                 </span>
             </a>
+
+            <a href="#"
+               class="mt-9 inline-flex items-center justify-center gap-2 font-sans uppercase text-[12px] tracking-[0.22em]
+                      px-8 py-3.5 transition-all duration-300 ease-out cursor-pointer select-none
+                      bg-transparent border-2 border-oro text-caffe hover:bg-oro hover:text-bianco">
+                Scopri le collezioni
+            </a>
         </div>
     </header>
 
     {{-- ============ BARRA DI NAVIGAZIONE (sticky) ============ --}}
     {{-- La parte superiore del menu resta sempre visibile durante lo scroll. --}}
+    @php
+        // Condivisa fra il menu inline (da md in su) e il pannello mobile a
+        // tendina: le voci sono le stesse, cambia solo come si aprono.
+        $naveVoci = [
+            ['Trigesimali',   '#'],
+            ['Devozionali',   '#'],
+            ['Photoceramiche','#'],
+            ['Personalizza',  '#'],
+            ['Stampa foto',   '#'],
+            ['QR Memoria',    '#'],
+        ];
+    @endphp
     <nav aria-label="Navigazione principale"
          class="sticky top-0 z-50 bg-bianco/95 backdrop-blur-sm border-y-2 border-caffe">
         <div class="mx-auto max-w-7xl px-6 relative flex items-center justify-center min-h-[3.25rem] py-2">
 
-            {{-- brand compatto (sinistra) --}}
+            {{-- brand compatto (sinistra, da md in su) --}}
             <a href="{{ url('/') }}"
                class="absolute left-6 hidden md:block font-serif text-oro text-lg tracking-[0.2em] pl-[0.2em]">
                 MemorAI
             </a>
 
-            {{-- voci principali (centro) --}}
-            <ul class="flex flex-wrap items-center justify-center gap-x-7 gap-y-1
+            {{-- apri/chiudi il menu (sinistra, sotto md): deve essere visibile
+                 fin da subito, non dietro nessun'altra interazione. --}}
+            <button type="button" id="menu-mobile-toggle" aria-controls="menu-mobile" aria-expanded="false"
+                    aria-label="Apri il menu"
+                    class="absolute left-6 md:hidden text-caffe hover:text-oro-scuro transition-colors duration-300">
+                <x-icon.menu class="w-6 h-6" data-menu-icon-open />
+                <x-icon.close class="w-6 h-6 hidden" data-menu-icon-close />
+            </button>
+
+            {{-- voci principali (centro, da md in su: sotto si passa dal menu a tendina) --}}
+            <ul class="hidden md:flex flex-wrap items-center justify-center gap-x-7 gap-y-1
                        font-sans text-[12px] tracking-[0.16em] uppercase">
-                @foreach ([
-                    ['Trigesimali',   '#'],
-                    ['Devozionali',   '#'],
-                    ['Photoceramiche','#'],
-                    ['Personalizza',  '#'],
-                    ['Stampa foto',   '#'],
-                    ['QR Memoria',    '#'],
-                ] as [$voce, $href])
+                @foreach ($naveVoci as [$voce, $href])
                     <li>
                         <a href="{{ $href }}"
                            class="relative inline-block text-testo hover:text-oro-scuro transition-colors duration-300
@@ -71,8 +92,9 @@
                 @endforeach
             </ul>
 
-            {{-- icone (destra) --}}
-            <div class="absolute right-6 hidden sm:flex items-center gap-4 text-caffe">
+            {{-- icone (destra): sempre visibili, anche da mobile — accesso e
+                 carrello non devono sparire sotto nessuna soglia. --}}
+            <div class="absolute right-6 flex items-center gap-4 text-caffe">
                 <button type="button" aria-label="Cerca" class="hover:text-oro-scuro transition-colors duration-300">
                     <x-icon.search class="w-5 h-5" />
                 </button>
@@ -100,7 +122,43 @@
                 </a>
             </div>
         </div>
+
+        {{-- pannello mobile a tendina: le stesse voci, in colonna --}}
+        <div id="menu-mobile" class="hidden md:hidden border-t border-caffe/15 bg-bianco">
+            <ul class="divide-y divide-caffe/10 font-sans text-[12px] tracking-[0.16em] uppercase">
+                @foreach ($naveVoci as [$voce, $href])
+                    <li>
+                        <a href="{{ $href }}"
+                           class="block px-6 py-3.5 text-testo hover:text-oro-scuro hover:bg-panna/50 transition-colors duration-300">
+                            {{ $voce }}
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
     </nav>
+
+    @push('scripts')
+        <script>
+            // Apre/chiude il menu mobile e scambia l'icona hamburger con la X.
+            (function () {
+                const toggle = document.getElementById('menu-mobile-toggle');
+                const panel = document.getElementById('menu-mobile');
+                if (!toggle || !panel) return;
+
+                const iconApri = toggle.querySelector('[data-menu-icon-open]');
+                const iconChiudi = toggle.querySelector('[data-menu-icon-close]');
+
+                toggle.addEventListener('click', () => {
+                    const aperto = toggle.getAttribute('aria-expanded') === 'true';
+                    toggle.setAttribute('aria-expanded', String(!aperto));
+                    panel.classList.toggle('hidden', aperto);
+                    iconApri.classList.toggle('hidden', !aperto);
+                    iconChiudi.classList.toggle('hidden', aperto);
+                });
+            })();
+        </script>
+    @endpush
 
     {{-- ============ HERO A TUTTA LARGHEZZA (opzionale) ============ --}}
     @yield('hero')
