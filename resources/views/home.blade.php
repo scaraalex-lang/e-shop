@@ -3,17 +3,20 @@
 @section('title', 'MemorAI — Articoli · Memoria · Devozione')
 
 {{-- ============ HERO (a tutta larghezza, sopra la colonna) ============ --}}
+@php
+    use App\Models\ContenutoVetrina;
+@endphp
 @section('hero')
     <x-hero
-        occhiello="Artigianato memoriale dal 2026"
-        sottotitolo="Rosari, corone e ricordini di fattura artigianale, in materiali nobili. Piccoli oggetti da tenere fra le mani e tramandare — mai lutto, sempre cura."
+        :occhiello="ContenutoVetrina::valore('hero.occhiello')"
+        :sottotitolo="ContenutoVetrina::valore('hero.sottotitolo')"
         :immagine="$hero?->primaryImage ? asset('storage/'.$hero->primaryImage->path) : null"
         :immagineAlt="$hero?->name ?? 'MemorAI'"
-        primario="Scopri le collezioni" primarioHref="#"
-        secondario="Personalizza" secondarioHref="#"
+        :primario="ContenutoVetrina::valore('hero.bottone_primario')" :primarioHref="ContenutoVetrina::valore('hero.bottone_primario_url', '#')"
+        :secondario="ContenutoVetrina::valore('hero.bottone_secondario')" :secondarioHref="ContenutoVetrina::valore('hero.bottone_secondario_url', '#')"
         class="border-b-2 border-caffe">
-        Custodire la memoria<br>
-        con <em class="italic text-oro">bellezza</em>
+        {{ ContenutoVetrina::valore('hero.titolo_intro') }}<br>
+        con <em class="italic text-oro">{{ ContenutoVetrina::valore('hero.titolo_enfasi') }}</em>
     </x-hero>
 @endsection
 
@@ -22,9 +25,9 @@
 
     {{-- ============ COLLEZIONI (griglia categorie) ============ --}}
     <section>
-        <x-section-title occhiello="Le collezioni" titolo="Un catalogo curato" allineamento="left" />
+        <x-section-title :occhiello="ContenutoVetrina::valore('collezioni.occhiello')" :titolo="ContenutoVetrina::valore('collezioni.titolo')" allineamento="left" />
         <p class="mt-4 mb-10 max-w-xl font-sans font-light text-testo-soft leading-relaxed">
-            Ogni collezione raccoglie oggetti scelti per bellezza e cura dei dettagli.
+            {{ ContenutoVetrina::valore('collezioni.testo') }}
         </p>
         <x-category-grid />
     </section>
@@ -32,7 +35,7 @@
     {{-- ============ IN EVIDENZA (prodotti reali) ============ --}}
     @if ($evidenza->isNotEmpty())
         <section>
-            <x-section-title occhiello="Dal catalogo" titolo="In evidenza" allineamento="left" />
+            <x-section-title :occhiello="ContenutoVetrina::valore('evidenza.occhiello')" :titolo="ContenutoVetrina::valore('evidenza.titolo')" allineamento="left" />
             <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
                 @foreach ($evidenza as $p)
                     @php
@@ -50,7 +53,7 @@
                 @endforeach
             </div>
             <div class="mt-10">
-                <x-button variant="contornata" href="#">Vedi tutto il catalogo</x-button>
+                <x-button variant="contornata" :href="ContenutoVetrina::valore('evidenza.bottone_url', '#')">Vedi tutto il catalogo</x-button>
             </div>
         </section>
     @endif
@@ -59,19 +62,15 @@
     <section class="bg-panna border-2 border-caffe">
         <div class="px-8 py-14">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
-                @foreach ([
-                    ['Fattura artigianale', 'Ogni pezzo è lavorato e rifinito a mano, in materiali nobili scelti con cura.'],
-                    ['Personalizzazione', 'Ricordini e stampe su misura, con la fotografia e le parole che preferite.'],
-                    ['QR Memoria', 'Una galleria online di foto e ricordi, da arricchire nel tempo, accanto all\'oggetto.'],
-                ] as [$titolo, $testo])
+                @for ($i = 1; $i <= 3; $i++)
                     <div class="flex flex-col items-center">
                         <span class="block h-px w-10 bg-oro mb-6"></span>
-                        <h3 class="font-serif text-2xl text-caffe">{{ $titolo }}</h3>
+                        <h3 class="font-serif text-2xl text-caffe">{{ ContenutoVetrina::valore("valori.{$i}.titolo") }}</h3>
                         <p class="mt-3 font-sans font-light text-[14px] text-testo-soft leading-relaxed max-w-xs">
-                            {{ $testo }}
+                            {{ ContenutoVetrina::valore("valori.{$i}.testo") }}
                         </p>
                     </div>
-                @endforeach
+                @endfor
             </div>
         </div>
     </section>
@@ -79,15 +78,14 @@
     {{-- ============ CTA FINALE ============ --}}
     <section class="text-center py-8">
         <h2 class="font-serif font-medium text-caffe text-4xl md:text-5xl leading-tight">
-            Un ricordo che <em class="italic text-oro">resta</em>
+            {{ ContenutoVetrina::valore('cta.titolo_intro') }} <em class="italic text-oro">{{ ContenutoVetrina::valore('cta.titolo_enfasi') }}</em>
         </h2>
         <p class="mx-auto mt-5 max-w-xl font-sans font-light text-testo-soft text-lg leading-relaxed">
-            Racconta a chi siamo che cosa desideri: ti guideremo nella scelta e nella
-            personalizzazione, con la stessa cura con cui realizziamo ogni oggetto.
+            {{ ContenutoVetrina::valore('cta.testo') }}
         </p>
         <div class="mt-8 flex flex-wrap justify-center gap-4">
-            <x-button variant="piena" href="#">Richiedi assistenza</x-button>
-            <x-button variant="contornata" href="#">Onoranze funebri (B2B)</x-button>
+            <x-button variant="piena" :href="ContenutoVetrina::valore('cta.bottone_primario_url', '#')">{{ ContenutoVetrina::valore('cta.bottone_primario') }}</x-button>
+            <x-button variant="contornata" :href="ContenutoVetrina::valore('cta.bottone_secondario_url', '#')">{{ ContenutoVetrina::valore('cta.bottone_secondario') }}</x-button>
         </div>
     </section>
 

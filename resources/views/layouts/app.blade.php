@@ -18,7 +18,7 @@
     <div class="bg-caffe text-bianco/80 text-[11px] tracking-[0.25em] uppercase">
         <div class="mx-auto max-w-7xl px-6 h-9 flex items-center justify-center text-center">
             <span class="font-sans font-light">
-                Lavorazione artigianale · Spedizione curata in tutta Italia
+                {{ \App\Models\ContenutoVetrina::valore('topbar.testo') }}
             </span>
         </div>
     </div>
@@ -35,11 +35,11 @@
                 </span>
             </a>
 
-            <a href="#"
+            <a href="{{ \App\Models\ContenutoVetrina::valore('hero.bottone_primario_url', '#') }}"
                class="mt-9 inline-flex items-center justify-center gap-2 font-sans uppercase text-[12px] tracking-[0.22em]
                       px-8 py-3.5 transition-all duration-300 ease-out cursor-pointer select-none
                       bg-transparent border-2 border-oro text-caffe hover:bg-oro hover:text-bianco">
-                Scopri le collezioni
+                {{ \App\Models\ContenutoVetrina::valore('hero.bottone_primario', 'Scopri le collezioni') }}
             </a>
         </div>
     </header>
@@ -188,8 +188,7 @@
             <div>
                 <span class="font-serif text-oro text-2xl font-medium tracking-[0.3em] pl-[0.3em]">MemorAI</span>
                 <p class="mt-5 font-sans font-light text-[13px] leading-relaxed text-bianco/60">
-                    Oggetti di memoria e devozione, pensati e realizzati con cura artigianale.
-                    Bellezza che dura, da tramandare.
+                    {{ \App\Models\ContenutoVetrina::valore('footer.testo_brand') }}
                 </p>
             </div>
 

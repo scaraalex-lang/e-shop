@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GestioneContenutiController;
 use App\Http\Controllers\GestioneMenuController;
 use App\Http\Controllers\ProdottoController;
 use App\Http\Controllers\ProfileController;
@@ -80,6 +81,9 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
     Route::get('menu/{voce}/modifica', [GestioneMenuController::class, 'edit'])->name('menu.edit');
     Route::put('menu/{voce}', [GestioneMenuController::class, 'update'])->name('menu.update');
     Route::delete('menu/{voce}', [GestioneMenuController::class, 'destroy'])->name('menu.destroy');
+
+    Route::get('contenuti', [GestioneContenutiController::class, 'edit'])->name('contenuti.edit');
+    Route::put('contenuti', [GestioneContenutiController::class, 'update'])->name('contenuti.update');
 });
 
 require __DIR__.'/auth.php';

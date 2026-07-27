@@ -17,6 +17,7 @@
         ['Kit', route('gestione.kit.index'), 'gestione.kit.*'],
         ['Agenti', route('gestione.agenti.index'), 'gestione.agenti.*'],
         ['Menu', route('gestione.menu.index'), 'gestione.menu.*'],
+        ['Contenuti home', route('gestione.contenuti.edit'), 'gestione.contenuti.*'],
         ['Studio', route('studio.ricordino'), 'studio.*'],
     ];
 @endphp
