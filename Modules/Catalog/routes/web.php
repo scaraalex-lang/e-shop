@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Catalog\Http\Controllers\CatalogController;
+use Modules\Catalog\Http\Controllers\GestioneCategorieController;
 use Modules\Catalog\Http\Controllers\GestioneKitController;
 use Modules\Catalog\Http\Controllers\GestioneProdottiController;
 
@@ -29,4 +30,10 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
     Route::get('kit/{kit:id}', [GestioneKitController::class, 'show'])->name('kit.show');
     Route::post('kit/{kit:id}/componenti', [GestioneKitController::class, 'componentiStore'])->name('kit.componenti.store');
     Route::delete('kit/{kit:id}/componenti/{componente}', [GestioneKitController::class, 'componentiDestroy'])->name('kit.componenti.destroy');
+
+    Route::get('categorie', [GestioneCategorieController::class, 'index'])->name('categorie.index');
+    Route::get('categorie/nuova', [GestioneCategorieController::class, 'create'])->name('categorie.create');
+    Route::post('categorie', [GestioneCategorieController::class, 'store'])->name('categorie.store');
+    Route::get('categorie/{categoria:id}/modifica', [GestioneCategorieController::class, 'edit'])->name('categorie.edit');
+    Route::put('categorie/{categoria:id}', [GestioneCategorieController::class, 'update'])->name('categorie.update');
 });

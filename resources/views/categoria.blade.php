@@ -7,6 +7,11 @@
 
     {{-- intestazione categoria --}}
     <header>
+        @if ($categoria->image)
+            <div class="mb-8 aspect-[21/9] w-full overflow-hidden border-2 border-caffe">
+                <img src="{{ asset('storage/'.$categoria->image) }}" alt="{{ $categoria->name }}" class="h-full w-full object-cover">
+            </div>
+        @endif
         <x-section-title :occhiello="'Categoria'" :titolo="$categoria->name" allineamento="left" />
         @if ($categoria->description)
             <p class="mt-4 max-w-2xl font-sans font-light text-testo-soft leading-relaxed">
