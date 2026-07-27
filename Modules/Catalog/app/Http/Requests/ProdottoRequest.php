@@ -44,6 +44,7 @@ class ProdottoRequest extends FormRequest
 
             'stock' => ['required', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
+            'is_featured' => ['nullable', 'boolean'],
             'is_configurable' => ['nullable', 'boolean'],
             'is_photo_printable' => ['nullable', 'boolean'],
             'has_qr_memorial' => ['nullable', 'boolean'],
@@ -92,6 +93,7 @@ class ProdottoRequest extends FormRequest
             'color' => $this->input('color'),
             'stock' => $this->integer('stock'),
             'is_active' => $this->boolean('is_active'),
+            'is_featured' => $this->boolean('is_featured'),
             'is_configurable' => $this->boolean('is_configurable'),
             'is_photo_printable' => $this->boolean('is_photo_printable'),
             'has_qr_memorial' => $this->boolean('has_qr_memorial'),

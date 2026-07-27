@@ -89,6 +89,20 @@ class GestioneProdottiTest extends TestCase
         $this->assertTrue($prodotto->is_active);
     }
 
+    public function test_un_prodotto_si_puo_segnare_in_evidenza(): void
+    {
+        $this->actingAs($this->staff())->post('/gestione/prodotti', $this->datiForm(['is_featured' => '1']));
+
+        $this->assertTrue(Product::firstOrFail()->is_featured);
+    }
+
+    public function test_un_prodotto_non_e_in_evidenza_per_default(): void
+    {
+        $this->actingAs($this->staff())->post('/gestione/prodotti', $this->datiForm());
+
+        $this->assertFalse(Product::firstOrFail()->is_featured);
+    }
+
     public function test_lo_sku_duplicato_viene_rifiutato(): void
     {
         $this->prodotto(['sku' => 'TRG-DUP']);

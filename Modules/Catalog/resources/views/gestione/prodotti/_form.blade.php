@@ -167,6 +167,13 @@
             Attivo (visibile in vetrina)
         </label>
 
+        <label class="flex items-center gap-3 font-sans text-[14px]">
+            <input type="hidden" name="is_featured" value="0">
+            <input type="checkbox" name="is_featured" value="1" @checked($vecchio('is_featured'))
+                   class="border-caffe/40 text-oro focus:ring-oro/40">
+            In evidenza in home
+        </label>
+
         <hr class="h-px w-full border-0 bg-caffe/15">
 
         <h2 class="font-serif text-xl font-medium">Flussi collegati</h2>

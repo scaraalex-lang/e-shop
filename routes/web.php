@@ -12,8 +12,9 @@ Route::get('/', function () {
 
     $evidenza = Product::with('category', 'primaryImage')
         ->where('is_active', true)
-        ->whereIn('sku', ['COR-PRL-CHA', 'COR-VTR-ROS', 'ROS-BRC-CRI-BLU'])
-        ->orderByRaw("FIELD(sku, 'COR-PRL-CHA', 'COR-VTR-ROS', 'ROS-BRC-CRI-BLU')")
+        ->where('is_featured', true)
+        ->orderBy('sort_order')
+        ->orderBy('name')
         ->get();
 
     return view('home', compact('hero', 'evidenza'));
