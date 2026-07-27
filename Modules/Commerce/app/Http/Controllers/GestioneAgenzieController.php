@@ -3,10 +3,14 @@
 namespace Modules\Commerce\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Modules\Commerce\Enums\RuoloUtente;
 use Modules\Commerce\Enums\StatoAgenzia;
+use Modules\Commerce\Http\Requests\RegistrazioneAgenziaRequest;
 use Modules\Commerce\Models\Agenzia;
 
 /**
@@ -35,6 +39,37 @@ class GestioneAgenzieController extends Controller
                 ->groupBy('stato')
                 ->pluck('totale', 'stato'),
         ]);
+    }
+
+    public function create(): View
+    {
+        return view('commerce::gestione.agenzie.create');
+    }
+
+    /**
+     * A differenza della registrazione self-service, un'agenzia creata dallo
+     * staff nasce già approvata: non ha senso che lo staff approvi se stesso.
+     * Stessa transazione e stessa validazione della registrazione pubblica
+     * (RegistrazioneAgenziaRequest) — solo l'esito finale cambia.
+     */
+    public function store(RegistrazioneAgenziaRequest $request): RedirectResponse
+    {
+        $agenzia = DB::transaction(function () use ($request) {
+            $agenzia = Agenzia::create($request->datiAgenzia());
+
+            $user = new User($request->safe()->only(['name', 'email', 'password', 'telefono']));
+            $user->ruolo = RuoloUtente::Agenzia;
+            $user->agenzia()->associate($agenzia);
+            $user->save();
+
+            $agenzia->approva($request->user());
+
+            return $agenzia;
+        });
+
+        return redirect()
+            ->route('gestione.agenzie.show', $agenzia)
+            ->with('stato', "Agenzia {$agenzia->ragione_sociale} creata e già approvata.");
     }
 
     public function show(Agenzia $agenzia): View

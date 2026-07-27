@@ -13,8 +13,17 @@
         }
     @endphp
 
+    <div class="flex justify-end">
+        <a href="{{ route('gestione.agenzie.create') }}"
+           class="inline-flex items-center justify-center gap-2 cursor-pointer select-none
+                  font-sans uppercase text-[12px] tracking-[0.22em] px-8 py-3.5
+                  bg-oro text-bianco hover:bg-oro-scuro transition-all duration-300 ease-out">
+            Nuova agenzia
+        </a>
+    </div>
+
     {{-- filtri per stato, con il conteggio --}}
-    <nav aria-label="Filtra per stato" class="flex flex-wrap gap-x-7 gap-y-2 font-sans text-[12px] tracking-[0.14em] uppercase">
+    <nav aria-label="Filtra per stato" class="mt-6 flex flex-wrap gap-x-7 gap-y-2 font-sans text-[12px] tracking-[0.14em] uppercase">
         @foreach ($filtri as [$etichetta, $caso])
             @php
                 $attivo = $statoAttivo === $caso;

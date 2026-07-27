@@ -56,6 +56,8 @@ Route::middleware('guest')->group(function () {
 */
 Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->group(function () {
     Route::get('agenzie', [GestioneAgenzieController::class, 'index'])->name('agenzie.index');
+    Route::get('agenzie/nuova', [GestioneAgenzieController::class, 'create'])->name('agenzie.create');
+    Route::post('agenzie', [GestioneAgenzieController::class, 'store'])->name('agenzie.store');
     Route::get('agenzie/{agenzia}', [GestioneAgenzieController::class, 'show'])->name('agenzie.show');
 
     Route::post('agenzie/{agenzia}/approva', [GestioneAgenzieController::class, 'approva'])->name('agenzie.approva');

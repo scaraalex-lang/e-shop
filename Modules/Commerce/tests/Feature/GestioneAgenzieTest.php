@@ -133,6 +133,58 @@ class GestioneAgenzieTest extends TestCase
             ->assertDontSee('cliente segnalato da Rossi');
     }
 
+    public function test_chi_non_e_staff_non_puo_creare_unagenzia(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get('/gestione/agenzie/nuova')
+            ->assertNotFound();
+    }
+
+    private function datiNuovaAgenzia(array $sovrascrivi = []): array
+    {
+        return array_merge([
+            'name' => 'Marco Bianchi',
+            'email' => 'marco@onoranzebianchi.it',
+            'telefono' => '0212345678',
+            'password' => 'password-lunga-abbastanza',
+            'password_confirmation' => 'password-lunga-abbastanza',
+            'ragione_sociale' => 'Onoranze Funebri Bianchi S.r.l.',
+            'partita_iva' => '00743110157',
+            'indirizzo' => 'Via Roma 12',
+            'cap' => '20121',
+            'citta' => 'Milano',
+            'provincia' => 'mi',
+        ], $sovrascrivi);
+    }
+
+    public function test_lo_staff_crea_unagenzia_gia_approvata(): void
+    {
+        $staff = $this->staff();
+
+        $risposta = $this->actingAs($staff)->post('/gestione/agenzie', $this->datiNuovaAgenzia());
+
+        $agenzia = Agenzia::firstOrFail();
+        $risposta->assertRedirect(route('gestione.agenzie.show', $agenzia));
+
+        $this->assertSame(StatoAgenzia::Approvata, $agenzia->stato);
+        $this->assertSame($staff->id, $agenzia->stato_aggiornato_da);
+        $this->assertTrue($agenzia->user->eAgenziaApprovata());
+    }
+
+    public function test_il_referente_creato_dallo_staff_puo_accedere_subito(): void
+    {
+        $this->actingAs($this->staff())->post('/gestione/agenzie', $this->datiNuovaAgenzia([
+            'email' => 'referente@prova.it',
+            'password' => 'una-password-lunga',
+            'password_confirmation' => 'una-password-lunga',
+        ]));
+
+        $this->post('/esci');
+
+        $this->post('/accedi', ['email' => 'referente@prova.it', 'password' => 'una-password-lunga'])
+            ->assertRedirect(route('account'));
+    }
+
     public function test_il_comando_promuove_a_staff(): void
     {
         $user = User::factory()->create(['email' => 'staff@memorai.test']);
