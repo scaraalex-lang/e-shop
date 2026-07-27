@@ -45,19 +45,10 @@
     </header>
 
     {{-- ============ BARRA DI NAVIGAZIONE (sticky) ============ --}}
-    {{-- La parte superiore del menu resta sempre visibile durante lo scroll. --}}
-    @php
-        // Condivisa fra il menu inline (da md in su) e il pannello mobile a
-        // tendina: le voci sono le stesse, cambia solo come si aprono.
-        $naveVoci = [
-            ['Trigesimali',   '#'],
-            ['Devozionali',   '#'],
-            ['Photoceramiche','#'],
-            ['Personalizza',  '#'],
-            ['Stampa foto',   '#'],
-            ['QR Memoria',    '#'],
-        ];
-    @endphp
+    {{-- La parte superiore del menu resta sempre visibile durante lo scroll.
+         $naveVoci arriva dal View Composer in AppServiceProvider (tabella
+         voci_menu, gestibile da /gestione/menu) — condivisa fra il menu
+         inline (da md in su) e il pannello mobile a tendina sotto. --}}
     <nav aria-label="Navigazione principale"
          class="sticky top-0 z-50 bg-bianco/95 backdrop-blur-sm border-y-2 border-caffe">
         <div class="mx-auto max-w-7xl px-6 relative flex items-center justify-center min-h-[3.25rem] py-2">
@@ -80,13 +71,13 @@
             {{-- voci principali (centro, da md in su: sotto si passa dal menu a tendina) --}}
             <ul class="hidden md:flex flex-wrap items-center justify-center gap-x-7 gap-y-1
                        font-sans text-[12px] tracking-[0.16em] uppercase">
-                @foreach ($naveVoci as [$voce, $href])
+                @foreach ($naveVoci as $voce)
                     <li>
-                        <a href="{{ $href }}"
+                        <a href="{{ $voce->url }}"
                            class="relative inline-block text-testo hover:text-oro-scuro transition-colors duration-300
                                   after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-px after:w-0
                                   after:bg-oro after:transition-all after:duration-300 hover:after:w-full">
-                            {{ $voce }}
+                            {{ $voce->etichetta }}
                         </a>
                     </li>
                 @endforeach
@@ -126,11 +117,11 @@
         {{-- pannello mobile a tendina: le stesse voci, in colonna --}}
         <div id="menu-mobile" class="hidden md:hidden border-t border-caffe/15 bg-bianco">
             <ul class="divide-y divide-caffe/10 font-sans text-[12px] tracking-[0.16em] uppercase">
-                @foreach ($naveVoci as [$voce, $href])
+                @foreach ($naveVoci as $voce)
                     <li>
-                        <a href="{{ $href }}"
+                        <a href="{{ $voce->url }}"
                            class="block px-6 py-3.5 text-testo hover:text-oro-scuro hover:bg-panna/50 transition-colors duration-300">
-                            {{ $voce }}
+                            {{ $voce->etichetta }}
                         </a>
                     </li>
                 @endforeach
@@ -205,30 +196,27 @@
             <div>
                 <h4 class="footer-heading">Collezioni</h4>
                 <ul class="footer-list">
-                    <li><a href="#" class="footer-link">Articoli trigesimali</a></li>
-                    <li><a href="#" class="footer-link">Rosari e corone</a></li>
-                    <li><a href="#" class="footer-link">Croci</a></li>
-                    <li><a href="#" class="footer-link">Photoceramiche</a></li>
+                    @foreach ($footerCollezioni as $voce)
+                        <li><a href="{{ $voce->url }}" class="footer-link">{{ $voce->etichetta }}</a></li>
+                    @endforeach
                 </ul>
             </div>
 
             <div>
                 <h4 class="footer-heading">Servizi</h4>
                 <ul class="footer-list">
-                    <li><a href="#" class="footer-link">Personalizza il tuo ricordino</a></li>
-                    <li><a href="#" class="footer-link">Stampa foto</a></li>
-                    <li><a href="#" class="footer-link">QR Memoria</a></li>
-                    <li><a href="#" class="footer-link">Onoranze funebri (B2B)</a></li>
+                    @foreach ($footerServizi as $voce)
+                        <li><a href="{{ $voce->url }}" class="footer-link">{{ $voce->etichetta }}</a></li>
+                    @endforeach
                 </ul>
             </div>
 
             <div>
                 <h4 class="footer-heading">Assistenza</h4>
                 <ul class="footer-list">
-                    <li><a href="#" class="footer-link">Contatti</a></li>
-                    <li><a href="#" class="footer-link">Spedizioni e resi</a></li>
-                    <li><a href="#" class="footer-link">Domande frequenti</a></li>
-                    <li><a href="#" class="footer-link">Assistenza personalizzazione</a></li>
+                    @foreach ($footerAssistenza as $voce)
+                        <li><a href="{{ $voce->url }}" class="footer-link">{{ $voce->etichetta }}</a></li>
+                    @endforeach
                 </ul>
             </div>
         </div>
@@ -239,9 +227,9 @@
                         font-sans text-[11px] tracking-[0.15em] uppercase text-bianco/40">
                 <span>© {{ date('Y') }} MemorAI — Ecosistema kerachrom.it</span>
                 <div class="flex gap-6">
-                    <a href="#" class="hover:text-oro transition-colors">Privacy</a>
-                    <a href="#" class="hover:text-oro transition-colors">Cookie</a>
-                    <a href="#" class="hover:text-oro transition-colors">Termini</a>
+                    @foreach ($legaleVoci as $voce)
+                        <a href="{{ $voce->url }}" class="hover:text-oro transition-colors">{{ $voce->etichetta }}</a>
+                    @endforeach
                 </div>
             </div>
         </div>

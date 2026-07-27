@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GestioneMenuController;
 use App\Http\Controllers\ProdottoController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -62,6 +63,22 @@ Route::middleware('auth')->prefix('account')->group(function () {
     Route::get('profilo', [ProfileController::class, 'edit'])->name('account.profilo');
     Route::patch('profilo', [ProfileController::class, 'update'])->name('account.profilo.update');
     Route::delete('profilo', [ProfileController::class, 'destroy'])->name('account.profilo.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Area staff: menu e footer del sito pubblico
+|--------------------------------------------------------------------------
+| A livello applicazione, non dentro un modulo: è contenuto del layout
+| condiviso (resources/views/layouts/app.blade.php), non del catalogo.
+*/
+Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->group(function () {
+    Route::get('menu', [GestioneMenuController::class, 'index'])->name('menu.index');
+    Route::get('menu/nuova', [GestioneMenuController::class, 'create'])->name('menu.create');
+    Route::post('menu', [GestioneMenuController::class, 'store'])->name('menu.store');
+    Route::get('menu/{voce}/modifica', [GestioneMenuController::class, 'edit'])->name('menu.edit');
+    Route::put('menu/{voce}', [GestioneMenuController::class, 'update'])->name('menu.update');
+    Route::delete('menu/{voce}', [GestioneMenuController::class, 'destroy'])->name('menu.destroy');
 });
 
 require __DIR__.'/auth.php';
