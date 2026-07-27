@@ -21,6 +21,7 @@ class Product extends Model
         'is_configurable', 'is_photo_printable', 'has_qr_memorial',
         'is_kit', 'included_units', 'extra_unit_price', 'crediti',
         'stock', 'is_active', 'sort_order',
+        'is_componibile',
     ];
 
     protected $casts = [
@@ -36,6 +37,7 @@ class Product extends Model
         'crediti'            => 'integer',
         'stock'              => 'integer',
         'is_active'          => 'boolean',
+        'is_componibile'     => 'boolean',
     ];
 
     public function category(): BelongsTo
@@ -51,6 +53,18 @@ class Product extends Model
     public function primaryImage(): HasOne
     {
         return $this->hasOne(ProductImage::class)->where('is_primary', true);
+    }
+
+    /** Le righe di composizione di questo kit componibile: cosa contiene. */
+    public function componenti(): HasMany
+    {
+        return $this->hasMany(KitComponente::class, 'kit_product_id')->with('componente');
+    }
+
+    /** In quali kit componibili finisce questo articolo. */
+    public function kitDiCui(): HasMany
+    {
+        return $this->hasMany(KitComponente::class, 'componente_product_id');
     }
 
     public function scopeActive(Builder $query): Builder

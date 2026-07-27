@@ -13,6 +13,7 @@
     $sezioni = [
         ['Agenzie', route('gestione.agenzie.index'), 'gestione.agenzie.*'],
         ['Prodotti', route('gestione.prodotti.index'), 'gestione.prodotti.*'],
+        ['Kit', route('gestione.kit.index'), 'gestione.kit.*'],
         ['Studio', route('studio.ricordino'), 'studio.*'],
     ];
 @endphp
