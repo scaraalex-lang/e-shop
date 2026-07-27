@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Modules\Memorial\Models\Defunto;
+use Modules\Memorial\Models\ManifestoTemplate;
 use Modules\Memorial\Models\Necrologio;
 use Modules\Memorial\Models\NecrologioCardTemplate;
 
@@ -260,6 +261,164 @@ class NecrologiController extends Controller
     }
 
     /**
+     * Il designer manifesti: canvas Fabric per comporre il manifesto
+     * funebre. Il QR punta al necrologio ed è generato in locale — mai un
+     * servizio esterno a cui mandare l'indirizzo di un defunto a ogni
+     * apertura (era la terza violazione GDPR della sorgente originale).
+     *
+     * Riparte dallo stato salvato (`manifesto_canvas`) se c'è già uno,
+     * altrimenti da un canvas vuoto: qui, a differenza del Ricordino
+     * Designer, non c'è un banner di consenso — comporre il manifesto non
+     * tocca il consenso sull'uso dei dati per la pubblicazione, quello
+     * resta il gate separato di `consenso()`/`pubblica()`.
+     */
+    public function manifestoDesigner(Request $request, Necrologio $necrologio): View
+    {
+        $this->soloSuo($request, $necrologio);
+        $necrologio->load('defunto');
+        $agenzia = $this->agenzia($request);
+
+        return view('memorial::necrologi.manifesto-designer', [
+            'necrologio' => $necrologio,
+            'defunto' => $necrologio->defunto,
+            'praticaData' => array_merge(
+                $necrologio->defunto->toPraticaData(),
+                ['necrologio_url' => $necrologio->url($agenzia->slug)],
+            ),
+            'agenziaData' => ['name' => $agenzia->ragione_sociale],
+            'templates' => ManifestoTemplate::visibiliPer($agenzia->id)->latest()->get(),
+            'savedCanvas' => $necrologio->manifesto_canvas,
+            'savedFormato' => $necrologio->manifesto_formato ?? 'a3l',
+        ]);
+    }
+
+    public function manifestoTemplatesIndex(Request $request): JsonResponse
+    {
+        $agenzia = $this->agenzia($request);
+
+        $templates = ManifestoTemplate::visibiliPer($agenzia->id)->latest()->get()
+            ->map(fn (ManifestoTemplate $t) => [
+                'id' => $t->id,
+                'nome' => $t->nome,
+                'formato' => $t->formato,
+                'globale' => $t->agenzia_id === null,
+                'editabile' => $this->manifestoTemplateAppartieneA($request, $t),
+                'anteprima' => $t->anteprimaUrl(),
+                'fronte' => $t->fronte,
+            ]);
+
+        return response()->json($templates);
+    }
+
+    public function manifestoTemplatesStore(Request $request): JsonResponse
+    {
+        $proprietario = $this->proprietarioTemplate($request);
+
+        $dati = $request->validate([
+            'nome' => ['required', 'string', 'max:120'],
+            'formato' => ['required', 'string'],
+            'fronte' => ['required', 'string'],
+            'anteprima' => ['nullable', 'string'],
+        ]);
+
+        $fronte = json_decode($dati['fronte'], true);
+        abort_if(! is_array($fronte) || empty($fronte['objects']), 422, 'Il manifesto è vuoto: non c\'è niente da salvare come template.');
+
+        $template = ManifestoTemplate::create([
+            'nome' => $dati['nome'],
+            'formato' => $dati['formato'],
+            'agenzia_id' => $proprietario,
+            'fronte' => $fronte,
+            'anteprima' => $this->salvaAnteprimaDataUrl($dati['anteprima'] ?? null, 'necrologi/manifesto-template'),
+        ]);
+
+        return response()->json(['success' => true, 'id' => $template->id]);
+    }
+
+    public function manifestoTemplatesUpdate(Request $request, ManifestoTemplate $template): JsonResponse
+    {
+        abort_unless($this->manifestoTemplateAppartieneA($request, $template), 403, 'Questo template non è tuo.');
+
+        $dati = $request->validate([
+            'nome' => ['required', 'string', 'max:120'],
+            'fronte' => ['required', 'string'],
+            'anteprima' => ['nullable', 'string'],
+        ]);
+
+        $fronte = json_decode($dati['fronte'], true);
+        abort_if(! is_array($fronte) || empty($fronte['objects']), 422, 'Il manifesto è vuoto: non c\'è niente da salvare come template.');
+
+        $anteprima = $this->salvaAnteprimaDataUrl($dati['anteprima'] ?? null, 'necrologi/manifesto-template');
+        if ($anteprima && $template->anteprima) {
+            Storage::disk('public')->delete($template->anteprima);
+        }
+
+        $template->update(array_filter([
+            'nome' => $dati['nome'],
+            'fronte' => $fronte,
+            'anteprima' => $anteprima,
+        ], fn ($v) => $v !== null));
+
+        return response()->json(['success' => true, 'id' => $template->id]);
+    }
+
+    public function manifestoTemplatesDestroy(Request $request, ManifestoTemplate $template): JsonResponse
+    {
+        abort_unless($this->manifestoTemplateAppartieneA($request, $template), 403, 'Questo template non è tuo.');
+
+        if ($template->anteprima) {
+            Storage::disk('public')->delete($template->anteprima);
+        }
+        $template->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Salva lo stato del canvas (per riaprirlo) e il PDF pronto da
+     * scaricare — lo stesso file che oggi si caricava a mano in `manifesto`.
+     */
+    public function salvaManifesto(Request $request, Necrologio $necrologio): JsonResponse
+    {
+        $this->soloSuo($request, $necrologio);
+
+        $dati = $request->validate([
+            'canvas' => ['required', 'string'],
+            'formato' => ['required', 'string'],
+            'pdf' => ['nullable', 'string'],
+        ]);
+
+        $canvas = json_decode($dati['canvas'], true);
+        abort_if(! is_array($canvas), 422, 'Il manifesto non è valido.');
+
+        $vecchio = $necrologio->manifesto;
+        $path = $vecchio;
+
+        if ($dati['pdf'] ?? null) {
+            if (! preg_match('/^data:application\/pdf;base64,(.+)$/', $dati['pdf'], $m)) {
+                abort(422, 'Il PDF non è valido.');
+            }
+            $binario = base64_decode($m[1], true);
+            abort_if($binario === false, 422, 'Il PDF non è valido.');
+
+            $path = 'necrologi/manifesti/'.$necrologio->id.'-'.Str::lower(Str::random(8)).'.pdf';
+            Storage::disk('public')->put($path, $binario);
+        }
+
+        $necrologio->update([
+            'manifesto_canvas' => $canvas,
+            'manifesto_formato' => $dati['formato'],
+            'manifesto' => $path,
+        ]);
+
+        if ($path !== $vecchio && $vecchio) {
+            Storage::disk('public')->delete($vecchio);
+        }
+
+        return response()->json(['success' => true, 'url' => $path ? '/storage/'.$path : null]);
+    }
+
+    /**
      * Il Ricordino Designer chiede questo prima di offrire "aggiorna la
      * preghiera nel necrologio": dice solo se QUESTA agenzia ne ha già uno
      * per questo defunto, così il designer sa se aggiornarlo o mandare a
@@ -345,6 +504,46 @@ class NecrologiController extends Controller
     private function immaginePredefinita(Defunto $defunto): ?string
     {
         return $defunto->ricordini()->latest()->first()?->anteprima_fronte;
+    }
+
+    /** Chi possiede un nuovo template manifesto: staff -> globale, agenzia -> suo. */
+    private function proprietarioTemplate(Request $request): ?int
+    {
+        if ($request->user()?->eStaff()) {
+            return null;
+        }
+
+        return $this->agenzia($request)->id;
+    }
+
+    /** Chi può toccare (modificare/eliminare) un template manifesto già esistente. */
+    private function manifestoTemplateAppartieneA(Request $request, ManifestoTemplate $template): bool
+    {
+        $user = $request->user();
+
+        return $template->agenzia_id === null
+            ? (bool) $user?->eStaff()
+            : $user?->agenzia?->id === $template->agenzia_id;
+    }
+
+    /** Salva un'anteprima base64 nello storage e ritorna il path (o null). */
+    private function salvaAnteprimaDataUrl(?string $dataUrl, string $dir): ?string
+    {
+        if (! $dataUrl || ! str_starts_with($dataUrl, 'data:')) {
+            return null;
+        }
+        $comma = strpos($dataUrl, ',');
+        if ($comma === false) {
+            return null;
+        }
+        $binario = base64_decode(substr($dataUrl, $comma + 1), true);
+        if ($binario === false) {
+            return null;
+        }
+        $path = trim($dir, '/').'/'.Str::uuid().'.jpg';
+        Storage::disk('public')->put($path, $binario);
+
+        return $path;
     }
 
     private function agenzia(Request $request)

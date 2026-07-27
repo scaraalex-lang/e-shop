@@ -80,6 +80,14 @@
                            class="text-oro-scuro underline underline-offset-4 decoration-oro/40">guarda quello attuale</a>
                     </p>
                 @endif
+                @unless ($nuovo)
+                    <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">
+                        Oppure
+                        <a href="{{ route('necrologi.manifesto', $necrologio) }}"
+                           class="text-oro-scuro underline underline-offset-4 decoration-oro/40">disegnalo qui</a>,
+                        formati A3/A4 e manifesto, con il QR del necrologio già pronto.
+                    </p>
+                @endunless
             </div>
 
             <x-primary-button>{{ $nuovo ? 'Crea il necrologio' : 'Salva le modifiche' }}</x-primary-button>

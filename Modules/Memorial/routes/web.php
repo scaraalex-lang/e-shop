@@ -30,6 +30,7 @@ Route::middleware('auth')->prefix('account/necrologi')->name('necrologi.')->grou
     Route::post('{necrologio}/ritira', [NecrologiController::class, 'ritira'])->name('ritira');
 
     Route::get('{necrologio}/designer', [NecrologiController::class, 'designer'])->name('designer');
+    Route::get('{necrologio}/manifesto', [NecrologiController::class, 'manifestoDesigner'])->name('manifesto');
 });
 
 /*
@@ -48,6 +49,14 @@ Route::middleware('auth')->prefix('admin/api')->group(function () {
     Route::post('necrologio-card-templates', [NecrologiController::class, 'templatesStore']);
     Route::delete('necrologio-card-templates/{template}', [NecrologiController::class, 'templatesDestroy']);
     Route::post('necrologi/{necrologio}/salva-card', [NecrologiController::class, 'salvaCard']);
+
+    // Designer manifesti: condivide /admin/api/santi col Ricordino Designer
+    // (rotta già definita in Modules/PhotoPrint), non duplicata qui.
+    Route::get('manifesto-templates', [NecrologiController::class, 'manifestoTemplatesIndex']);
+    Route::post('manifesto-templates', [NecrologiController::class, 'manifestoTemplatesStore']);
+    Route::put('manifesto-templates/{template}', [NecrologiController::class, 'manifestoTemplatesUpdate']);
+    Route::delete('manifesto-templates/{template}', [NecrologiController::class, 'manifestoTemplatesDestroy']);
+    Route::post('necrologi/{necrologio}/salva-manifesto', [NecrologiController::class, 'salvaManifesto']);
 
     // Chiamati anche dal Ricordino Designer (Modules/PhotoPrint): lì "pratica"
     // è il defunto (PhotoPrintController::ricordinoDesigner passa
