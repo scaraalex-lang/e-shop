@@ -83,7 +83,9 @@ class Defunto extends Model
     }
 
     /**
-     * Dati pronti per precompilare i blocchi testo del ricordino-designer.
+     * Dati pronti per precompilare i blocchi testo del ricordino-designer e
+     * del designer manifesti — quest'ultimo è dove i luoghi della cerimonia
+     * raccolti in lavorazione tornano visibili (blocco "Info funerale").
      */
     public function toPraticaData(): array
     {
@@ -95,6 +97,13 @@ class Defunto extends Model
             'data_morte'   => optional($this->data_morte)->format('d/m/Y'),
             'frase'        => $this->frase,
             'prayer'       => $this->preghiera,
+            'cerimonia_data'      => optional($this->cerimonia_at)->format('d/m/Y'),
+            'cerimonia_ora'       => optional($this->cerimonia_at)->format('H:i'),
+            'luogo_partenza'      => $this->luogo_partenza,
+            'indirizzo_cerimonia' => $this->indirizzo_cerimonia,
+            'chiesa'              => $this->chiesa,
+            'indirizzo_chiesa'    => $this->indirizzo_chiesa,
+            'cimitero'            => $this->cimitero,
         ];
     }
 }

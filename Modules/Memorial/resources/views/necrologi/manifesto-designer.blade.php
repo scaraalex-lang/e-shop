@@ -867,7 +867,17 @@ function addBlock(type) {
       fontWeight = 'bold';
       break;
     case 'funerale':
-      text = 'I funerali si svolgeranno [data] alle ore [ora]\nPartenza da [luogo]\n[chiesa]';
+      var quando = (praticaData.cerimonia_data && praticaData.cerimonia_ora)
+        ? praticaData.cerimonia_data + ' alle ore ' + praticaData.cerimonia_ora
+        : '[data] alle ore [ora]';
+      var partenza = praticaData.luogo_partenza
+        ? praticaData.luogo_partenza + (praticaData.indirizzo_cerimonia ? ', ' + praticaData.indirizzo_cerimonia : '')
+        : '[luogo]';
+      var chiesaTesto = praticaData.chiesa
+        ? praticaData.chiesa + (praticaData.indirizzo_chiesa ? ', ' + praticaData.indirizzo_chiesa : '')
+        : '[chiesa]';
+      text = 'I funerali si svolgeranno ' + quando + '\nPartenza da ' + partenza + '\n' + chiesaTesto;
+      if (praticaData.cimitero) { text += '\nTumulazione: ' + praticaData.cimitero; }
       fontSize = 35;
       break;
     case 'agenzia':
