@@ -25,6 +25,11 @@ class PhotoPrintController extends Controller
     public function fotoManager(Request $request)
     {
         if ($ordine = $this->lavorazione->ordine()) {
+            if (! $ordine->defunto_id) {
+                return redirect()->route('lavorazione', $ordine)
+                    ->with('stato', 'Prima compila i dati della persona.');
+            }
+
             $foto = FotoPratica::where('ordine_id', $ordine->id)
                 ->orderByDesc('is_principale')
                 ->latest()
@@ -73,11 +78,14 @@ class PhotoPrintController extends Controller
             return redirect()->route($ordine ? 'lavorazione' : 'account', $ordine);
         }
 
+        if ($ordine && ! FotoPratica::principaleDi($ordine->id)) {
+            return redirect()->route('lavorazione', $ordine)
+                ->with('stato', 'Carica prima la fotografia.');
+        }
+
         $ricordino = $defunto->ricordini()->latest()->first();
 
-        $principale = $ordine
-            ? FotoPratica::where('ordine_id', $ordine->id)->where('is_principale', true)->first()
-            : null;
+        $principale = $ordine ? FotoPratica::principaleDi($ordine->id) : null;
 
         return view('photoprint::ricordino-designer', [
             'praticaId' => $defunto->id,

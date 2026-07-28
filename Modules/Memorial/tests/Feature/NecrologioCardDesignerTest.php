@@ -5,6 +5,7 @@ namespace Modules\Memorial\Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Modules\Commerce\Enums\RuoloUtente;
 use Modules\Commerce\Models\Agenzia;
@@ -96,6 +97,7 @@ class NecrologioCardDesignerTest extends TestCase
         $n->refresh();
         $this->assertNotNull($n->og_image);
         Storage::disk('public')->assertExists($n->og_image);
+        $this->assertStringStartsWith($agenzia->cartellaAssetSociali().'/og-image/', $n->og_image);
 
         $vecchioPath = $n->og_image;
 
@@ -187,5 +189,32 @@ class NecrologioCardDesignerTest extends TestCase
         $n = $this->necrologio($agenzia);
 
         $this->actingAs($privato)->get(route('necrologi.designer', $n))->assertForbidden();
+    }
+
+    public function test_il_designer_preferisce_la_foto_principale_della_pratica_all_anteprima_del_ricordino(): void
+    {
+        [$referente, $agenzia] = $this->agenziaConReferente();
+
+        $defunto = Defunto::create(['nome' => 'Luigia', 'cognome' => 'Rossetti', 'ordine_id' => 501]);
+        $defunto->ricordini()->create(['anteprima_fronte' => 'ricordini/anteprime/vecchia.jpg']);
+
+        DB::table('foto_pratica')->insert([
+            'ordine_id' => 501,
+            'path' => 'photoprint/pratica/principale.jpg',
+            'tipo' => 'originale',
+            'is_principale' => true,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $necrologio = Necrologio::create([
+            'defunto_id' => $defunto->id,
+            'agenzia_id' => $agenzia->id,
+            'percorso' => Necrologio::componiPercorso($defunto),
+        ]);
+
+        $this->actingAs($referente)
+            ->get(route('necrologi.designer', $necrologio))
+            ->assertOk()
+            ->assertViewHas('fotoPrincipale', '/storage/photoprint/pratica/principale.jpg');
     }
 }

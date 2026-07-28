@@ -51,6 +51,11 @@ class Necrologio extends Model
         return route('necrologio', ['agenzia' => $slugAgenzia, 'percorso' => $this->percorso]);
     }
 
+    public function urlManifesto(string $slugAgenzia): string
+    {
+        return route('necrologio.manifesto.pubblico', ['agenzia' => $slugAgenzia, 'percorso' => $this->percorso]);
+    }
+
     /**
      * È visibile a un estraneo?
      *

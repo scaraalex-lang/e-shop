@@ -2,25 +2,20 @@
 
 @php
     $nome = $defunto->nomeCompleto();
-    $quando = $necrologio->trigesimo_at;
-    $titolo = "Trigesimo di {$nome}";
-    $descrizione = $quando
-        ? "Il trigesimo sarà il {$quando->translatedFormat('j F Y')} alle {$quando->format('H:i')}"
-            .($necrologio->trigesimo_luogo ? ", {$necrologio->trigesimo_luogo}" : '').'.'
-        : "In ricordo di {$nome}.";
+    $titolo = "Manifesto di {$nome}";
+    $descrizione = "Il manifesto funebre di {$nome}.";
+    // og:image usa la card del necrologio, già disegnata: il manifesto
+    // spesso è un PDF, non un formato valido per un'anteprima social, e
+    // generarne una miniatura richiederebbe una dipendenza in più
+    // (Imagick/Ghostscript) fuori scope qui.
     $immagine = $necrologio->og_image ? asset('storage/'.$necrologio->og_image) : null;
-
-    $testoCondivisione = $quando
-        ? "{$titolo} — {$quando->translatedFormat('j F')} alle {$quando->format('H:i')}"
-        : $titolo;
+    $ePdf = \Illuminate\Support\Str::endsWith(strtolower($necrologio->manifesto), '.pdf');
 @endphp
 
 @section('title', $titolo.' — MemorAI')
 @section('meta_description', $descrizione)
 
 @push('meta')
-    {{-- WhatsApp e Facebook non eseguono JavaScript: prendono questi meta e
-         un'immagine da un indirizzo. Senza, il link resta un link nudo. --}}
     <meta property="og:type" content="article">
     <meta property="og:title" content="{{ $titolo }}">
     <meta property="og:description" content="{{ $descrizione }}">
@@ -33,15 +28,12 @@
     @endif
     <meta name="twitter:card" content="{{ $immagine ? 'summary_large_image' : 'summary' }}">
 
-    {{-- Fuori dai motori di ricerca: la pagina è per chi riceve il link,
-         non per chi cerca un nome su internet fra dieci anni. --}}
     <meta name="robots" content="noindex, noarchive">
 @endpush
 
 @section('content')
 <div class="w-full max-w-md">
 
-    {{-- ============ la card ============ --}}
     <article class="bg-bianco border border-caffe/15 shadow-[0_24px_70px_rgba(58,46,34,0.14)]">
 
         @if ($immagine)
@@ -53,7 +45,7 @@
 
         <div class="px-8 py-9 text-center">
             <span class="font-sans text-[10px] tracking-[0.32em] uppercase text-oro-scuro">
-                Nel trigesimo della scomparsa
+                Manifesto funebre
             </span>
 
             <h1 class="mt-4 font-serif text-3xl font-medium leading-tight">{{ $nome }}</h1>
@@ -68,42 +60,30 @@
 
             <span class="mx-auto mt-6 block h-px w-14 bg-oro"></span>
 
-            @if ($quando)
-                <div class="mt-7">
-                    <p class="font-serif text-[1.6rem] leading-snug">
-                        {{ $quando->translatedFormat('l j F Y') }}
-                    </p>
-                    <p class="mt-0.5 font-serif text-[1.6rem] text-oro-scuro tabular-nums">
-                        ore {{ $quando->format('H:i') }}
-                    </p>
-
-                    @if ($necrologio->trigesimo_luogo)
-                        <p class="mt-4 font-sans font-light text-[14px] leading-relaxed text-testo">
-                            {{ $necrologio->trigesimo_luogo }}
-                            @if ($necrologio->trigesimo_indirizzo)
-                                <span class="block text-testo-soft">{{ $necrologio->trigesimo_indirizzo }}</span>
-                            @endif
-                        </p>
-                    @endif
-                </div>
-            @endif
-
-            @if ($necrologio->testo)
-                <p class="mt-7 font-sans font-light text-[14px] leading-relaxed text-testo-soft whitespace-pre-line">
-                    {{ $necrologio->testo }}
-                </p>
-            @endif
-
-            @if ($necrologio->manifesto)
-                <div class="mt-8">
-                    <a href="{{ $necrologio->urlManifesto($agenzia->slug) }}"
-                       class="font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro
+            <div class="mt-7">
+                @if ($ePdf)
+                    <embed src="{{ asset('storage/'.$necrologio->manifesto) }}" type="application/pdf"
+                           class="w-full h-[28rem] border border-caffe/15">
+                    <a href="{{ asset('storage/'.$necrologio->manifesto) }}" target="_blank" rel="noopener"
+                       class="mt-4 inline-block font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro
                               hover:text-caffe transition-colors duration-300
                               underline underline-offset-4 decoration-oro/40">
-                        Guarda il manifesto
+                        Scarica il manifesto (PDF)
                     </a>
-                </div>
-            @endif
+                @else
+                    <img src="{{ asset('storage/'.$necrologio->manifesto) }}" alt="Manifesto di {{ $nome }}"
+                         class="w-full border border-caffe/15">
+                @endif
+            </div>
+
+            <div class="mt-8">
+                <a href="{{ $necrologio->url($agenzia->slug) }}"
+                   class="font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro
+                          hover:text-caffe transition-colors duration-300
+                          underline underline-offset-4 decoration-oro/40">
+                    Torna al necrologio
+                </a>
+            </div>
         </div>
 
         {{-- ============ condivisione, dentro la card ============ --}}
@@ -113,7 +93,7 @@
             </p>
 
             <div class="mt-4 flex flex-wrap justify-center gap-3">
-                <a href="{{ 'https://wa.me/?text='.rawurlencode($testoCondivisione.' '.$indirizzo) }}"
+                <a href="{{ 'https://wa.me/?text='.rawurlencode($titolo.' '.$indirizzo) }}"
                    target="_blank" rel="noopener"
                    class="inline-flex items-center justify-center font-sans uppercase text-[11px]
                           tracking-[0.2em] px-6 py-3 bg-oro text-bianco

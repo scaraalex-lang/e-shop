@@ -75,3 +75,5 @@ Route::middleware('auth')->prefix('admin/api')->group(function () {
 */
 Route::get('ricordi/{agenzia}/{percorso}', [NecrologioPubblicoController::class, 'show'])
     ->name('necrologio');
+Route::get('ricordi/{agenzia}/{percorso}/manifesto', [NecrologioPubblicoController::class, 'manifesto'])
+    ->name('necrologio.manifesto.pubblico');

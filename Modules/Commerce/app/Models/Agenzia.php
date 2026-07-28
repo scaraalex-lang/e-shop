@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Commerce\Enums\StatoAgenzia;
 
@@ -107,6 +108,24 @@ class Agenzia extends Model
                 $agenzia->slug = static::slugLibero($agenzia->ragione_sociale, $agenzia->citta);
             }
         });
+
+        // Ogni agenzia ha il suo spazio per gli asset social (card, manifesti,
+        // template) fin dalla registrazione, chiunque l'abbia creata (self
+        // service o staff da gestione): l'invariante sta sul model, non su un
+        // solo controller.
+        static::created(function (self $agenzia) {
+            Storage::disk('public')->makeDirectory($agenzia->cartellaAssetSociali());
+        });
+    }
+
+    /**
+     * La cartella dedicata a questa agenzia per gli asset "social" generati
+     * per suo conto (card necrologio, manifesti, template): usa lo slug, già
+     * univoco e già disponibile subito dopo la creazione (vedi hook sopra).
+     */
+    public function cartellaAssetSociali(): string
+    {
+        return "agenzie/{$this->slug}/social";
     }
 
     public static function slugLibero(string $ragioneSociale, ?string $citta = null): string

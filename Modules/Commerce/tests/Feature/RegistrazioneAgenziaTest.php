@@ -4,6 +4,7 @@ namespace Modules\Commerce\Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Modules\Commerce\Enums\RuoloUtente;
 use Modules\Commerce\Enums\StatoAgenzia;
 use Modules\Commerce\Models\Agenzia;
@@ -94,5 +95,15 @@ class RegistrazioneAgenziaTest extends TestCase
         $this->assertDatabaseCount('users', 0);
         $this->assertDatabaseCount('agenzie', 0);
         $this->assertGuest();
+    }
+
+    public function test_la_registrazione_crea_la_cartella_storage_dedicata_all_agenzia(): void
+    {
+        Storage::fake('public');
+
+        $this->post('/registrati/agenzia', $this->datiValidi());
+
+        $agenzia = Agenzia::firstOrFail();
+        Storage::disk('public')->assertExists($agenzia->cartellaAssetSociali());
     }
 }

@@ -5,10 +5,12 @@ namespace Modules\PhotoPrint\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Commerce\Enums\StatoOrdine;
 use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
+use Modules\Memorial\Models\Necrologio;
 use Modules\PhotoPrint\Models\FotoPratica;
 use Modules\PhotoPrint\Servizi\LavorazioneCorrente;
 
@@ -58,6 +60,13 @@ class LavorazioneController extends Controller
             'data_morte' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:data_nascita'],
             'frase' => ['nullable', 'string', 'max:200'],
             'preghiera' => ['nullable', 'string', 'max:2000'],
+            'luogo_partenza' => ['nullable', 'string', Rule::in(Defunto::LUOGHI_PARTENZA)],
+            'indirizzo_cerimonia' => ['nullable', 'string', 'max:255'],
+            'cerimonia_at' => ['nullable', 'date'],
+            'chiesa' => ['nullable', 'string', 'max:150'],
+            'indirizzo_chiesa' => ['nullable', 'string', 'max:255'],
+            'cimitero' => ['nullable', 'string', 'max:150'],
+            'indirizzo_cimitero' => ['nullable', 'string', 'max:255'],
             'gdpr_parentela' => ['required', 'string', 'max:80'],
             'gdpr_consenso' => ['accepted'],
         ], [
@@ -76,6 +85,13 @@ class LavorazioneController extends Controller
             'data_morte' => $dati['data_morte'] ?? null,
             'frase' => $dati['frase'] ?? null,
             'preghiera' => $dati['preghiera'] ?? null,
+            'luogo_partenza' => $dati['luogo_partenza'] ?? null,
+            'indirizzo_cerimonia' => $dati['indirizzo_cerimonia'] ?? null,
+            'cerimonia_at' => $dati['cerimonia_at'] ?? null,
+            'chiesa' => $dati['chiesa'] ?? null,
+            'indirizzo_chiesa' => $dati['indirizzo_chiesa'] ?? null,
+            'cimitero' => $dati['cimitero'] ?? null,
+            'indirizzo_cimitero' => $dati['indirizzo_cimitero'] ?? null,
             'ordine_id' => $ordine->id,
         ])->save();
 
@@ -115,6 +131,49 @@ class LavorazioneController extends Controller
         return redirect()
             ->route('ordine', $ordine)
             ->with('stato', 'Bozza approvata: il tuo ordine va in produzione.');
+    }
+
+    /**
+     * Apre (creandolo se manca) il Necrologio di questa pratica.
+     */
+    public function apriNecrologio(Request $request, Ordine $ordine): RedirectResponse
+    {
+        $necrologio = $this->necrologioDiPratica($request, $ordine);
+
+        return redirect()->route('necrologi.designer', $necrologio);
+    }
+
+    /**
+     * Apre (creandolo se manca) il Manifesto di questa pratica.
+     */
+    public function apriManifesto(Request $request, Ordine $ordine): RedirectResponse
+    {
+        $necrologio = $this->necrologioDiPratica($request, $ordine);
+
+        return redirect()->route('necrologi.manifesto', $necrologio);
+    }
+
+    /**
+     * Trova o crea il necrologio di questa pratica. L'agenzia è quella
+     * dell'ordine, non dell'utente che sta operando: è anche lo staff — che
+     * non ha un'agenzia propria — a poter lavorare l'ordine per suo conto.
+     *
+     * Il necrologio è uno strumento dell'agenzia (vedi NecrologiController):
+     * un ordine privato, senza agenzia, non ne ha uno.
+     */
+    private function necrologioDiPratica(Request $request, Ordine $ordine): Necrologio
+    {
+        $this->soloSuo($request, $ordine);
+        abort_unless($ordine->agenzia_id !== null, 404, 'Il necrologio è uno strumento per le agenzie.');
+
+        $defunto = $ordine->defunto_id ? Defunto::find($ordine->defunto_id) : null;
+        abort_unless($defunto !== null, 404, 'Prima compila i dati della persona.');
+        abort_unless(FotoPratica::principaleDi($ordine->id), 403, 'Carica prima la fotografia.');
+
+        return Necrologio::firstOrCreate(
+            ['defunto_id' => $defunto->id, 'agenzia_id' => $ordine->agenzia_id],
+            ['percorso' => Necrologio::componiPercorso($defunto)]
+        );
     }
 
     /**

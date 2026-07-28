@@ -248,6 +248,7 @@ function flipOggetto(asse) {
     <span style="color:rgba(255,255,255,.4);font-size:.7rem;margin-right:.25rem">FOTO</span>
     <button class="tool-btn" onclick="document.getElementById('foto-upload').click()">📷 Inserisci Foto</button>
     <input type="file" id="foto-upload" accept="image/*" style="display:none" onchange="insertPhoto(this)">
+    <button class="tool-btn" id="btn-foto-pratica" onclick="inserisciFotoPrincipale()" @if(!($fotoPrincipale ?? null)) disabled title="Nessuna foto ancora caricata nella pratica" @endif>🖼 Usa la foto della pratica</button>
     <input type="file" id="santo-upload" accept="image/*" style="display:none" onchange="insertSanto(this)">
     <button class="tool-btn" onclick="flipOggetto('X')" title="Rifletti orizzontale">↔ Flip H</button>
     <button class="tool-btn" onclick="flipOggetto('Y')" title="Rifletti verticale">↕ Flip V</button>
@@ -449,6 +450,7 @@ function flipOggetto(asse) {
 const praticaData = @json($praticaData ?? []);
 const agenziaData = @json($agenziaData ?? []);
 const savedCanvas = @json($savedCanvas);
+const fotoPrincipale = @json($fotoPrincipale ?? null);
 const csrfToken = '{{ csrf_token() }}';
 
 // Allega CSRF e sessione a tutte le chiamate /admin/api/: gli endpoint sono
@@ -1349,6 +1351,32 @@ function insertPhoto(input) {
   };
   reader.readAsDataURL(input.files[0]);
   input.value = '';
+}
+
+// La stessa foto scelta come principale nel Foto Manager, così ricordino,
+// manifesto e card partono tutti dalla stessa immagine.
+function inserisciFotoPrincipale() {
+  if (!fotoPrincipale) return;
+  fabric.Image.fromURL(fotoPrincipale, function(img) {
+    const maxW = canvas.getWidth() * 0.4;
+    const maxH = canvas.getHeight() * 0.4;
+    const scale = Math.min(maxW / img.width, maxH / img.height);
+    img.set({
+      left: canvas.getWidth() / 2 - (img.width * scale) / 2,
+      top: canvas.getHeight() / 2 - (img.height * scale) / 2,
+      scaleX: scale,
+      scaleY: scale,
+      selectable: true,
+      hasControls: true,
+      hasBorders: true,
+      strokeWidth: 0,
+      stroke: '#c8a96e',
+      customType: 'photo'
+    });
+    canvas.add(img);
+    canvas.setActiveObject(img);
+    canvas.renderAll();
+  }, { crossOrigin: 'anonymous' });
 }
 
 // ── EXPORT (client-side, nessuna chiamata server) ──

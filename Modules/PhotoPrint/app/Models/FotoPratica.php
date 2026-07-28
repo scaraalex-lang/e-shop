@@ -47,4 +47,9 @@ class FotoPratica extends Model
             'tipo' => $this->tipo,
         ];
     }
+
+    public static function principaleDi(int $ordineId): ?self
+    {
+        return static::where('ordine_id', $ordineId)->where('is_principale', true)->first();
+    }
 }

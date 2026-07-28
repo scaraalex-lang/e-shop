@@ -20,6 +20,38 @@ class NecrologioPubblicoController extends Controller
 {
     public function show(string $agenzia, string $percorso): View
     {
+        [$necrologio, $onoranza] = $this->risolvi($agenzia, $percorso);
+
+        return view('memorial::necrologi.pubblico', [
+            'necrologio' => $necrologio,
+            'defunto' => $necrologio->defunto,
+            'agenzia' => $onoranza,
+            'indirizzo' => $necrologio->url($onoranza->slug),
+        ]);
+    }
+
+    /**
+     * Il manifesto condivide interamente il gate del necrologio: stesso
+     * consenso, stesso interruttore, stessa scadenza. Non è un'entità con
+     * un proprio stato di pubblicazione — è lo stesso evento, un altro foglio.
+     */
+    public function manifesto(string $agenzia, string $percorso): View
+    {
+        [$necrologio, $onoranza] = $this->risolvi($agenzia, $percorso);
+
+        abort_unless($necrologio->manifesto !== null, 404);
+
+        return view('memorial::necrologi.manifesto-pubblico', [
+            'necrologio' => $necrologio,
+            'defunto' => $necrologio->defunto,
+            'agenzia' => $onoranza,
+            'indirizzo' => $necrologio->urlManifesto($onoranza->slug),
+        ]);
+    }
+
+    /** @return array{0: Necrologio, 1: Agenzia} */
+    private function risolvi(string $agenzia, string $percorso): array
+    {
         $onoranza = Agenzia::where('slug', $agenzia)->first();
 
         abort_unless($onoranza !== null, 404);
@@ -32,11 +64,6 @@ class NecrologioPubblicoController extends Controller
 
         abort_unless($necrologio && $necrologio->pubblico(), 404);
 
-        return view('memorial::necrologi.pubblico', [
-            'necrologio' => $necrologio,
-            'defunto' => $necrologio->defunto,
-            'agenzia' => $onoranza,
-            'indirizzo' => $necrologio->url($onoranza->slug),
-        ]);
+        return [$necrologio, $onoranza];
     }
 }

@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Modules\Commerce\Models\Agenzia;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\ManifestoTemplate;
 use Modules\Memorial\Models\Necrologio;
@@ -180,7 +181,7 @@ class NecrologiController extends Controller
         return view('memorial::necrologi.card-designer', [
             'necrologio' => $necrologio,
             'defunto' => $necrologio->defunto,
-            'templates' => NecrologioCardTemplate::where('agenzia_id', $this->agenzia($request)->id)->latest()->get(),
+            'templates' => NecrologioCardTemplate::where('agenzia_id', $necrologio->agenzia_id)->latest()->get(),
             'fotoPrincipale' => $fotoPrincipale ? '/storage/'.ltrim($fotoPrincipale, '/') : null,
         ]);
     }
@@ -206,7 +207,7 @@ class NecrologiController extends Controller
             'template.mimes' => 'Il template dev\'essere un PNG.',
         ]);
 
-        $path = $request->file('template')->store('necrologi/card-templates', 'public');
+        $path = $request->file('template')->store($agenzia->cartellaAssetSociali().'/card-templates', 'public');
         abort_if($path === false, 500, 'Salvataggio del template fallito, riprova.');
 
         $template = NecrologioCardTemplate::create([
@@ -250,8 +251,9 @@ class NecrologiController extends Controller
         abort_if($binario === false, 422, 'Immagine non valida.');
 
         $vecchia = $necrologio->og_image;
+        $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
 
-        $path = 'necrologi/og-image/'.$necrologio->id.'-'.Str::lower(Str::random(8)).'.png';
+        $path = $agenzia->cartellaAssetSociali().'/og-image/'.$necrologio->id.'-'.Str::lower(Str::random(8)).'.png';
         $scritto = Storage::disk('public')->put($path, $binario);
         abort_if($scritto === false, 500, 'Salvataggio della card fallito, riprova.');
 
@@ -280,7 +282,8 @@ class NecrologiController extends Controller
     {
         $this->soloSuo($request, $necrologio);
         $necrologio->load('defunto');
-        $agenzia = $this->agenzia($request);
+        $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
+        $foto = $this->immaginePredefinita($necrologio->defunto);
 
         return view('memorial::necrologi.manifesto-designer', [
             'necrologio' => $necrologio,
@@ -293,6 +296,7 @@ class NecrologiController extends Controller
             'templates' => ManifestoTemplate::visibiliPer($agenzia->id)->latest()->get(),
             'savedCanvas' => $necrologio->manifesto_canvas,
             'savedFormato' => $necrologio->manifesto_formato ?? 'a3l',
+            'fotoPrincipale' => $foto ? '/storage/'.ltrim($foto, '/') : null,
         ]);
     }
 
@@ -333,7 +337,7 @@ class NecrologiController extends Controller
             'formato' => $dati['formato'],
             'agenzia_id' => $proprietario,
             'fronte' => $fronte,
-            'anteprima' => $this->salvaAnteprimaDataUrl($dati['anteprima'] ?? null, 'necrologi/manifesto-template'),
+            'anteprima' => $this->salvaAnteprimaDataUrl($dati['anteprima'] ?? null, $this->cartellaTemplateManifesto($proprietario)),
         ]);
 
         return response()->json(['success' => true, 'id' => $template->id]);
@@ -352,7 +356,7 @@ class NecrologiController extends Controller
         $fronte = json_decode($dati['fronte'], true);
         abort_if(! is_array($fronte) || empty($fronte['objects']), 422, 'Il manifesto è vuoto: non c\'è niente da salvare come template.');
 
-        $anteprima = $this->salvaAnteprimaDataUrl($dati['anteprima'] ?? null, 'necrologi/manifesto-template');
+        $anteprima = $this->salvaAnteprimaDataUrl($dati['anteprima'] ?? null, $this->cartellaTemplateManifesto($template->agenzia_id));
         if ($anteprima && $template->anteprima) {
             Storage::disk('public')->delete($template->anteprima);
         }
@@ -405,7 +409,8 @@ class NecrologiController extends Controller
             $binario = base64_decode($m[1], true);
             abort_if($binario === false, 422, 'Il PDF non è valido.');
 
-            $path = 'necrologi/manifesti/'.$necrologio->id.'-'.Str::lower(Str::random(8)).'.pdf';
+            $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
+            $path = $agenzia->cartellaAssetSociali().'/manifesti/'.$necrologio->id.'-'.Str::lower(Str::random(8)).'.pdf';
             Storage::disk('public')->put($path, $binario);
         }
 
@@ -495,19 +500,34 @@ class NecrologiController extends Controller
     private function allegaManifesto(Request $request, Necrologio $necrologio): void
     {
         if ($request->hasFile('manifesto')) {
+            $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
+
             $necrologio->update([
-                'manifesto' => $request->file('manifesto')->store('necrologi/manifesti', 'public'),
+                'manifesto' => $request->file('manifesto')->store($agenzia->cartellaAssetSociali().'/manifesti', 'public'),
             ]);
         }
     }
 
+    /** I template manifesto globali (staff) restano in una cartella condivisa; quelli di un'agenzia vanno nella sua. */
+    private function cartellaTemplateManifesto(?int $agenziaId): string
+    {
+        if ($agenziaId === null) {
+            return 'necrologi/manifesto-template';
+        }
+
+        return Agenzia::findOrFail($agenziaId)->cartellaAssetSociali().'/manifesto-template';
+    }
+
     /**
      * L'anteprima social di partenza, prima che l'agenzia apra il designer:
-     * il ritratto già elaborato è già una card valida su WhatsApp.
+     * preferiamo la foto principale scelta nel Foto Manager (stessa foto per
+     * ricordino, manifesto e card), col ritratto già elaborato del ricordino
+     * come ripiego se quella non c'è ancora.
      */
     private function immaginePredefinita(Defunto $defunto): ?string
     {
-        return $defunto->ricordini()->latest()->first()?->anteprima_fronte;
+        return $defunto->fotoPrincipalePath()
+            ?? $defunto->ricordini()->latest()->first()?->anteprima_fronte;
     }
 
     /** Chi possiede un nuovo template manifesto: staff -> globale, agenzia -> suo. */
@@ -559,9 +579,21 @@ class NecrologiController extends Controller
         return $agenzia;
     }
 
+    /**
+     * Chi può toccare questo necrologio: la sua agenzia, o lo staff — che non
+     * ha un'agenzia propria ma lavora gli ordini B2B per conto delle agenzie
+     * (arriva qui dalla lavorazione dell'ordine, non dal self-service).
+     */
     private function soloSuo(Request $request, Necrologio $necrologio): void
     {
-        abort_unless($necrologio->agenzia_id === $this->agenzia($request)->id, 404);
+        $utente = $request->user();
+
+        if ($utente->eStaff()) {
+            return;
+        }
+
+        abort_unless($utente->agenzia !== null, 403, 'I necrologi sono uno strumento per le onoranze funebri.');
+        abort_unless($necrologio->agenzia_id === $utente->agenzia->id, 404);
     }
 
     private function defuntiDisponibili(Request $request)
