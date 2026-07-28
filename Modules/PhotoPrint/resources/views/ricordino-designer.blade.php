@@ -892,7 +892,7 @@ const BLOCCHI_PERSONALI = ['nome', 'eta', 'date', 'frase', 'preghiera'];
 function testoPersonale(tipo, dati) {
   const d = dati || {};
   switch (tipo) {
-    case 'nome':      return (d.cognome || 'COGNOME') + '\n' + (d.nome || 'Nome');
+    case 'nome':      return (d.cognome || 'COGNOME') + ' ' + (d.nome || 'Nome');
     case 'eta':       return d.anni ? 'di anni ' + d.anni : 'di anni ___';
     case 'date':      return (d.data_nascita || '__/__/____') + ' — ' + (d.data_morte || '__/__/____');
     case 'frase':     return d.frase || "E mancato all'affetto dei suoi cari";
