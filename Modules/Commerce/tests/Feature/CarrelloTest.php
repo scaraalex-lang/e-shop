@@ -157,6 +157,34 @@ class CarrelloTest extends TestCase
             ->assertDontSee('minimo d\'ordine');
     }
 
+    public function test_un_carrello_di_soli_crediti_ignora_il_minimo_d_ordine(): void
+    {
+        $categoria = Category::firstOrCreate(
+            ['slug' => 'servizi-agenzia'],
+            ['name' => 'Servizi per agenzie'],
+        );
+        $pacchettoCrediti = Product::create([
+            'category_id' => $categoria->id,
+            'sku' => 'SRV-TEST-'.uniqid(),
+            'slug' => 'test-crediti-'.uniqid(),
+            'name' => 'Pacchetto crediti di prova',
+            'price' => 10000,
+            'crediti' => 100,
+            'is_photo_printable' => false,
+            'is_active' => true,
+        ]);
+
+        $referente = $this->referenteAgenzia(attributi: ['ordine_minimo_pezzi' => 30]);
+        $carrello = Carrello::create(['user_id' => $referente->id]);
+        $carrello->righe()->create(['product_id' => $pacchettoCrediti->id, 'quantita' => 1]);
+
+        $this->actingAs($referente)->get('/carrello')
+            ->assertOk()
+            ->assertSeeText('il minimo d\'ordine non si applica')
+            ->assertDontSee('Mancano')
+            ->assertSeeText('Concludi l\'ordine');
+    }
+
     public function test_non_si_aggiunge_un_prodotto_ritirato(): void
     {
         $prodotto = $this->prodotto(['is_active' => false]);

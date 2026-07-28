@@ -6,7 +6,7 @@
 @section('content')
 @php
     $minimo = $agenzia?->ordineMinimoPezzi() ?? 0;
-    $sottoMinimo = $minimo > 0 && $pezzi < $minimo;
+    $sottoMinimo = $minimo > 0 && $pezzi < $minimo && ! $soloCrediti;
 @endphp
 
 <div class="mx-auto w-full max-w-5xl">
@@ -128,7 +128,9 @@
                         </h2>
 
                         <p class="mt-3 font-sans font-light text-[14px] leading-relaxed text-testo-soft">
-                            @if ($sottoMinimo)
+                            @if ($soloCrediti)
+                                Solo pacchetti crediti nel carrello: il minimo d'ordine non si applica.
+                            @elseif ($sottoMinimo)
                                 Il minimo d'ordine per il tuo account è di <strong class="font-normal text-testo">{{ $minimo }} pezzi</strong>.
                                 Nel carrello ce ne sono {{ $pezzi }}: ne mancano {{ $minimo - $pezzi }}.
                             @elseif ($minimo > 0)

@@ -30,6 +30,7 @@ class CarrelloController extends Controller
             'conto' => $carrello?->conto($this->listino, $utente),
             'agenzia' => $agenzia,
             'pezzi' => $carrello?->pezzi() ?? 0,
+            'soloCrediti' => $carrello?->soloCrediti() ?? false,
         ]);
     }
 
