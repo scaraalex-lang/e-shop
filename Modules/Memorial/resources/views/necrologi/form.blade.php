@@ -233,6 +233,35 @@
                 </form>
             @endif
         </section>
+
+        {{-- ============ messaggi di cordoglio ============ --}}
+        @if ($necrologio->messaggiCordoglio->isNotEmpty())
+            <section class="bg-bianco px-7 py-8">
+                <h2 class="font-serif text-2xl font-medium">Messaggi di cordoglio</h2>
+                <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">
+                    Lasciati senza account sulla pagina del manifesto. Puoi toglierne uno se fuori luogo.
+                </p>
+                <div class="mt-5 max-w-2xl space-y-4">
+                    @foreach ($necrologio->messaggiCordoglio as $messaggio)
+                        <div class="flex items-start justify-between gap-4 border border-caffe/15 px-4 py-3">
+                            <div class="min-w-0">
+                                <p class="font-sans text-[13px] font-medium">{{ $messaggio->nome }}</p>
+                                <p class="mt-1 font-sans font-light text-[14px] leading-relaxed text-testo-soft whitespace-pre-line">{{ $messaggio->messaggio }}</p>
+                                <p class="mt-1 font-sans text-[11px] text-testo-soft/70">{{ $messaggio->created_at->format('d/m/Y H:i') }}</p>
+                            </div>
+                            <form method="POST" action="{{ route('necrologi.messaggi.elimina', [$necrologio, $messaggio]) }}"
+                                  onsubmit="return confirm('Eliminare questo messaggio?')">
+                                @csrf
+                                @method('delete')
+                                <button type="submit" class="font-sans text-[11px] uppercase tracking-[0.15em] text-errore hover:underline">
+                                    Elimina
+                                </button>
+                            </form>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
     @endunless
 </div>
 

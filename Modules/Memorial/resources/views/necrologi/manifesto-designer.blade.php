@@ -1431,6 +1431,9 @@ async function salvaManifesto() {
   const dataUrlCanvas = canvas.toDataURL({ format: 'jpeg', quality: 0.92, multiplier: 3 });
   doc.addImage(dataUrlCanvas, 'JPEG', 0, 0, fmt.wmm, fmt.hmm);
   const pdfDataUrl = doc.output('datauristring');
+  // Miniatura leggera per la pagina pubblica: lì non deve arrivare né il PDF
+  // né l'export a piena risoluzione, solo un'anteprima cliccabile.
+  const anteprima = canvas.toDataURL({ format: 'jpeg', quality: 0.6, multiplier: 0.5 });
 
   try {
     const res = await fetch('/admin/api/necrologi/{{ $necrologio->id }}/salva-manifesto', {
@@ -1440,6 +1443,7 @@ async function salvaManifesto() {
         canvas: JSON.stringify(canvas.toJSON(['customType', 'customBlockType'])),
         formato: currentFormat,
         pdf: pdfDataUrl,
+        anteprima: anteprima,
       }),
     });
     const data = await res.json();

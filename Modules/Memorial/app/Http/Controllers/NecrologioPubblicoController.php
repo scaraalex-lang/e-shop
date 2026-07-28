@@ -3,6 +3,8 @@
 namespace Modules\Memorial\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Commerce\Models\Agenzia;
 use Modules\Memorial\Models\Necrologio;
@@ -46,7 +48,34 @@ class NecrologioPubblicoController extends Controller
             'defunto' => $necrologio->defunto,
             'agenzia' => $onoranza,
             'indirizzo' => $necrologio->urlManifesto($onoranza->slug),
+            'messaggi' => $necrologio->messaggiCordoglio,
         ]);
+    }
+
+    /**
+     * Un pensiero lasciato senza account: solo nome e testo, nessun contatto.
+     * Sta sotto il manifesto (il funerale), non sulla card del trigesimo.
+     */
+    public function inviaMessaggio(Request $request, string $agenzia, string $percorso): RedirectResponse
+    {
+        [$necrologio] = $this->risolvi($agenzia, $percorso);
+
+        $dati = $request->validate([
+            'nome' => ['required', 'string', 'max:80'],
+            'messaggio' => ['required', 'string', 'max:1000'],
+            // Honeypot: un campo invisibile per chi guarda la pagina, che uno
+            // script che compila tutto il form invece riempie.
+            'sito_web' => ['prohibited'],
+        ]);
+
+        $necrologio->messaggiCordoglio()->create([
+            'nome' => $dati['nome'],
+            'messaggio' => $dati['messaggio'],
+        ]);
+
+        return redirect()
+            ->route('necrologio.manifesto.pubblico', ['agenzia' => $agenzia, 'percorso' => $percorso])
+            ->with('messaggio_inviato', true);
     }
 
     /** @return array{0: Necrologio, 1: Agenzia} */

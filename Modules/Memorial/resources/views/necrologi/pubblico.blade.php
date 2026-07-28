@@ -96,11 +96,17 @@
 
             @if ($necrologio->manifesto)
                 <div class="mt-8">
-                    <a href="{{ $necrologio->urlManifesto($agenzia->slug) }}"
-                       class="font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro
-                              hover:text-caffe transition-colors duration-300
-                              underline underline-offset-4 decoration-oro/40">
-                        Guarda il manifesto
+                    <a href="{{ $necrologio->urlManifesto($agenzia->slug) }}" class="group inline-block">
+                        @if ($necrologio->manifestoAnteprimaUrl())
+                            <img src="{{ $necrologio->manifestoAnteprimaUrl() }}" alt="Manifesto di {{ $nome }}"
+                                 class="mx-auto max-h-64 w-auto border border-caffe/15 shadow-[0_10px_30px_rgba(58,46,34,0.14)]
+                                        transition-opacity duration-300 group-hover:opacity-80">
+                        @endif
+                        <span class="mt-3 block font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro
+                                     group-hover:text-caffe transition-colors duration-300
+                                     underline underline-offset-4 decoration-oro/40">
+                            Guarda il manifesto
+                        </span>
                     </a>
                 </div>
             @endif

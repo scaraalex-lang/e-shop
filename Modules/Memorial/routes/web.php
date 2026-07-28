@@ -31,6 +31,8 @@ Route::middleware('auth')->prefix('account/necrologi')->name('necrologi.')->grou
 
     Route::get('{necrologio}/designer', [NecrologiController::class, 'designer'])->name('designer');
     Route::get('{necrologio}/manifesto', [NecrologiController::class, 'manifestoDesigner'])->name('manifesto');
+
+    Route::delete('{necrologio}/messaggi/{messaggio}', [NecrologiController::class, 'eliminaMessaggio'])->name('messaggi.elimina');
 });
 
 /*
@@ -77,3 +79,9 @@ Route::get('ricordi/{agenzia}/{percorso}', [NecrologioPubblicoController::class,
     ->name('necrologio');
 Route::get('ricordi/{agenzia}/{percorso}/manifesto', [NecrologioPubblicoController::class, 'manifesto'])
     ->name('necrologio.manifesto.pubblico');
+
+// Messaggi di cordoglio: pubblico, senza account — un limite di frequenza
+// basta come freno allo spam, niente moderazione preventiva per ora.
+Route::post('ricordi/{agenzia}/{percorso}/manifesto/messaggio', [NecrologioPubblicoController::class, 'inviaMessaggio'])
+    ->middleware('throttle:5,1')
+    ->name('necrologio.manifesto.messaggio');

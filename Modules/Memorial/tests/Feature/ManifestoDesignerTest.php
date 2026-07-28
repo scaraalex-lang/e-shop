@@ -165,6 +165,46 @@ class ManifestoDesignerTest extends TestCase
         Storage::disk('public')->assertExists($n->manifesto);
     }
 
+    public function test_salvare_con_anteprima_genera_la_miniatura_pubblica(): void
+    {
+        Storage::fake('public');
+        [$referente, $agenzia] = $this->agenziaConReferente();
+        $n = $this->necrologio($agenzia);
+
+        $this->actingAs($referente)->postJson(
+            "/admin/api/necrologi/{$n->id}/salva-manifesto",
+            ['canvas' => $this->canvasNonVuoto(), 'formato' => 'a3l', 'anteprima' => 'data:image/jpeg;base64,'.base64_encode('finta miniatura')]
+        )->assertOk();
+
+        $n->refresh();
+        $this->assertNotNull($n->manifesto_anteprima);
+        Storage::disk('public')->assertExists($n->manifesto_anteprima);
+        $this->assertNotNull($n->manifestoAnteprimaUrl());
+    }
+
+    public function test_risalvare_toglie_l_anteprima_vecchia(): void
+    {
+        Storage::fake('public');
+        [$referente, $agenzia] = $this->agenziaConReferente();
+        $n = $this->necrologio($agenzia);
+
+        $this->actingAs($referente)->postJson(
+            "/admin/api/necrologi/{$n->id}/salva-manifesto",
+            ['canvas' => $this->canvasNonVuoto(), 'formato' => 'a3l', 'anteprima' => 'data:image/jpeg;base64,'.base64_encode('prima')]
+        )->assertOk();
+        $primaAnteprima = $n->fresh()->manifesto_anteprima;
+
+        $this->actingAs($referente)->postJson(
+            "/admin/api/necrologi/{$n->id}/salva-manifesto",
+            ['canvas' => $this->canvasNonVuoto(), 'formato' => 'a3l', 'anteprima' => 'data:image/jpeg;base64,'.base64_encode('seconda')]
+        )->assertOk();
+
+        $n->refresh();
+        $this->assertNotSame($primaAnteprima, $n->manifesto_anteprima);
+        Storage::disk('public')->assertMissing($primaAnteprima);
+        Storage::disk('public')->assertExists($n->manifesto_anteprima);
+    }
+
     public function test_salvare_senza_pdf_aggiorna_solo_lo_stato_del_canvas(): void
     {
         Storage::fake('public');

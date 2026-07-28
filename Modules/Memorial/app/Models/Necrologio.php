@@ -5,6 +5,7 @@ namespace Modules\Memorial\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
@@ -15,7 +16,7 @@ class Necrologio extends Model
     protected $fillable = [
         'defunto_id', 'agenzia_id', 'percorso',
         'trigesimo_at', 'trigesimo_luogo', 'trigesimo_indirizzo', 'testo',
-        'og_image', 'manifesto', 'manifesto_canvas', 'manifesto_formato',
+        'og_image', 'manifesto', 'manifesto_anteprima', 'manifesto_canvas', 'manifesto_formato',
     ];
 
     protected $casts = [
@@ -30,6 +31,11 @@ class Necrologio extends Model
     public function defunto(): BelongsTo
     {
         return $this->belongsTo(Defunto::class);
+    }
+
+    public function messaggiCordoglio(): HasMany
+    {
+        return $this->hasMany(MessaggioCordoglio::class)->latest();
     }
 
     /**
@@ -54,6 +60,12 @@ class Necrologio extends Model
     public function urlManifesto(string $slugAgenzia): string
     {
         return route('necrologio.manifesto.pubblico', ['agenzia' => $slugAgenzia, 'percorso' => $this->percorso]);
+    }
+
+    /** Path relativo (mai `Storage::url()`/`url()`, vedi CLAUDE.md): evita l'host sbagliato di APP_URL=localhost. */
+    public function manifestoAnteprimaUrl(): ?string
+    {
+        return $this->manifesto_anteprima ? '/storage/'.ltrim($this->manifesto_anteprima, '/') : null;
     }
 
     /**

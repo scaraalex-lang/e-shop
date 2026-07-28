@@ -13,6 +13,7 @@ use Illuminate\View\View;
 use Modules\Commerce\Models\Agenzia;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\ManifestoTemplate;
+use Modules\Memorial\Models\MessaggioCordoglio;
 use Modules\Memorial\Models\Necrologio;
 use Modules\Memorial\Models\NecrologioCardTemplate;
 
@@ -79,7 +80,7 @@ class NecrologiController extends Controller
         $this->soloSuo($request, $necrologio);
 
         return view('memorial::necrologi.form', [
-            'necrologio' => $necrologio->load('defunto'),
+            'necrologio' => $necrologio->load(['defunto', 'messaggiCordoglio']),
             'defunti' => $this->defuntiDisponibili($request),
             'agenzia' => $this->agenzia($request),
         ]);
@@ -162,6 +163,18 @@ class NecrologiController extends Controller
 
         return redirect()->route('necrologi.modifica', $necrologio)
             ->with('stato', 'Pagina ritirata. Ricorda: quello che è già stato condiviso resta nelle chat.');
+    }
+
+    /** Un messaggio di cordoglio fuori luogo: solo l'agenzia del necrologio può toglierlo. */
+    public function eliminaMessaggio(Request $request, Necrologio $necrologio, MessaggioCordoglio $messaggio): RedirectResponse
+    {
+        $this->soloSuo($request, $necrologio);
+        abort_unless($messaggio->necrologio_id === $necrologio->id, 404);
+
+        $messaggio->delete();
+
+        return redirect()->route('necrologi.modifica', $necrologio)
+            ->with('stato', 'Messaggio eliminato.');
     }
 
     /**
@@ -293,7 +306,6 @@ class NecrologiController extends Controller
                 ['necrologio_url' => $necrologio->url($agenzia->slug)],
             ),
             'agenziaData' => ['name' => $agenzia->ragione_sociale],
-            'templates' => ManifestoTemplate::visibiliPer($agenzia->id)->latest()->get(),
             'savedCanvas' => $necrologio->manifesto_canvas,
             'savedFormato' => $necrologio->manifesto_formato ?? 'a3l',
             'fotoPrincipale' => $foto ? '/storage/'.ltrim($foto, '/') : null,
@@ -304,7 +316,12 @@ class NecrologiController extends Controller
     {
         $agenzia = $this->agenzia($request);
 
-        $templates = ManifestoTemplate::visibiliPer($agenzia->id)->latest()->get()
+        // Niente ORDER BY in SQL: `fronte` può arrivare a qualche MB (uno
+        // sfondo personalizzato incluso di proposito) e MySQL può finire la
+        // memoria di sort ordinando l'intera riga. Il volume per agenzia è
+        // ridotto: si ordina in PHP dopo il fetch.
+        $templates = ManifestoTemplate::visibiliPer($agenzia->id)->get()
+            ->sortByDesc('created_at')
             ->map(fn (ManifestoTemplate $t) => [
                 'id' => $t->id,
                 'nome' => $t->nome,
@@ -394,6 +411,7 @@ class NecrologiController extends Controller
             'canvas' => ['required', 'string'],
             'formato' => ['required', 'string'],
             'pdf' => ['nullable', 'string'],
+            'anteprima' => ['nullable', 'string'],
         ]);
 
         $canvas = json_decode($dati['canvas'], true);
@@ -401,6 +419,7 @@ class NecrologiController extends Controller
 
         $vecchio = $necrologio->manifesto;
         $path = $vecchio;
+        $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
 
         if ($dati['pdf'] ?? null) {
             // jsPDF .output('datauristring') inserisce sempre un "filename=...;"
@@ -411,19 +430,26 @@ class NecrologiController extends Controller
             $binario = base64_decode($m[1], true);
             abort_if($binario === false, 422, 'Il PDF non è valido.');
 
-            $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
             $path = $agenzia->cartellaAssetSociali().'/manifesti/'.$necrologio->id.'-'.Str::lower(Str::random(8)).'.pdf';
             Storage::disk('public')->put($path, $binario);
         }
+
+        $vecchiaAnteprima = $necrologio->manifesto_anteprima;
+        $anteprima = $this->salvaAnteprimaDataUrl($dati['anteprima'] ?? null, $agenzia->cartellaAssetSociali().'/manifesti-anteprima')
+            ?? $vecchiaAnteprima;
 
         $necrologio->update([
             'manifesto_canvas' => $canvas,
             'manifesto_formato' => $dati['formato'],
             'manifesto' => $path,
+            'manifesto_anteprima' => $anteprima,
         ]);
 
         if ($path !== $vecchio && $vecchio) {
             Storage::disk('public')->delete($vecchio);
+        }
+        if ($anteprima !== $vecchiaAnteprima && $vecchiaAnteprima) {
+            Storage::disk('public')->delete($vecchiaAnteprima);
         }
 
         return response()->json(['success' => true, 'url' => $path ? '/storage/'.$path : null]);
