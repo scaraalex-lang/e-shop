@@ -65,8 +65,7 @@ class LavorazioneController extends Controller
             'cerimonia_at' => ['nullable', 'date'],
             'chiesa' => ['nullable', 'string', 'max:150'],
             'indirizzo_chiesa' => ['nullable', 'string', 'max:255'],
-            'cimitero' => ['nullable', 'string', 'max:150'],
-            'indirizzo_cimitero' => ['nullable', 'string', 'max:255'],
+            'cimitero' => ['nullable', 'string', 'max:255'],
             'gdpr_parentela' => ['required', 'string', 'max:80'],
             'gdpr_consenso' => ['accepted'],
         ], [
@@ -91,7 +90,6 @@ class LavorazioneController extends Controller
             'chiesa' => $dati['chiesa'] ?? null,
             'indirizzo_chiesa' => $dati['indirizzo_chiesa'] ?? null,
             'cimitero' => $dati['cimitero'] ?? null,
-            'indirizzo_cimitero' => $dati['indirizzo_cimitero'] ?? null,
             'ordine_id' => $ordine->id,
         ])->save();
 

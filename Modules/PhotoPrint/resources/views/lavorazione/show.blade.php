@@ -134,21 +134,12 @@
                     </div>
                 </div>
 
-                <div class="grid gap-6 sm:grid-cols-2">
-                    <div>
-                        <x-input-label for="cimitero" value="Cimitero" />
-                        <x-text-input id="cimitero" name="cimitero" autocomplete="off"
-                            placeholder="Nome del cimitero"
-                            :value="old('cimitero', $defunto?->cimitero)" />
-                        <x-input-error :messages="$errors->get('cimitero')" />
-                    </div>
-                    <div>
-                        <x-input-label for="indirizzo_cimitero" value="Indirizzo cimitero" />
-                        <x-text-input id="indirizzo_cimitero" name="indirizzo_cimitero" autocomplete="off"
-                            placeholder="Via, numero civico, città"
-                            :value="old('indirizzo_cimitero', $defunto?->indirizzo_cimitero)" />
-                        <x-input-error :messages="$errors->get('indirizzo_cimitero')" />
-                    </div>
+                <div>
+                    <x-input-label for="cimitero" value="Cimitero" />
+                    <x-text-input id="cimitero" name="cimitero" autocomplete="off"
+                        placeholder="Nome e indirizzo del cimitero"
+                        :value="old('cimitero', $defunto?->cimitero)" />
+                    <x-input-error :messages="$errors->get('cimitero')" />
                 </div>
             </div>
 
@@ -202,29 +193,30 @@
                 window.inizializzaAutocompleteLuoghi = function () {
                     var opzioni = { componentRestrictions: { country: 'it' }, fields: ['name', 'formatted_address'] };
 
-                    // Indirizzi semplici: la ricerca compila il campo stesso.
-                    ['indirizzo_cerimonia', 'indirizzo_chiesa', 'indirizzo_cimitero'].forEach(function (id) {
+                    // Indirizzi semplici: la ricerca compila il campo stesso. Anche
+                    // "Cimitero" resta qui — molti cimiteri su Google Places non hanno
+                    // un indirizzo stradale, solo la città: lo split lasciava il
+                    // campo indirizzo con "Milano" e niente altro.
+                    ['indirizzo_cerimonia', 'indirizzo_chiesa', 'cimitero'].forEach(function (id) {
                         var el = document.getElementById(id);
                         if (el) {
                             new google.maps.places.Autocomplete(el, opzioni);
                         }
                     });
 
-                    // "Chiesa" e "Cimitero": si cerca il nome del luogo, non il suo
-                    // indirizzo — che si scrive da solo nel campo accanto, così non
-                    // si ridigita lo stesso posto due volte.
-                    ['chiesa', 'cimitero'].forEach(function (nomeId) {
-                        var elNome = document.getElementById(nomeId);
-                        var elIndirizzo = document.getElementById('indirizzo_' + nomeId);
-                        if (!elNome || !elIndirizzo) return;
-
-                        var autocomplete = new google.maps.places.Autocomplete(elNome, opzioni);
-                        autocomplete.addListener('place_changed', function () {
-                            var luogo = autocomplete.getPlace();
-                            if (luogo.name) elNome.value = luogo.name;
-                            if (luogo.formatted_address) elIndirizzo.value = luogo.formatted_address;
+                    // "Chiesa": si cerca il nome del luogo, non il suo indirizzo — che
+                    // si scrive da solo nel campo accanto, così non si ridigita lo
+                    // stesso posto due volte.
+                    var elChiesa = document.getElementById('chiesa');
+                    var elIndirizzoChiesa = document.getElementById('indirizzo_chiesa');
+                    if (elChiesa && elIndirizzoChiesa) {
+                        var autocompleteChiesa = new google.maps.places.Autocomplete(elChiesa, opzioni);
+                        autocompleteChiesa.addListener('place_changed', function () {
+                            var luogo = autocompleteChiesa.getPlace();
+                            if (luogo.name) elChiesa.value = luogo.name;
+                            if (luogo.formatted_address) elIndirizzoChiesa.value = luogo.formatted_address;
                         });
-                    });
+                    }
                 };
             </script>
             <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google.maps_key') }}&libraries=places&callback=inizializzaAutocompleteLuoghi&loading=async" async defer></script>

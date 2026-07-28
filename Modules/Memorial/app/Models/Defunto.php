@@ -19,7 +19,7 @@ class Defunto extends Model
         'frase', 'preghiera',
         'luogo_partenza', 'indirizzo_cerimonia', 'cerimonia_at',
         'chiesa', 'indirizzo_chiesa',
-        'cimitero', 'indirizzo_cimitero',
+        'cimitero',
         'gdpr_consenso', 'gdpr_autorizzato_da', 'gdpr_parentela',
         'gdpr_autorizzato_at', 'gdpr_note',
         'ordine_id',

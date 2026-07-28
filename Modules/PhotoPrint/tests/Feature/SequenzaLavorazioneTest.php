@@ -111,8 +111,7 @@ class SequenzaLavorazioneTest extends TestCase
             'cerimonia_at' => '2026-08-10 10:30',
             'chiesa' => 'Chiesa di San Giuseppe',
             'indirizzo_chiesa' => 'Via Roma 1, Milano',
-            'cimitero' => 'Cimitero Monumentale',
-            'indirizzo_cimitero' => 'Piazzale Cimitero Monumentale, Milano',
+            'cimitero' => 'Cimitero Monumentale, Piazzale Cimitero Monumentale, Milano',
         ])->assertRedirect();
 
         $defunto = \Modules\Memorial\Models\Defunto::firstOrFail();
@@ -121,8 +120,7 @@ class SequenzaLavorazioneTest extends TestCase
         $this->assertSame('10/08/2026 10:30', $defunto->cerimonia_at->format('d/m/Y H:i'));
         $this->assertSame('Chiesa di San Giuseppe', $defunto->chiesa);
         $this->assertSame('Via Roma 1, Milano', $defunto->indirizzo_chiesa);
-        $this->assertSame('Cimitero Monumentale', $defunto->cimitero);
-        $this->assertSame('Piazzale Cimitero Monumentale, Milano', $defunto->indirizzo_cimitero);
+        $this->assertSame('Cimitero Monumentale, Piazzale Cimitero Monumentale, Milano', $defunto->cimitero);
     }
 
     public function test_il_luogo_di_partenza_deve_essere_una_delle_opzioni_previste(): void
