@@ -34,10 +34,10 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 .btn-green{background:var(--green);color:#fff}
 
 /* LAYOUT */
-.designer-layout{display:flex;flex:1;overflow:hidden}
-.sidebar{width:280px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
-.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;background:#2a2a3a;overflow:auto;position:relative}
-.props-panel{width:260px;background:var(--white);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.designer-layout{display:flex;flex:1;overflow:hidden;min-height:0}
+.sidebar{width:280px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;min-height:0}
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;background:#2a2a3a;overflow:auto;position:relative;min-height:0}
+.props-panel{width:260px;background:var(--white);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;min-height:0}
 
 /* SIDEBAR */
 .panel-title{font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);padding:.75rem 1rem .5rem;border-bottom:1px solid var(--border);font-weight:500}
@@ -110,10 +110,9 @@ canvas{display:block}
 </head>
 <body>
 <script>
-// Fullscreen al primo click (comodità in negozio/agenzia) + rifletti oggetto
-// (usato dai bottoni Flip H/V della toolbar). Sta qui, prima della creazione
-// del canvas, quindi legge sempre window.canvas per evitare problemi di scope.
-document.addEventListener("click",function(){var e=document.documentElement;if(e.requestFullscreen)e.requestFullscreen();else if(e.webkitRequestFullscreen)e.webkitRequestFullscreen();},{once:true});
+// Rifletti oggetto (usato dai bottoni Flip H/V della toolbar). Sta qui, prima
+// della creazione del canvas, quindi legge sempre window.canvas per evitare
+// problemi di scope.
 function flipOggetto(asse) {
   var c = window.canvas;
   if (!c) { alert('Canvas non pronto'); return; }
@@ -526,12 +525,6 @@ function cambiaFormato(fmt) {
 }
 
 window.onload = function() {
-  setTimeout(function() {
-    var el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  }, 500);
-
   // Registra la proprietà custom dei blocchi testo (nome/data/frase/età/...)
   // per la serializzazione JSON: serve al sistema di template e al salvataggio.
   fabric.Object.prototype.toObject = (function(toObject) {
