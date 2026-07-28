@@ -34,7 +34,7 @@
     {{-- ============ 1. il defunto ============ --}}
     <section class="bg-bianco px-7 py-8">
         <header class="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 class="font-serif text-2xl font-medium">Di chi parliamo</h2>
+            <h2 class="font-serif text-2xl font-medium">Dati del defunto</h2>
             @if ($defunto)
                 <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-successo">Registrato</span>
             @endif
@@ -68,7 +68,7 @@
                     <x-input-error :messages="$errors->get('data_nascita')" />
                 </div>
                 <div>
-                    <x-input-label for="data_morte" value="Data di mancanza" />
+                    <x-input-label for="data_morte" value="Data del decesso" />
                     <x-text-input id="data_morte" name="data_morte" type="date"
                         :value="old('data_morte', $defunto?->data_morte?->format('Y-m-d'))" />
                     <x-input-error :messages="$errors->get('data_morte')" />
@@ -80,6 +80,76 @@
                 <x-text-input id="frase" name="frase"
                     :value="old('frase', $defunto?->frase ?? 'È mancata all\'affetto dei suoi cari')" />
                 <x-input-error :messages="$errors->get('frase')" />
+            </div>
+
+            {{-- la cerimonia: da dove parte, quando, dove si celebra, dove si tumula --}}
+            <div class="border-l-2 border-caffe/15 bg-panna/40 px-5 py-5 space-y-6">
+                <h3 class="font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro">La cerimonia</h3>
+
+                <div class="grid gap-6 sm:grid-cols-2">
+                    <div>
+                        <x-input-label for="luogo_partenza" value="Luogo di partenza" />
+                        <select id="luogo_partenza" name="luogo_partenza"
+                                class="block w-full bg-bianco border border-caffe/25 px-4 py-3 font-sans font-light
+                                       text-[15px] text-testo focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40">
+                            <option value="">— Seleziona —</option>
+                            @foreach (\Modules\Memorial\Models\Defunto::LUOGHI_PARTENZA as $opzione)
+                                <option value="{{ $opzione }}" @selected(old('luogo_partenza', $defunto?->luogo_partenza) === $opzione)>
+                                    {{ $opzione }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('luogo_partenza')" />
+                    </div>
+                    <div>
+                        <x-input-label for="cerimonia_at" value="Data e ora della cerimonia" />
+                        <x-text-input id="cerimonia_at" name="cerimonia_at" type="datetime-local"
+                            :value="old('cerimonia_at', $defunto?->cerimonia_at?->format('Y-m-d\TH:i'))" />
+                        <x-input-error :messages="$errors->get('cerimonia_at')" />
+                    </div>
+                </div>
+
+                <div>
+                    <x-input-label for="indirizzo_cerimonia" value="Indirizzo della cerimonia (partenza)" />
+                    <x-text-input id="indirizzo_cerimonia" name="indirizzo_cerimonia" autocomplete="off"
+                        placeholder="Via, numero civico, città"
+                        :value="old('indirizzo_cerimonia', $defunto?->indirizzo_cerimonia)" />
+                    <x-input-error :messages="$errors->get('indirizzo_cerimonia')" />
+                </div>
+
+                <div class="grid gap-6 sm:grid-cols-2">
+                    <div>
+                        <x-input-label for="chiesa" value="Chiesa" />
+                        <x-text-input id="chiesa" name="chiesa" autocomplete="off"
+                            placeholder="Nome della chiesa"
+                            :value="old('chiesa', $defunto?->chiesa)" />
+                        <x-input-error :messages="$errors->get('chiesa')" />
+                    </div>
+                    <div>
+                        <x-input-label for="indirizzo_chiesa" value="Indirizzo chiesa" />
+                        <x-text-input id="indirizzo_chiesa" name="indirizzo_chiesa" autocomplete="off"
+                            placeholder="Via, numero civico, città"
+                            :value="old('indirizzo_chiesa', $defunto?->indirizzo_chiesa)" />
+                        <x-input-error :messages="$errors->get('indirizzo_chiesa')" />
+                    </div>
+                </div>
+
+                <div class="grid gap-6 sm:grid-cols-2">
+                    <div>
+                        <x-input-label for="cimitero" value="Cimitero" />
+                        <x-text-input id="cimitero" name="cimitero" autocomplete="off"
+                            placeholder="Nome del cimitero"
+                            :value="old('cimitero', $defunto?->cimitero)" />
+                        <x-input-error :messages="$errors->get('cimitero')" />
+                    </div>
+                    <div>
+                        <x-input-label for="indirizzo_cimitero" value="Indirizzo cimitero" />
+                        <x-text-input id="indirizzo_cimitero" name="indirizzo_cimitero" autocomplete="off"
+                            placeholder="Via, numero civico, città"
+                            :value="old('indirizzo_cimitero', $defunto?->indirizzo_cimitero)" />
+                        <x-input-error :messages="$errors->get('indirizzo_cimitero')" />
+                    </div>
+                </div>
             </div>
 
             <div>
@@ -116,6 +186,49 @@
 
             <x-primary-button>{{ $defunto ? 'Aggiorna i dati' : 'Salva e prosegui' }}</x-primary-button>
         </form>
+
+        {{--
+            Autocomplete Google Places sui campi di luogo: deroga isolata e
+            esplicita alla convenzione self-hosted del progetto (font, script
+            sempre locali), giustificata dal requisito esplicito del cliente.
+            Circoscritta a questa sola vista; senza chiave configurata i campi
+            restano input di testo normali e non parte nessuna richiesta esterna.
+        --}}
+        @if (config('services.google.maps_key'))
+            <script>
+                // `loading=async` carica le librerie di Google in background: a
+                // DOMContentLoaded "places" potrebbe non essere pronto ancora.
+                // Il callback ufficiale parte solo a libreria caricata davvero.
+                window.inizializzaAutocompleteLuoghi = function () {
+                    var opzioni = { componentRestrictions: { country: 'it' }, fields: ['name', 'formatted_address'] };
+
+                    // Indirizzi semplici: la ricerca compila il campo stesso.
+                    ['indirizzo_cerimonia', 'indirizzo_chiesa', 'indirizzo_cimitero'].forEach(function (id) {
+                        var el = document.getElementById(id);
+                        if (el) {
+                            new google.maps.places.Autocomplete(el, opzioni);
+                        }
+                    });
+
+                    // "Chiesa" e "Cimitero": si cerca il nome del luogo, non il suo
+                    // indirizzo — che si scrive da solo nel campo accanto, così non
+                    // si ridigita lo stesso posto due volte.
+                    ['chiesa', 'cimitero'].forEach(function (nomeId) {
+                        var elNome = document.getElementById(nomeId);
+                        var elIndirizzo = document.getElementById('indirizzo_' + nomeId);
+                        if (!elNome || !elIndirizzo) return;
+
+                        var autocomplete = new google.maps.places.Autocomplete(elNome, opzioni);
+                        autocomplete.addListener('place_changed', function () {
+                            var luogo = autocomplete.getPlace();
+                            if (luogo.name) elNome.value = luogo.name;
+                            if (luogo.formatted_address) elIndirizzo.value = luogo.formatted_address;
+                        });
+                    });
+                };
+            </script>
+            <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google.maps_key') }}&libraries=places&callback=inizializzaAutocompleteLuoghi&loading=async" async defer></script>
+        @endif
     </section>
 
     {{-- ============ 2. la foto ============ --}}
@@ -204,6 +317,27 @@
             </x-button>
         </div>
     </section>
+
+    {{-- ============ necrologio e manifesto (solo agenzie) ============ --}}
+    @if ($ordine->agenzia_id)
+        <section class="bg-bianco px-7 py-8 {{ $foto->isNotEmpty() ? '' : 'opacity-45 pointer-events-none' }}">
+            <h2 class="font-serif text-2xl font-medium">Necrologio e manifesto</h2>
+            <p class="mt-2 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+                Strumenti dell'agenzia: la card social e il manifesto funebre, dalla stessa fotografia.
+            </p>
+
+            <div class="mt-6 flex flex-wrap gap-4">
+                <form method="POST" action="{{ route('lavorazione.necrologio', $ordine) }}">
+                    @csrf
+                    <x-button type="submit">Apri il Necrologio</x-button>
+                </form>
+                <form method="POST" action="{{ route('lavorazione.manifesto', $ordine) }}">
+                    @csrf
+                    <x-button type="submit">Apri il Manifesto</x-button>
+                </form>
+            </div>
+        </section>
+    @endif
 
     {{-- ============ 4. approvazione ============ --}}
     <section class="bg-panna/60 px-7 py-8">
