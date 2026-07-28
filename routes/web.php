@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GestioneContenutiController;
 use App\Http\Controllers\GestioneMenuController;
+use App\Http\Controllers\GestionePreghiereController;
 use App\Http\Controllers\ProdottoController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -84,6 +85,15 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
 
     Route::get('contenuti', [GestioneContenutiController::class, 'edit'])->name('contenuti.edit');
     Route::put('contenuti', [GestioneContenutiController::class, 'update'])->name('contenuti.update');
+
+    // Archivio preghiere: la galleria che si apre nel Ricordino Designer.
+    Route::get('preghiere', [GestionePreghiereController::class, 'index'])->name('preghiere.index');
+    Route::get('preghiere/nuova', [GestionePreghiereController::class, 'create'])->name('preghiere.create');
+    Route::post('preghiere', [GestionePreghiereController::class, 'store'])->name('preghiere.store');
+    Route::get('preghiere/{preghiera}/modifica', [GestionePreghiereController::class, 'edit'])->name('preghiere.edit');
+    Route::put('preghiere/{preghiera}', [GestionePreghiereController::class, 'update'])->name('preghiere.update');
+    Route::delete('preghiere/{preghiera}', [GestionePreghiereController::class, 'destroy'])->name('preghiere.destroy');
+    Route::post('preghiere/{preghiera}/attiva', [GestionePreghiereController::class, 'attiva'])->name('preghiere.attiva');
 });
 
 require __DIR__.'/auth.php';

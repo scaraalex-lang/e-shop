@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Memorial\Models\Defunto;
+use Modules\Memorial\Models\Preghiera;
 use Modules\Memorial\Models\Ricordino;
 use Modules\Memorial\Models\RicordinoTemplate;
 use Modules\Memorial\Models\Santo;
@@ -49,6 +50,74 @@ class RicordinoApiController extends Controller
         $santo = Santo::create(['nome' => $validated['name'], 'path' => $path]);
 
         return response()->json(['success' => true, 'url' => $santo->url()]);
+    }
+
+    // ---- Archivio preghiere -----------------------------------------------
+
+    /**
+     * Elenco delle preghiere attive per il modale del designer. L'archivio si
+     * gestisce da /gestione/preghiere (staff): qui è solo lettura, come i Santi.
+     */
+    public function preghiereIndex()
+    {
+        $preghiere = Preghiera::attive()->get()->map(fn (Preghiera $p) => [
+            'id'        => $p->id,
+            'titolo'    => $p->titolo,
+            'testo'     => $p->testo,
+            'categoria' => $p->categoria,
+            'estratto'  => $p->estratto(),
+        ]);
+
+        return response()->json($preghiere);
+    }
+
+    /**
+     * Nuova preghiera nell'archivio, dalla modale del designer. Solo staff:
+     * l'archivio è condiviso da tutti, non per-agenzia — la gestione fine
+     * (posizione, nascondere) resta in /gestione/preghiere.
+     */
+    public function preghiereStore(Request $request)
+    {
+        abort_unless($request->user()?->eStaff(), 403, 'Solo lo staff gestisce l\'archivio preghiere.');
+
+        $validated = $request->validate([
+            'titolo'    => ['required', 'string', 'max:120'],
+            'testo'     => ['required', 'string', 'max:1200'],
+            'categoria' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $preghiera = Preghiera::create($validated + [
+            'sort_order' => (int) Preghiera::max('sort_order') + 10,
+            'is_active'  => true,
+        ]);
+
+        return response()->json(['success' => true, 'id' => $preghiera->id]);
+    }
+
+    /** Corregge titolo, testo o categoria di una preghiera già in archivio. */
+    public function preghiereUpdate(Request $request, Preghiera $preghiera)
+    {
+        abort_unless($request->user()?->eStaff(), 403, 'Solo lo staff gestisce l\'archivio preghiere.');
+
+        $validated = $request->validate([
+            'titolo'    => ['required', 'string', 'max:120'],
+            'testo'     => ['required', 'string', 'max:1200'],
+            'categoria' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $preghiera->update($validated);
+
+        return response()->json(['success' => true, 'id' => $preghiera->id]);
+    }
+
+    /** Toglie una preghiera dall'archivio, dalla modale del designer. */
+    public function preghiereDestroy(Request $request, Preghiera $preghiera)
+    {
+        abort_unless($request->user()?->eStaff(), 403, 'Solo lo staff gestisce l\'archivio preghiere.');
+
+        $preghiera->delete();
+
+        return response()->json(['success' => true]);
     }
 
     // ---- Salvataggio ricordino ------------------------------------------

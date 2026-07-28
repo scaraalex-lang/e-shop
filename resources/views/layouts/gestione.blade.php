@@ -19,6 +19,7 @@
         ['Agenti', route('gestione.agenti.index'), 'gestione.agenti.*'],
         ['Menu', route('gestione.menu.index'), 'gestione.menu.*'],
         ['Contenuti home', route('gestione.contenuti.edit'), 'gestione.contenuti.*'],
+        ['Preghiere', route('gestione.preghiere.index'), 'gestione.preghiere.*'],
         ['Studio', route('studio.ricordino'), 'studio.*'],
     ];
 @endphp

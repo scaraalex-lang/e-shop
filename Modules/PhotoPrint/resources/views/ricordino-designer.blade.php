@@ -239,6 +239,7 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
         <button class="block-btn" onclick="addBlock('date')"><span class="block-icon">📅</span>Date</button>
         <button class="block-btn" onclick="addBlock('frase')"><span class="block-icon">✨</span>Frase</button>
         <button class="block-btn" onclick="addBlock('preghiera')"><span class="block-icon">🙏</span>Preghiera</button>
+        <button class="block-btn" onclick="openPreghieraModal()" style="border-color:#7c3aed;background:rgba(124,58,237,.08)"><span class="block-icon">📖</span><span style="color:#7c3aed;font-weight:500">Archivio Preghiere</span></button>
         <button class="block-btn" onclick="addBlock('testo')"><span class="block-icon">📝</span>Testo libero</button>
         <button class="block-btn" onclick="addBlock('linea')"><span class="block-icon">➖</span>Linea decorativa</button>
       </div>
@@ -553,6 +554,46 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
         ✓ Inserisci sul canvas
       </button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL ARCHIVIO PREGHIERE -->
+<div id="preghiera-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:12px;padding:1.25rem;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem">Archivio Preghiere</div>
+      <button onclick="closePreghieraModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--gray)">✕</button>
+    </div>
+
+    <div id="preghiere-list">
+      <div style="text-align:center;color:var(--gray);font-size:.78rem;padding:.75rem">Caricamento…</div>
+    </div>
+
+    @if (auth()->user()?->eStaff())
+    <div id="preghiera-form" style="display:none;border-top:1px solid var(--border);padding-top:.75rem;margin-top:.5rem">
+      <input type="hidden" id="preghiera-form-id" value="">
+      <input type="text" id="preghiera-form-titolo" placeholder="Titolo (es. Padre Nostro)"
+             style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.82rem;margin-bottom:.5rem;box-sizing:border-box">
+      <textarea id="preghiera-form-testo" rows="4" placeholder="Testo della preghiera…"
+                style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.82rem;box-sizing:border-box;resize:vertical;margin-bottom:.5rem"></textarea>
+      <input type="text" id="preghiera-form-categoria" placeholder="Categoria (es. Preghiere, Salmi…)"
+             style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.82rem;box-sizing:border-box">
+      <div style="display:flex;gap:.5rem;margin-top:.5rem">
+        <button onclick="annullaFormPreghiera()" style="flex:1;padding:.5rem;background:var(--cream);color:var(--ink);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.82rem">Annulla</button>
+        <button onclick="salvaFormPreghiera()" style="flex:1;padding:.5rem;background:var(--gold);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500">Salva</button>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);padding-top:.75rem;margin-top:.5rem;display:flex;gap:.5rem">
+      <button onclick="apriFormNuovaPreghiera()" style="flex:1;padding:.5rem;background:var(--cream);color:var(--ink);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.78rem">
+        + Aggiungi
+      </button>
+      <a href="{{ route('gestione.preghiere.index') }}" target="_blank" rel="noopener"
+         style="flex:1;display:block;text-align:center;padding:.5rem;background:var(--cream);color:var(--ink);border:1px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.78rem;text-decoration:none;box-sizing:border-box">
+        ⚙ Gestione completa
+      </a>
+    </div>
+    @endif
   </div>
 </div>
 
@@ -1117,6 +1158,144 @@ function insertSantoFromGallery(url, opacita) {
     c.setActiveObject(img);
     c.renderAll();
   });
+}
+
+// ── ARCHIVIO PREGHIERE ──
+// Libreria di testi liturgici, condivisa da tutti (non per-agenzia). Modifica/
+// elimina/aggiungi solo per staff — stesso confine di /gestione/preghiere,
+// solo più comodo da qui: niente cambio pagina mentre si lavora un ricordino.
+// Diverso da salvaPreghieraNecrologio() più sotto: quella sincronizza il
+// testo scritto sul canvas nel necrologio del defunto, questo è l'archivio
+// da cui si sceglie il testo di partenza.
+var preghiereCache = [];
+const isStaffPreghiere = @json(auth()->user()?->eStaff() ?? false);
+
+function openPreghieraModal() {
+  document.getElementById('preghiera-modal').style.display = 'flex';
+  annullaFormPreghiera();
+  loadPreghiereGallery();
+}
+function closePreghieraModal() { document.getElementById('preghiera-modal').style.display = 'none'; }
+
+function loadPreghiereGallery() {
+  const lista = document.getElementById('preghiere-list');
+  lista.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:.78rem;padding:.75rem">Caricamento…</div>';
+  fetch('/admin/api/preghiere').then(r => r.json()).then(preghiere => {
+    preghiereCache = preghiere;
+    if (!preghiere.length) {
+      lista.innerHTML = '<div style="text-align:center;color:var(--gray);font-size:.78rem;padding:.75rem">Archivio vuoto</div>';
+      return;
+    }
+    const gruppi = {};
+    preghiere.forEach(function(p) {
+      const cat = p.categoria || 'Preghiere';
+      (gruppi[cat] = gruppi[cat] || []).push(p);
+    });
+    lista.innerHTML = Object.keys(gruppi).map(function(cat) { return gruppoPreghiere(cat, gruppi[cat]); }).join('');
+  });
+}
+
+function gruppoPreghiere(titolo, elenco) {
+  return '<div style="font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gray);padding:.3rem .1rem .25rem">' + _lyEsc(titolo) + '</div>'
+    + elenco.map(function(p) {
+      const azioni = isStaffPreghiere ? `
+        <div style="display:flex;gap:2px;flex-shrink:0">
+          <button title="Modifica" onclick="event.stopPropagation();modificaPreghiera(${p.id})" style="font-size:.62rem;padding:2px 6px;border:1px solid var(--border);border-radius:3px;background:var(--ink);color:#fff;cursor:pointer">✎</button>
+          <button title="Elimina" onclick="event.stopPropagation();eliminaPreghiera(${p.id})" style="font-size:.62rem;padding:2px 6px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>
+        </div>` : '';
+      return `
+      <div onclick="inserisciPreghiera(${p.id})"
+           style="cursor:pointer;margin-bottom:.35rem;padding:.5rem;border:1px solid var(--border);border-radius:6px;background:var(--cream);transition:border-color .2s;display:flex;align-items:flex-start;gap:.5rem"
+           onmouseover="this.style.borderColor='#c8a96e'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.78rem;font-weight:500">${_lyEsc(p.titolo)}</div>
+          <div style="font-size:.68rem;color:var(--gray);margin-top:.15rem">${_lyEsc(p.estratto)}</div>
+        </div>
+        ${azioni}
+      </div>`;
+    }).join('');
+}
+
+function apriFormNuovaPreghiera() {
+  document.getElementById('preghiera-form-id').value = '';
+  document.getElementById('preghiera-form-titolo').value = '';
+  document.getElementById('preghiera-form-testo').value = '';
+  document.getElementById('preghiera-form-categoria').value = '';
+  document.getElementById('preghiera-form').style.display = 'block';
+}
+
+function modificaPreghiera(id) {
+  const p = preghiereCache.find(function(x) { return x.id === id; });
+  if (!p) return;
+  document.getElementById('preghiera-form-id').value = p.id;
+  document.getElementById('preghiera-form-titolo').value = p.titolo;
+  document.getElementById('preghiera-form-testo').value = p.testo;
+  document.getElementById('preghiera-form-categoria').value = p.categoria || '';
+  document.getElementById('preghiera-form').style.display = 'block';
+}
+
+function annullaFormPreghiera() {
+  const form = document.getElementById('preghiera-form');
+  if (form) form.style.display = 'none';
+}
+
+function salvaFormPreghiera() {
+  const id        = document.getElementById('preghiera-form-id').value;
+  const titolo    = document.getElementById('preghiera-form-titolo').value.trim();
+  const testo     = document.getElementById('preghiera-form-testo').value.trim();
+  const categoria = document.getElementById('preghiera-form-categoria').value.trim();
+  if (!titolo || !testo) { modale({ titolo: 'Manca qualcosa', testo: 'Titolo e testo sono entrambi obbligatori.' }); return; }
+
+  const url = '/admin/api/preghiere' + (id ? '/' + id : '');
+  fetch(url, {
+    method: id ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+    body: JSON.stringify({ titolo: titolo, testo: testo, categoria: categoria || null }),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.success) { modale({ titolo: 'Salvataggio non riuscito', testo: _lyEsc(res.error || 'Riprova fra un momento.') }); return; }
+      annullaFormPreghiera();
+      loadPreghiereGallery();
+    })
+    .catch(function() { modale({ titolo: 'Salvataggio non riuscito', testo: 'Non è stato possibile contattare il server.' }); });
+}
+
+async function eliminaPreghiera(id) {
+  const p = preghiereCache.find(function(x) { return x.id === id; });
+  const conferma = await modale({
+    titolo: 'Eliminare la preghiera?',
+    testo:  '<strong>' + _lyEsc(p ? p.titolo : '') + '</strong> verrà rimossa dall\'archivio. I ricordini che la usano già non cambiano.',
+    azioni: [
+      { testo: 'Annulla', valore: null, tipo: 'neutro' },
+      { testo: 'Elimina', valore: 'ok', tipo: 'pericolo' },
+    ],
+  });
+  if (!conferma.azione) return;
+
+  fetch('/admin/api/preghiere/' + id, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.success) { modale({ titolo: 'Eliminazione non riuscita', testo: _lyEsc(res.error || 'Riprova fra un momento.') }); return; }
+      loadPreghiereGallery();
+    });
+}
+
+/** Inserisce il testo scelto come nuovo blocco "Preghiera" sul canvas, stessa veste dei blocchi aggiunti da +Preghiera. */
+function inserisciPreghiera(id) {
+  const p = preghiereCache.find(function(x) { return x.id === id; });
+  if (!p) return;
+  closePreghieraModal();
+
+  const c = getActiveCanvas();
+  const obj = new fabric.Textbox(p.testo, {
+    left: 10, top: 30 + c.getObjects().length * 15,
+    width: c.getWidth() - 20, fontSize: 45, fontFamily: 'Cormorant Garamond',
+    fontStyle: 'italic', fontWeight: 'normal', textAlign: 'center', fill: '#1a1a2e',
+    editable: true, customType: 'preghiera',
+  });
+  applyTouchSettings(obj);
+  c.add(obj); c.setActiveObject(obj); c.renderAll();
 }
 
 // ── PROPS PANEL ──

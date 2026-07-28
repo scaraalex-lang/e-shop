@@ -87,6 +87,10 @@ Route::prefix('admin/api')->middleware(['auth', AccessoStudio::class, 'throttle:
     // Ricordino Designer (dati Memorial).
     Route::get('santi',                [RicordinoApiController::class, 'santiIndex']);
     Route::post('santi',               [RicordinoApiController::class, 'santiStore']);
+    Route::get('preghiere',                [RicordinoApiController::class, 'preghiereIndex']);
+    Route::post('preghiere',               [RicordinoApiController::class, 'preghiereStore']);
+    Route::put('preghiere/{preghiera}',    [RicordinoApiController::class, 'preghiereUpdate']);
+    Route::delete('preghiere/{preghiera}', [RicordinoApiController::class, 'preghiereDestroy']);
     Route::get('ricordino-templates',                [RicordinoApiController::class, 'templatesIndex']);
     Route::post('ricordino-templates',               [RicordinoApiController::class, 'templatesStore']);
     Route::put('ricordino-templates/{template}',     [RicordinoApiController::class, 'templatesUpdate']);
