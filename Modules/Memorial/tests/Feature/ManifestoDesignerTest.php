@@ -72,6 +72,15 @@ class ManifestoDesignerTest extends TestCase
         return 'data:application/pdf;base64,'.base64_encode('%PDF-1.4 contenuto di prova');
     }
 
+    /**
+     * jsPDF .output('datauristring') produce sempre questo formato, con un
+     * "filename=generated.pdf;" prima di "base64,": non un data URI "pulito".
+     */
+    private function pdfDataUrlComeJsPdf(): string
+    {
+        return 'data:application/pdf;filename=generated.pdf;base64,'.base64_encode('%PDF-1.4 contenuto di prova');
+    }
+
     // ---- accesso -----------------------------------------------------------
 
     public function test_solo_l_agenzia_proprietaria_apre_il_designer_manifesti(): void
@@ -116,6 +125,21 @@ class ManifestoDesignerTest extends TestCase
         $this->assertSame('Prova', $n->manifesto_canvas['objects'][0]['text']);
         $this->assertNotNull($n->manifesto);
         Storage::disk('public')->assertExists($n->manifesto);
+    }
+
+    public function test_salvare_accetta_il_pdf_cosi_come_lo_produce_jspdf(): void
+    {
+        Storage::fake('public');
+        [$referente, $agenzia] = $this->agenziaConReferente();
+        $n = $this->necrologio($agenzia);
+
+        $risposta = $this->actingAs($referente)->postJson(
+            "/admin/api/necrologi/{$n->id}/salva-manifesto",
+            ['canvas' => $this->canvasNonVuoto(), 'formato' => 'a3l', 'pdf' => $this->pdfDataUrlComeJsPdf()]
+        )->assertOk()->json();
+
+        $this->assertTrue($risposta['success']);
+        Storage::disk('public')->assertExists($n->fresh()->manifesto);
     }
 
     public function test_risalvare_toglie_il_pdf_vecchio(): void

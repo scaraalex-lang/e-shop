@@ -93,8 +93,7 @@ canvas{display:block}
 .zoom-label{background:rgba(255,255,255,.15);color:#fff;border-radius:6px;padding:0 .6rem;font-size:.75rem;display:flex;align-items:center}
 .tool-btn{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:.25rem .5rem;font-size:.72rem;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .tool-btn:hover{background:rgba(200,169,110,.3);border-color:var(--gold)}
-.layers-box{margin-bottom:.75rem;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--cream)}
-.layers-head{display:flex;align-items:center;justify-content:space-between;padding:.4rem .6rem;background:#f0ece4;font-size:.72rem;font-weight:600;color:var(--ink);text-transform:uppercase;letter-spacing:.05em}
+.layers-box{margin:.6rem;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--cream)}
 .layers-actions{display:flex;gap:.3rem}
 .layers-actions button{font-size:.62rem;padding:.15rem .4rem;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--gray);cursor:pointer;font-family:'DM Sans',sans-serif}
 .layers-actions button:hover{background:#fff;color:var(--ink)}
@@ -271,18 +270,23 @@ function flipOggetto(asse) {
 
 <!-- PANEL DESTRO PROPRIETÀ -->
   <div class="props-panel" id="props-panel">
-    <div class="panel-title">Proprietà Elemento</div>
-    <div class="layers-box">
-      <div class="layers-head">
-        <span>Livelli</span>
+    <details class="acc" id="acc-livelli-dx" open>
+      <summary class="panel-title">
+        <span class="acc-lbl">Livelli</span>
         <div class="layers-actions">
-          <button type="button" onclick="selectAllLayers()">Tutti</button>
-          <button type="button" onclick="deselectAllLayers()">Nessuno</button>
+          <button type="button" onclick="event.preventDefault();event.stopPropagation();selectAllLayers()">Tutti</button>
+          <button type="button" onclick="event.preventDefault();event.stopPropagation();deselectAllLayers()">Nessuno</button>
         </div>
+        <span class="acc-arrow">▾</span>
+      </summary>
+      <div class="layers-box">
+        <div id="layers-list" class="layers-list"></div>
+        <div class="layers-hint">Spunta 2+ livelli, poi usa i pulsanti di allineamento in alto.</div>
       </div>
-      <div id="layers-list" class="layers-list"></div>
-      <div class="layers-hint">Spunta 2+ livelli, poi usa i pulsanti di allineamento in alto.</div>
-    </div>
+    </details>
+
+    <details class="acc" id="acc-proprieta" open>
+      <summary class="panel-title"><span class="acc-lbl">Proprietà Elemento</span><span class="acc-arrow">▾</span></summary>
     <div class="no-selection" id="no-selection">Seleziona un elemento sul canvas per modificarne le proprietà</div>
     <div id="props-content" style="display:none">
       <div class="prop-group">
@@ -415,6 +419,7 @@ function flipOggetto(asse) {
         <button class="btn-danger" onclick="deleteSelected()">🗑 Elimina elemento</button>
       </div>
     </div>
+    </details>
   </div>
 
 <!-- MODAL SANTI -->
@@ -668,14 +673,14 @@ const ACC_KEY = 'manifesto-designer:sezioni';
 function initAccordion() {
   let stato = {};
   try { stato = JSON.parse(localStorage.getItem(ACC_KEY) || '{}'); } catch (e) {}
-  document.querySelectorAll('.sidebar details.acc').forEach(function(d) {
+  document.querySelectorAll('.sidebar details.acc, .props-panel details.acc').forEach(function(d) {
     if (Object.prototype.hasOwnProperty.call(stato, d.id)) d.open = !!stato[d.id];
     d.addEventListener('toggle', salvaStatoAccordion);
   });
 }
 function salvaStatoAccordion() {
   const stato = {};
-  document.querySelectorAll('.sidebar details.acc').forEach(function(d) { stato[d.id] = d.open; });
+  document.querySelectorAll('.sidebar details.acc, .props-panel details.acc').forEach(function(d) { stato[d.id] = d.open; });
   try { localStorage.setItem(ACC_KEY, JSON.stringify(stato)); } catch (e) {}
 }
 
@@ -911,21 +916,6 @@ function addBlock(type) {
       fontSize = 30;
       fontWeight = 'bold';
       break;
-  }
-
-  // Se c'è un elemento selezionato sul canvas, sostituisce quello
-  var selected = canvas.getActiveObject();
-  var esistente = null;
-  if (selected && selected.type === 'textbox' && type !== 'testo') {
-    esistente = selected;
-  }
-
-  if (esistente) {
-    esistente.set({ text: text, styles: {} });
-    canvas.setActiveObject(esistente);
-    canvas.renderAll();
-    toastMsg('Elemento aggiornato nella stessa posizione');
-    return;
   }
 
   obj = new fabric.Textbox(text, {

@@ -403,7 +403,9 @@ class NecrologiController extends Controller
         $path = $vecchio;
 
         if ($dati['pdf'] ?? null) {
-            if (! preg_match('/^data:application\/pdf;base64,(.+)$/', $dati['pdf'], $m)) {
+            // jsPDF .output('datauristring') inserisce sempre un "filename=...;"
+            // (es. generated.pdf) prima di "base64,": va tollerato, non è un formato malformato.
+            if (! preg_match('/^data:application\/pdf;(?:filename=[^;]*;)?base64,(.+)$/', $dati['pdf'], $m)) {
                 abort(422, 'Il PDF non è valido.');
             }
             $binario = base64_decode($m[1], true);
