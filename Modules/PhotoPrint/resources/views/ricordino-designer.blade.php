@@ -37,6 +37,7 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 .toolbar{background:#1e1e2e;border-bottom:1px solid rgba(255,255,255,.1);padding:.35rem 1rem;display:flex;align-items:center;gap:.4rem;flex-shrink:0;flex-wrap:wrap}
 .tool-btn{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:.22rem .5rem;font-size:.7rem;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .tool-btn:hover{background:rgba(200,169,110,.3);border-color:var(--gold)}
+.tool-btn:disabled{opacity:.35;cursor:not-allowed;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15)}
 .tool-sep{width:1px;height:18px;background:rgba(255,255,255,.15);margin:0 .2rem}
 
 /* CANVAS WRAPPER */
@@ -324,6 +325,9 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
     </div>
     @endif
     <div class="toolbar">
+      <button class="tool-btn" id="btn-annulla" onclick="annulla()" title="Annulla (Ctrl+Z)">↺ Annulla</button>
+      <button class="tool-btn" id="btn-ripristina" onclick="ripristina()" title="Ripristina (Ctrl+Y)">↻ Ripristina</button>
+      <div class="tool-sep"></div>
       <span style="color:rgba(255,255,255,.4);font-size:.68rem">ALLINEA</span>
       <button class="tool-btn" onclick="alignObjects('left')">⬛⬜⬜ Sin</button>
       <button class="tool-btn" onclick="alignObjects('centerH')">⬜⬛⬜ Cen</button>
@@ -592,6 +596,16 @@ let activeSide = 'fronte';
 let canvasFronte, canvasRetro;
 let zoom = 1;
 
+// ── STORICO (annulla/ripristina) ──
+// Uno storico per lato (fronte/retro), indipendenti: un fotogramma per ogni
+// aggiunta/rimozione/modifica, indice a puntare quello attuale nello stack.
+const STORIA_LIMITE = 50;
+let storicoBloccato = false;
+const storico = {
+  fronte: { stack: [], indice: -1 },
+  retro:  { stack: [], indice: -1 },
+};
+
 function getActiveCanvas() {
   return activeSide === 'fronte' ? canvasFronte : canvasRetro;
 }
@@ -734,6 +748,39 @@ window.onload = function() {
     canvasRetro.on(ev, refreshLayers);
   });
 
+  // Storico (annulla/ripristina): ogni aggiunta, rimozione o modifica è un
+  // fotogramma. Non il semplice spostamento del mouse: solo i cambi veri.
+  ['object:added','object:removed','object:modified'].forEach(function(ev){
+    canvasFronte.on(ev, function(){ registraStorico('fronte'); });
+    canvasRetro.on(ev, function(){ registraStorico('retro'); });
+  });
+  inizializzaStorico('fronte');
+  inizializzaStorico('retro');
+
+  // Canc/Backspace elimina il blocco selezionato — non quando si sta
+  // scrivendo dentro una casella di testo, altrimenti si perde il carattere
+  // invece del blocco. Ctrl/Cmd+Z e Ctrl/Cmd+Y (o Maiusc+Z) per annulla/ripristina.
+  document.addEventListener('keydown', function(e){
+    const c = getActiveCanvas();
+    const inEditing = c && c.getActiveObject() && c.getActiveObject().isEditing;
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    const inCampo = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !inEditing && !inCampo) {
+      if (c && c.getActiveObject()) { e.preventDefault(); deleteSelected(); }
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && !inEditing && !inCampo) {
+      if (e.key === 'z' || e.key === 'Z') {
+        e.preventDefault();
+        if (e.shiftKey) { ripristina(); } else { annulla(); }
+      } else if (e.key === 'y' || e.key === 'Y') {
+        e.preventDefault();
+        ripristina();
+      }
+    }
+  });
+
   autoZoom();
   loadSavedTemplates();
   refreshLayers();
@@ -795,6 +842,7 @@ function setActiveSide(side) {
   document.getElementById('btn-retro').style.borderColor = side === 'retro' ? 'var(--gold)' : 'var(--border)';
   clearPropsPanel();
   refreshLayers();
+  aggiornaBottoniStorico();
 }
 
 // ── FORMATO ──
@@ -1233,6 +1281,65 @@ function deleteSelected() {
   if (obj) { c.remove(obj); clearPropsPanel(); c.renderAll(); }
 }
 
+function canvasDiLato(side) { return side === 'fronte' ? canvasFronte : canvasRetro; }
+
+function snapshotCanvas(c) {
+  return JSON.stringify(c.toJSON(['customType', 'maschera']));
+}
+
+/** Il fotogramma di partenza: senza, il primo annulla non avrebbe dove tornare. */
+function inizializzaStorico(side) {
+  storico[side].stack = [snapshotCanvas(canvasDiLato(side))];
+  storico[side].indice = 0;
+  aggiornaBottoniStorico();
+}
+
+function registraStorico(side) {
+  if (storicoBloccato) return;
+  const h = storico[side];
+  // Una modifica nuova taglia via i "ripristina" rimasti da un ramo precedente.
+  h.stack = h.stack.slice(0, h.indice + 1);
+  h.stack.push(snapshotCanvas(canvasDiLato(side)));
+  if (h.stack.length > STORIA_LIMITE) h.stack.shift();
+  h.indice = h.stack.length - 1;
+  aggiornaBottoniStorico();
+}
+
+function ripristinaStato(side, json) {
+  const c = canvasDiLato(side);
+  storicoBloccato = true;
+  c.discardActiveObject();
+  c.loadFromJSON(json, function () {
+    assicuraSfondo(c);
+    c.renderAll();
+    storicoBloccato = false;
+    refreshLayers();
+    aggiornaBottoniStorico();
+  });
+}
+
+function annulla() {
+  const h = storico[activeSide];
+  if (h.indice <= 0) return;
+  h.indice--;
+  ripristinaStato(activeSide, h.stack[h.indice]);
+}
+
+function ripristina() {
+  const h = storico[activeSide];
+  if (h.indice >= h.stack.length - 1) return;
+  h.indice++;
+  ripristinaStato(activeSide, h.stack[h.indice]);
+}
+
+function aggiornaBottoniStorico() {
+  const h = storico[activeSide];
+  const btnAnnulla = document.getElementById('btn-annulla');
+  const btnRipristina = document.getElementById('btn-ripristina');
+  if (btnAnnulla) btnAnnulla.disabled = h.indice <= 0;
+  if (btnRipristina) btnRipristina.disabled = h.indice >= h.stack.length - 1;
+}
+
 // ── ALLINEAMENTO ──
 function alignObjects(type) {
   const c = getActiveCanvas();
@@ -1588,8 +1695,18 @@ async function loadSavedTemplate(id) {
   [canvasFronte, canvasRetro].forEach(c => { c.setWidth(f.w); c.setHeight(f.h); });
   document.getElementById('formato-select').value = fmt;
   currentFormat = fmt;
-  canvasFronte.loadFromJSON(t.canvas_fronte, () => { assicuraSfondo(canvasFronte); riempiConDefunto(canvasFronte); });
-  canvasRetro.loadFromJSON(t.canvas_retro, () => { assicuraSfondo(canvasRetro); riempiConDefunto(canvasRetro); });
+  // Applicare un template è un nuovo punto di partenza: l'annulla di prima
+  // non deve tornare indietro fino a un layout che non c'è più.
+  storicoBloccato = true;
+  canvasFronte.loadFromJSON(t.canvas_fronte, () => {
+    assicuraSfondo(canvasFronte); riempiConDefunto(canvasFronte);
+    canvasRetro.loadFromJSON(t.canvas_retro, () => {
+      assicuraSfondo(canvasRetro); riempiConDefunto(canvasRetro);
+      storicoBloccato = false;
+      inizializzaStorico('fronte');
+      inizializzaStorico('retro');
+    });
+  });
   autoZoom();
 
   templateCorrente = { id: t.id, name: t.name, editabile: !!t.editabile };
@@ -2049,12 +2166,18 @@ window.addEventListener('load', function() {
     }
 
     // 2) BINARIO CONTENUTO: popola il JSON nel CALLBACK (quando la canvas e pronta), non a timeout
+    // Bloccato: è la bozza di partenza, non una sequenza di modifiche da poter annullare una a una.
+    storicoBloccato = true;
     const jsonFronte = {!! json_encode($savedFronte) !!};
     canvasFronte.loadFromJSON(jsonFronte, function() {
       assicuraSfondo(canvasFronte);
       canvasFronte.getObjects().forEach(function(o){ applyTouchSettings(o); });
       canvasFronte.renderAll();
       verificaBozzaIntegra('fronte', jsonFronte, canvasFronte);
+      inizializzaStorico('fronte');
+      @if(empty($savedRetro))
+      storicoBloccato = false;
+      @endif
     });
     @if(!empty($savedRetro))
     const jsonRetro = {!! json_encode($savedRetro) !!};
@@ -2063,6 +2186,8 @@ window.addEventListener('load', function() {
       canvasRetro.getObjects().forEach(function(o){ applyTouchSettings(o); });
       canvasRetro.renderAll();
       verificaBozzaIntegra('retro', jsonRetro, canvasRetro);
+      inizializzaStorico('retro');
+      storicoBloccato = false;
     });
     @endif
   }
