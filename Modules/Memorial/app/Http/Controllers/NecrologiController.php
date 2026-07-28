@@ -206,10 +206,13 @@ class NecrologiController extends Controller
             'template.mimes' => 'Il template dev\'essere un PNG.',
         ]);
 
+        $path = $request->file('template')->store('necrologi/card-templates', 'public');
+        abort_if($path === false, 500, 'Salvataggio del template fallito, riprova.');
+
         $template = NecrologioCardTemplate::create([
             'agenzia_id' => $agenzia->id,
             'nome' => $dati['nome'],
-            'path' => $request->file('template')->store('necrologi/card-templates', 'public'),
+            'path' => $path,
         ]);
 
         return response()->json(['success' => true, 'id' => $template->id, 'nome' => $template->nome, 'url' => $template->url()]);
@@ -249,7 +252,8 @@ class NecrologiController extends Controller
         $vecchia = $necrologio->og_image;
 
         $path = 'necrologi/og-image/'.$necrologio->id.'-'.Str::lower(Str::random(8)).'.png';
-        Storage::disk('public')->put($path, $binario);
+        $scritto = Storage::disk('public')->put($path, $binario);
+        abort_if($scritto === false, 500, 'Salvataggio della card fallito, riprova.');
 
         $necrologio->update(['og_image' => $path]);
 

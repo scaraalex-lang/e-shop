@@ -421,10 +421,13 @@ function uploadTemplate(input) {
     const fd = new FormData();
     fd.append('template', file);
     fd.append('nome', r.valore || file.name);
-    fetch('/admin/api/necrologio-card-templates', { method: 'POST', body: fd })
-      .then(res => res.json())
-      .then(d => {
-        if (!d.success) return;
+    fetch('/admin/api/necrologio-card-templates', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' } })
+      .then(res => res.json().then(d => ({ ok: res.ok, d: d })))
+      .then(({ ok, d }) => {
+        if (!ok || !d.success) {
+          modale({ titolo: 'Errore', testo: (d && (d.error || d.message)) || 'Caricamento del template fallito, riprova.' });
+          return;
+        }
         const grid = document.getElementById('tpl-grid');
         const empty = grid.querySelector('.tpl-empty');
         if (empty) empty.remove();
@@ -435,6 +438,9 @@ function uploadTemplate(input) {
         div.onclick = function(){ selectTemplate(this); };
         div.innerHTML = '<img src="'+d.url+'" alt="'+d.nome+'"><div class="tpl-item-name">'+d.nome+'</div><button onclick="event.stopPropagation();deleteTemplate('+d.id+',this)" style="position:absolute;top:3px;right:3px;background:rgba(196,75,58,.8);border:none;color:#fff;border-radius:3px;width:18px;height:18px;font-size:.6rem;cursor:pointer;line-height:1">✕</button>';
         grid.appendChild(div);
+      })
+      .catch(() => {
+        modale({ titolo: 'Errore di connessione', testo: 'Riprova.' });
       });
     input.value = '';
   });
@@ -497,15 +503,15 @@ function salvaCard() {
 
   fetch('/admin/api/necrologi/'+NECRO_ID+'/salva-card', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify({ image_data: dataURL })
-  }).then(r => r.json()).then(d => {
+  }).then(r => r.json().then(d => ({ ok: r.ok, d: d }))).then(({ ok, d }) => {
     document.getElementById('saving-overlay').style.display = 'none';
-    if (d.success) {
+    if (ok && d.success) {
       document.getElementById('btn-pubblica').style.display = 'inline-flex';
       document.getElementById('btn-salva').textContent = '✓ Salvata';
     } else {
-      modale({ titolo: 'Errore', testo: d.error || 'Sconosciuto' });
+      modale({ titolo: 'Errore', testo: (d && (d.error || d.message)) || 'Sconosciuto' });
     }
   }).catch(() => {
     document.getElementById('saving-overlay').style.display = 'none';
