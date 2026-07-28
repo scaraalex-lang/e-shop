@@ -977,19 +977,19 @@ function addBlock(type) {
   switch(type) {
     case 'nome':
       text = testoPersonale('nome', praticaData);
-      fontSize = 16*FS; fontWeight = 'bold'; customType = 'nome'; break;
+      fontSize = 84; fontWeight = 'bold'; fontFamily = 'Times New Roman'; customType = 'nome'; break;
     case 'eta':
       text = testoPersonale('eta', praticaData);
       fontSize = 11*FS; fontStyle = 'italic'; customType = 'eta'; break;
     case 'date':
       text = testoPersonale('date', praticaData);
-      fontSize = 9*FS; customType = 'date'; break;
+      fontSize = 50; fontWeight = 'bold'; fontFamily = 'Times New Roman'; customType = 'date'; break;
     case 'frase':
       text = testoPersonale('frase', praticaData);
       fontSize = 9*FS; fontStyle = 'italic'; customType = 'frase'; break;
     case 'preghiera':
       text = testoPersonale('preghiera', praticaData);
-      fontSize = 8*FS; fontStyle = 'italic'; customType = 'preghiera';
+      fontSize = 45; fontStyle = 'italic'; customType = 'preghiera';
       break;
     case 'logo':
       text = agenziaData.name || 'Nome Agenzia';
