@@ -248,7 +248,16 @@ function flipOggetto(asse) {
     <span style="color:rgba(255,255,255,.4);font-size:.7rem;margin-right:.25rem">FOTO</span>
     <button class="tool-btn" onclick="document.getElementById('foto-upload').click()">📷 Inserisci Foto</button>
     <input type="file" id="foto-upload" accept="image/*" style="display:none" onchange="insertPhoto(this)">
-    <button class="tool-btn" id="btn-foto-pratica" onclick="inserisciFotoPrincipale()" @if(!($fotoPrincipale ?? null)) disabled title="Nessuna foto ancora caricata nella pratica" @endif>🖼 Usa la foto della pratica</button>
+    <button class="tool-btn" id="btn-foto-pratica" onclick="inserisciFotoPrincipale()"
+            style="display:inline-flex;align-items:center;gap:.4rem"
+            @if(!($fotoPrincipale ?? null)) disabled title="Nessuna foto ancora caricata nella pratica" @endif>
+      @if($fotoPrincipale ?? null)
+        <img src="{{ $fotoPrincipale }}" style="width:22px;height:28px;object-fit:cover;border-radius:2px;border:1px solid rgba(255,255,255,.3)">
+      @else
+        🖼
+      @endif
+      Foto dell'ordine
+    </button>
     <input type="file" id="santo-upload" accept="image/*" style="display:none" onchange="insertSanto(this)">
     <button class="tool-btn" onclick="flipOggetto('X')" title="Rifletti orizzontale">↔ Flip H</button>
     <button class="tool-btn" onclick="flipOggetto('Y')" title="Rifletti verticale">↕ Flip V</button>
