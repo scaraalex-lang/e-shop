@@ -30,7 +30,7 @@ class OrdiniController extends Controller
         abort_unless($ordine->user_id === $request->user()->id, 404);
 
         return view('commerce::ordini.show', [
-            'ordine' => $ordine->load('righe.product.primaryImage'),
+            'ordine' => $ordine->load('righe.product.primaryImage', 'righe.product.category'),
             'ricordino' => $this->bozzaDi($ordine),
         ]);
     }

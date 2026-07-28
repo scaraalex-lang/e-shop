@@ -19,6 +19,15 @@
     </div>
 @endif
 
+@if ($ordine->agenzia_id && ($scadenza = $ordine->prossimaScadenzaSuggerita()))
+    <div class="mb-10 border-l-2 border-oro bg-panna/60 px-6 py-5">
+        <p class="font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+            Da segnarsi: <strong class="font-normal text-testo">{{ $scadenza['etichetta'] }}</strong>
+            intorno al <strong class="font-normal text-testo">{{ $scadenza['quando']->translatedFormat('j F Y') }}</strong>.
+        </p>
+    </div>
+@endif
+
 {{-- ============ tracciamento ============ --}}
 <section>
     <h2 class="font-sans text-[11px] tracking-[0.25em] uppercase text-oro-scuro">A che punto siamo</h2>

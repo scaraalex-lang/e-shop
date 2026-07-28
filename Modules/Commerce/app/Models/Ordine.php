@@ -105,6 +105,32 @@ class Ordine extends Model
         return sprintf('MEM-%d-%04d', $anno, $progressivo);
     }
 
+    /**
+     * Promemoria leggero, solo un suggerimento mostrato dopo aver creato
+     * l'ordine — nessun automatismo, nessuna nuova pratica generata.
+     *
+     * Euristica sulla categoria degli articoli, l'unico segnale che esiste
+     * oggi (niente flag "tipo pratica" su Ordine): un Kit Trigesimo comprato
+     * per questo defunto è, di fatto, la preparazione del trigesimo — da lì
+     * si segna l'Anniversario. Qualsiasi altro ordine legato a un defunto (i
+     * ricordi comprati vicino al lutto) suggerisce di segnarsi il Trigesimo,
+     * trenta giorni dopo.
+     */
+    public function prossimaScadenzaSuggerita(): ?array
+    {
+        if (! $this->defunto_id) {
+            return null;
+        }
+
+        $haKitTrigesimo = $this->righe->contains(
+            fn (RigaOrdine $riga) => $riga->product?->category?->slug === 'articoli-trigesimali'
+        );
+
+        return $haKitTrigesimo
+            ? ['etichetta' => 'Anniversario', 'quando' => $this->created_at->copy()->addYear()]
+            : ['etichetta' => 'Trigesimo', 'quando' => $this->created_at->copy()->addDays(30)];
+    }
+
     public function risparmio(): int
     {
         return $this->totale_pieno - $this->totale_merce;
