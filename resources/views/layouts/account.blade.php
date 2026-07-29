@@ -18,7 +18,8 @@
     $voci = $utente->eStaff()
         ? [
             ['Panoramica', route('account'), 'account'],
-            ['Ordini', route('gestione.ordini.index'), ['gestione.ordini.*']],
+            ['Gestione ordini', route('gestione.ordini.index'), fn () => request()->routeIs('gestione.ordini.*') && request()->query('provenienza') !== 'b2b'],
+            ['Agenti ed agenzia', route('gestione.ordini.index', ['provenienza' => 'b2b']), fn () => request()->routeIs('gestione.ordini.*') && request()->query('provenienza') === 'b2b'],
         ]
         : [
             ['Panoramica', route('account'), 'account'],
@@ -43,8 +44,9 @@
 
     // Gli editor compaiono solo a chi li apre di mestiere: il cliente ci
     // arriva dalla lavorazione del proprio ordine (vedi AccessoStudio). Si
-    // entra dall'archivio delle pratiche, non dritti nel designer.
-    if ($utente->eStaff() || $utente->eAgenziaApprovata()) {
+    // entra dall'archivio delle pratiche, non dritti nel designer. Lo staff
+    // la trova già nella barra /gestione (Operatività), non serve doppiarla qui.
+    if ($utente->eAgenziaApprovata()) {
         $voci[] = ['Studio ricordini', route('pratiche.index'), ['pratiche.*', 'studio.*']];
     }
 
@@ -70,7 +72,11 @@
                 <nav aria-label="Menu account" class="mt-6">
                     <ul class="flex flex-col gap-3 font-sans text-[12px] tracking-[0.16em] uppercase">
                         @foreach ($voci as [$voce, $href, $rotta])
-                            @php $attiva = $rotta && request()->routeIs(...(array) $rotta); @endphp
+                            @php
+                                $attiva = $rotta instanceof \Closure
+                                    ? $rotta()
+                                    : ($rotta && request()->routeIs(...(array) $rotta));
+                            @endphp
                             <li>
                                 <a href="{{ $href }}"
                                    @class([
