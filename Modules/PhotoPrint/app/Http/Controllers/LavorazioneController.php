@@ -56,6 +56,7 @@ class LavorazioneController extends Controller
         $dati = $request->validate([
             'nome' => ['required', 'string', 'max:100'],
             'cognome' => ['required', 'string', 'max:100'],
+            'sesso' => ['nullable', Rule::in(['M', 'F'])],
             'data_nascita' => ['nullable', 'date', 'before:today'],
             'data_morte' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:data_nascita'],
             'frase' => ['nullable', 'string', 'max:200'],
@@ -80,6 +81,7 @@ class LavorazioneController extends Controller
         $defunto->fill([
             'nome' => $dati['nome'],
             'cognome' => $dati['cognome'],
+            'sesso' => $dati['sesso'] ?? null,
             'data_nascita' => $dati['data_nascita'] ?? null,
             'data_morte' => $dati['data_morte'] ?? null,
             'frase' => $dati['frase'] ?? null,
@@ -168,9 +170,18 @@ class LavorazioneController extends Controller
         abort_unless($defunto !== null, 404, 'Prima compila i dati della persona.');
         abort_unless(FotoPratica::principaleDi($ordine->id), 403, 'Carica prima la fotografia.');
 
+        // occasione/numero_anniversario si copiano dall'ordine solo alla
+        // creazione (firstOrCreate non tocca un necrologio già esistente):
+        // è una fotografia del momento, non un legame permanente — coerente
+        // con l'assenza voluta di una FK Necrologio→Ordine. Un ordine vecchio
+        // senza il campo lascia il default 'trigesimo' della migration.
         return Necrologio::firstOrCreate(
             ['defunto_id' => $defunto->id, 'agenzia_id' => $ordine->agenzia_id],
-            ['percorso' => Necrologio::componiPercorso($defunto)]
+            array_filter([
+                'percorso' => Necrologio::componiPercorso($defunto),
+                'occasione' => $ordine->occasione?->value,
+                'numero_anniversario' => $ordine->numero_anniversario,
+            ], fn ($v) => $v !== null)
         );
     }
 

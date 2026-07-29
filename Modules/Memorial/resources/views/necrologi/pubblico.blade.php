@@ -2,11 +2,37 @@
 
 @php
     $nome = $defunto->nomeCompleto();
-    $quando = $necrologio->trigesimo_at;
-    $titolo = "Trigesimo di {$nome}";
+    $occasione = $necrologio->occasione ?? \Modules\Commerce\Enums\Occasione::Trigesimo;
+
+    // Il funerale legge data/luogo dal defunto (Defunto::cerimonia_at/chiesa/
+    // indirizzo_chiesa, già raccolti in lavorazione): trigesimo_at sul
+    // necrologio non è la data del funerale, è quella del trigesimo o
+    // dell'anniversario.
+    $quando = $occasione === \Modules\Commerce\Enums\Occasione::Funerale ? $defunto->cerimonia_at : $necrologio->trigesimo_at;
+    $luogoEvento = $occasione === \Modules\Commerce\Enums\Occasione::Funerale ? $defunto->chiesa : $necrologio->trigesimo_luogo;
+    $indirizzoEvento = $occasione === \Modules\Commerce\Enums\Occasione::Funerale ? $defunto->indirizzo_chiesa : $necrologio->trigesimo_indirizzo;
+
+    $badge = match ($occasione) {
+        \Modules\Commerce\Enums\Occasione::Funerale => 'Necrologio',
+        \Modules\Commerce\Enums\Occasione::Anniversario => "{$necrologio->numero_anniversario}° anniversario della scomparsa",
+        \Modules\Commerce\Enums\Occasione::Trigesimo => 'Nel trigesimo della scomparsa',
+    };
+
+    $titolo = match ($occasione) {
+        \Modules\Commerce\Enums\Occasione::Funerale => "{$nome} " . $defunto->eVenutoAMancare(),
+        \Modules\Commerce\Enums\Occasione::Anniversario => "{$necrologio->numero_anniversario}° Anniversario della scomparsa di {$nome}",
+        \Modules\Commerce\Enums\Occasione::Trigesimo => "Trigesimo di {$nome}",
+    };
+
+    $descrizioneEvento = match ($occasione) {
+        \Modules\Commerce\Enums\Occasione::Funerale => 'Il funerale sarà celebrato',
+        \Modules\Commerce\Enums\Occasione::Anniversario => 'La funzione sarà',
+        \Modules\Commerce\Enums\Occasione::Trigesimo => 'Il trigesimo sarà',
+    };
+
     $descrizione = $quando
-        ? "Il trigesimo sarà il {$quando->translatedFormat('j F Y')} alle {$quando->format('H:i')}"
-            .($necrologio->trigesimo_luogo ? ", {$necrologio->trigesimo_luogo}" : '').'.'
+        ? "{$descrizioneEvento} il {$quando->translatedFormat('j F Y')} alle {$quando->format('H:i')}"
+            .($luogoEvento ? ", {$luogoEvento}" : '').'.'
         : "In ricordo di {$nome}.";
     $immagine = $necrologio->og_image ? asset('storage/'.$necrologio->og_image) : null;
 
@@ -55,7 +81,7 @@
 
         <div class="px-8 py-9 text-center">
             <span class="font-sans text-[10px] tracking-[0.32em] uppercase text-oro-scuro">
-                Nel trigesimo della scomparsa
+                {{ $badge }}
             </span>
 
             <h1 class="mt-4 font-serif text-3xl font-medium leading-tight">{{ $nome }}</h1>
@@ -79,11 +105,11 @@
                         ore {{ $quando->format('H:i') }}
                     </p>
 
-                    @if ($necrologio->trigesimo_luogo)
+                    @if ($luogoEvento)
                         <p class="mt-4 font-sans font-light text-[14px] leading-relaxed text-testo">
-                            {{ $necrologio->trigesimo_luogo }}
-                            @if ($necrologio->trigesimo_indirizzo)
-                                <span class="block text-testo-soft">{{ $necrologio->trigesimo_indirizzo }}</span>
+                            {{ $luogoEvento }}
+                            @if ($indirizzoEvento)
+                                <span class="block text-testo-soft">{{ $indirizzoEvento }}</span>
                             @endif
                         </p>
                     @endif

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\Catalog\Models\Product;
+use Modules\Commerce\Enums\Occasione;
+use Modules\Commerce\Models\Agenzia;
 use Modules\Commerce\Models\Carrello;
 use Modules\Commerce\Models\RigaCarrello;
 
@@ -67,16 +69,69 @@ class GestoreCarrello
     /**
      * Aggiunge pezzi al carrello. Se il prodotto c'è già, si somma alla riga
      * esistente invece di aprirne una seconda.
+     *
+     * Un servizio (funerale/trigesimo/anniversario) fa eccezione: un ordine
+     * ha un solo defunto quindi una sola occasione, la quantità resta
+     * sempre 1 (non si somma) e porta con sé il numero dell'anniversario,
+     * se è quello il servizio. Il conflitto tra occasioni diverse nello
+     * stesso carrello si controlla PRIMA di chiamare questo metodo (vedi
+     * `occasioneNelCarrello()`), qui si assume già validato.
      */
-    public function aggiungi(Product $prodotto, int $quantita): RigaCarrello
+    public function aggiungi(Product $prodotto, int $quantita, ?int $numeroAnniversario = null): RigaCarrello
     {
         $carrello = $this->correnteOCrea();
+        $eServizio = Occasione::daSku($prodotto->sku) !== null;
 
         $riga = $carrello->righe()->firstOrNew(['product_id' => $prodotto->id]);
-        $riga->quantita = max(($riga->quantita ?? 0) + $quantita, 1);
+        $riga->quantita = $eServizio ? 1 : max(($riga->quantita ?? 0) + $quantita, 1);
+
+        if ($eServizio) {
+            $riga->numero_anniversario = $numeroAnniversario;
+        }
+
         $riga->save();
 
         return $riga;
+    }
+
+    /** L'occasione già presente nel carrello, se c'è un servizio dentro. */
+    public function occasioneNelCarrello(Carrello $carrello): ?Occasione
+    {
+        foreach ($carrello->righe as $riga) {
+            if ($occasione = Occasione::daSku($riga->product?->sku ?? '')) {
+                return $occasione;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Quanti crediti mancano per confermare questo carrello, `null` se non ne
+     * mancano (o non ce n'è bisogno). Un servizio ha `crediti` negativo: la
+     * somma di tutti i negativi, in positivo, è quanto costa il carrello.
+     * Un privato non ha un saldo su cui attingere: se il carrello consuma
+     * crediti, per lui mancano sempre tutti quelli richiesti.
+     *
+     * @return array{richiesti:int, saldo:int, mancano:int}|null
+     */
+    public function creditiMancanti(Carrello $carrello, ?Agenzia $agenzia): ?array
+    {
+        $richiesti = $carrello->righe->sum(
+            fn (RigaCarrello $r) => $r->product && $r->product->crediti < 0 ? -$r->product->crediti * $r->quantita : 0
+        );
+
+        if ($richiesti === 0) {
+            return null;
+        }
+
+        $saldo = $agenzia?->creditiSaldo() ?? 0;
+
+        if ($saldo >= $richiesti) {
+            return null;
+        }
+
+        return ['richiesti' => $richiesti, 'saldo' => $saldo, 'mancano' => $richiesti - $saldo];
     }
 
     /** Cambia la quantità di una riga. A zero, la riga sparisce. */

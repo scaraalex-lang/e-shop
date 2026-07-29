@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Catalog\Models\Product;
+use Modules\Commerce\Enums\Occasione;
 use Modules\Commerce\Models\RigaCarrello;
 use Modules\Commerce\Prezzi\Listino;
 use Modules\Commerce\Servizi\GestoreCarrello;
@@ -39,11 +40,30 @@ class CarrelloController extends Controller
         $dati = $request->validate([
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'quantita' => ['required', 'integer', 'min:1', 'max:100000'],
+            'numero_anniversario' => ['nullable', 'integer', 'min:1', 'max:99'],
         ]);
 
         $prodotto = Product::active()->findOrFail($dati['product_id']);
+        $occasione = Occasione::daSku($prodotto->sku);
 
-        $this->carrelli->aggiungi($prodotto, $dati['quantita']);
+        if ($occasione === Occasione::Anniversario && ! ($dati['numero_anniversario'] ?? null)) {
+            return redirect()
+                ->route('carrello')
+                ->with('stato', 'Indica di quale anniversario si tratta (1°, 2°...).');
+        }
+
+        if ($occasione) {
+            $carrello = $this->carrelli->corrente();
+            $occasioneEsistente = $carrello ? $this->carrelli->occasioneNelCarrello($carrello) : null;
+
+            if ($occasioneEsistente && $occasioneEsistente !== $occasione) {
+                return redirect()
+                    ->route('carrello')
+                    ->with('stato', "Nel carrello c'è già un servizio per {$occasioneEsistente->etichetta()}: un ordine riguarda un solo defunto, quindi una sola occasione.");
+            }
+        }
+
+        $this->carrelli->aggiungi($prodotto, $dati['quantita'], $dati['numero_anniversario'] ?? null);
 
         return redirect()
             ->route('carrello')

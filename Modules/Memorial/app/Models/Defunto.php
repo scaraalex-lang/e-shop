@@ -15,7 +15,7 @@ class Defunto extends Model
     public const LUOGHI_PARTENZA = ['Casa del commiato', 'Casa funeraria', 'Casa del defunto'];
 
     protected $fillable = [
-        'nome', 'cognome', 'data_nascita', 'data_morte', 'anni',
+        'nome', 'cognome', 'sesso', 'data_nascita', 'data_morte', 'anni',
         'frase', 'preghiera',
         'luogo_partenza', 'indirizzo_cerimonia', 'cerimonia_at',
         'chiesa', 'indirizzo_chiesa',
@@ -65,6 +65,18 @@ class Defunto extends Model
     public function nomeCompleto(): string
     {
         return trim("{$this->nome} {$this->cognome}");
+    }
+
+    /**
+     * "È venuto/a a mancare", coniugato per genere — per la dicitura del
+     * necrologio quando l'occasione è il funerale. Senza `sesso` (defunti
+     * registrati prima che il campo esistesse) resta maschile: una scelta
+     * arbitraria, non una regola grammaticale, da rivedere se in pratica
+     * risulta sbagliata più spesso del previsto.
+     */
+    public function eVenutoAMancare(): string
+    {
+        return $this->sesso === 'F' ? 'è venuta a mancare' : 'è venuto a mancare';
     }
 
     /**

@@ -62,6 +62,20 @@
 
             <div class="grid gap-6 sm:grid-cols-2">
                 <div>
+                    <x-input-label for="sesso" value="Sesso" />
+                    <select id="sesso" name="sesso"
+                        class="mt-1 block w-full border-caffe/25 focus:border-oro focus:ring-oro rounded-md shadow-sm">
+                        <option value="">Non indicato</option>
+                        <option value="M" @selected(old('sesso', $defunto?->sesso) === 'M')>Maschile</option>
+                        <option value="F" @selected(old('sesso', $defunto?->sesso) === 'F')>Femminile</option>
+                    </select>
+                    <x-input-error :messages="$errors->get('sesso')" />
+                    <p class="mt-1 text-xs text-testo-soft">Serve solo per coniugare correttamente il necrologio ("è venuto/a a mancare").</p>
+                </div>
+            </div>
+
+            <div class="grid gap-6 sm:grid-cols-2">
+                <div>
                     <x-input-label for="data_nascita" value="Data di nascita" />
                     <x-text-input id="data_nascita" name="data_nascita" type="date"
                         :value="old('data_nascita', $defunto?->data_nascita?->format('Y-m-d'))" />

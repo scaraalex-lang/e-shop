@@ -61,6 +61,47 @@
             @endif
         </div>
     </div>
+
+    @if ($prodottiServizio && $prodottiServizio->isNotEmpty())
+        {{-- ============ apri un servizio (paga in crediti, niente kit) ============ --}}
+        <div class="mt-4 border border-caffe/15 bg-panna/20 px-6 py-5">
+            <p class="font-sans text-[11px] tracking-[0.2em] uppercase text-oro-scuro">Apri un servizio</p>
+            <p class="mt-1 font-sans font-light text-[12px] text-testo-soft">
+                Crea un nuovo ordine di solo servizio, senza kit fisico: apre la lavorazione per compilare i dati
+                del defunto e i designer.
+            </p>
+            <div class="mt-4 flex flex-wrap gap-3">
+                @if ($prodotto = $prodottiServizio->get('SRV-NECRO-FUNERALE'))
+                    <form method="POST" action="{{ route('carrello.aggiungi') }}">
+                        @csrf
+                        <input type="hidden" name="product_id" value="{{ $prodotto->id }}">
+                        <input type="hidden" name="quantita" value="1">
+                        <x-button type="submit" variant="contornata">Funerale ({{ -$prodotto->crediti }} crediti)</x-button>
+                    </form>
+                @endif
+                @if ($prodotto = $prodottiServizio->get('SRV-NECRO-TRIGESIMO'))
+                    <form method="POST" action="{{ route('carrello.aggiungi') }}">
+                        @csrf
+                        <input type="hidden" name="product_id" value="{{ $prodotto->id }}">
+                        <input type="hidden" name="quantita" value="1">
+                        <x-button type="submit" variant="contornata">Trigesimo ({{ -$prodotto->crediti }} crediti)</x-button>
+                    </form>
+                @endif
+                @if ($prodotto = $prodottiServizio->get('SRV-NECRO-ANNIVERSARIO'))
+                    <form method="POST" action="{{ route('carrello.aggiungi') }}" class="flex items-center gap-2">
+                        @csrf
+                        <input type="hidden" name="product_id" value="{{ $prodotto->id }}">
+                        <input type="hidden" name="quantita" value="1">
+                        <label for="numero_anniversario" class="sr-only">Che anniversario</label>
+                        <input type="number" id="numero_anniversario" name="numero_anniversario" min="1" max="99"
+                            placeholder="N°" required
+                            class="w-16 border-caffe/25 focus:border-oro focus:ring-oro rounded-md shadow-sm text-sm">
+                        <x-button type="submit" variant="contornata">Anniversario ({{ -$prodotto->crediti }} crediti)</x-button>
+                    </form>
+                @endif
+            </div>
+        </div>
+    @endif
 @endif
 
 <div class="mt-10 border-t border-caffe/10 pt-6">

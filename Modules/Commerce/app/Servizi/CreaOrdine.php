@@ -5,6 +5,7 @@ namespace Modules\Commerce\Servizi;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Modules\Commerce\Enums\MetodoPagamento;
+use Modules\Commerce\Enums\Occasione;
 use Modules\Commerce\Models\Carrello;
 use Modules\Commerce\Models\MovimentoCredito;
 use Modules\Commerce\Models\Ordine;
@@ -36,6 +37,14 @@ class CreaOrdine
         return DB::transaction(function () use ($carrello, $utente, $consegna, $metodo, $conto, $agenzia) {
             $spedizione = $this->spedizione($conto->totale(), $agenzia !== null);
 
+            // Il servizio (funerale/trigesimo/anniversario), se c'è: al
+            // massimo uno, per costruzione (CarrelloController rifiuta di
+            // aggiungerne un secondo di occasione diversa).
+            $vocaServizio = $conto->voci->first(
+                fn (VoceConto $v) => Occasione::daSku($v->riga->product?->sku ?? '') !== null
+            );
+            $occasione = $vocaServizio ? Occasione::daSku($vocaServizio->riga->product->sku) : null;
+
             $ordine = new Ordine([
                 'numero' => Ordine::prossimoNumero(),
                 'user_id' => $utente->id,
@@ -55,6 +64,8 @@ class CreaOrdine
                 'richiede_lavorazione' => $conto->voci->contains(
                     fn (VoceConto $v) => (bool) $v->riga->product?->is_photo_printable
                 ),
+                'occasione' => $occasione,
+                'numero_anniversario' => $vocaServizio?->riga->numero_anniversario,
             ]);
             $ordine->save();
 
@@ -66,17 +77,20 @@ class CreaOrdine
                     'sku' => $prodotto->sku,
                     'nome' => $prodotto->name,
                     'quantita' => $voce->riga->quantita,
+                    'numero_anniversario' => $voce->riga->numero_anniversario,
                     'prezzo_pieno' => $voce->prezzo->pieno,
                     'prezzo' => $voce->prezzo->scontato,
                     'sconto_percentuale' => $voce->prezzo->fonteSconto?->sconto_percentuale,
                     'richiede_foto' => (bool) $prodotto->is_photo_printable,
                 ]);
 
-                // Pacchetto crediti: accredita subito, come richiede_foto —
-                // qui non c'è un incasso da aspettare, la fattura a termini è
-                // già un credito di fiducia verso l'agenzia in tutto il resto
-                // del checkout. Un privato che comprasse questo SKU (oggi non
-                // linkato da nessuna parte) non ha un'agenzia: niente da accreditare.
+                // Pacchetto crediti (accredito, `crediti` positivo) o servizio
+                // necrologio (consumo, `crediti` negativo): il segno del
+                // prodotto è già quello giusto per il movimento, subito e non
+                // dopo un incasso — sull'agenzia è un rapporto di fiducia per
+                // tutto il resto del checkout. Un privato che comprasse questi
+                // SKU (mai linkati fuori dall'area agenzia) non ha un'agenzia:
+                // niente movimento da registrare.
                 if ($agenzia && $prodotto->crediti) {
                     MovimentoCredito::create([
                         'agenzia_id' => $agenzia->id,

@@ -202,4 +202,75 @@ class NecrologioTest extends TestCase
             ->get(route('necrologi.index'))
             ->assertForbidden();
     }
+
+    /**
+     * Le tre occasioni cambiano il titolo/badge della pagina pubblica: il
+     * default 'trigesimo' (nessuna occasione impostata) tiene invariato il
+     * comportamento di prima.
+     */
+    public function test_senza_occasione_impostata_il_titolo_resta_quello_del_trigesimo(): void
+    {
+        [, $agenzia] = $this->agenziaConReferente();
+        $n = $this->necrologio($agenzia);
+        $n->autorizzaPubblicazione('Giulia Ferrari', 'figlia');
+        $n->pubblica();
+
+        $this->get($n->url($agenzia->slug))
+            ->assertOk()
+            ->assertSee('Trigesimo di Luigia Rossetti')
+            ->assertSee('Nel trigesimo della scomparsa');
+    }
+
+    public function test_l_occasione_funerale_usa_la_dicitura_coniugata_e_i_dati_della_cerimonia(): void
+    {
+        [, $agenzia] = $this->agenziaConReferente();
+        $defunto = Defunto::create([
+            'nome' => 'Luigia', 'cognome' => 'Rossetti', 'sesso' => 'F',
+            'cerimonia_at' => Carbon::now()->addDays(2)->setTime(10, 0),
+            'chiesa' => 'Chiesa di San Carlo', 'indirizzo_chiesa' => 'Via Roma 1',
+        ]);
+        $n = Necrologio::create([
+            'defunto_id' => $defunto->id, 'agenzia_id' => $agenzia->id,
+            'percorso' => Necrologio::componiPercorso($defunto),
+            'occasione' => 'funerale',
+        ]);
+        $n->autorizzaPubblicazione('Giulia Ferrari', 'figlia');
+        $n->pubblica();
+
+        $this->get($n->url($agenzia->slug))
+            ->assertOk()
+            ->assertSee('Luigia Rossetti è venuta a mancare')
+            ->assertSee('Chiesa di San Carlo')
+            ->assertDontSee('Nel trigesimo della scomparsa');
+    }
+
+    public function test_l_occasione_funerale_resta_al_maschile_senza_sesso_registrato(): void
+    {
+        [, $agenzia] = $this->agenziaConReferente();
+        $defunto = Defunto::create(['nome' => 'Mario', 'cognome' => 'Bianchi']);
+        $n = Necrologio::create([
+            'defunto_id' => $defunto->id, 'agenzia_id' => $agenzia->id,
+            'percorso' => Necrologio::componiPercorso($defunto),
+            'occasione' => 'funerale',
+        ]);
+        $n->autorizzaPubblicazione('Anna Bianchi', 'moglie');
+        $n->pubblica();
+
+        $this->get($n->url($agenzia->slug))
+            ->assertOk()
+            ->assertSee('Mario Bianchi è venuto a mancare');
+    }
+
+    public function test_l_occasione_anniversario_mostra_il_numero(): void
+    {
+        [, $agenzia] = $this->agenziaConReferente();
+        $n = $this->necrologio($agenzia, ['occasione' => 'anniversario', 'numero_anniversario' => 2]);
+        $n->autorizzaPubblicazione('Giulia Ferrari', 'figlia');
+        $n->pubblica();
+
+        $this->get($n->url($agenzia->slug))
+            ->assertOk()
+            ->assertSee('2° Anniversario della scomparsa di Luigia Rossetti')
+            ->assertSee('2° anniversario della scomparsa');
+    }
 }

@@ -8,18 +8,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Modules\Commerce\Enums\Occasione;
 
 class Necrologio extends Model
 {
     protected $table = 'necrologi';
 
     protected $fillable = [
-        'defunto_id', 'agenzia_id', 'percorso',
+        'defunto_id', 'agenzia_id', 'percorso', 'occasione', 'numero_anniversario',
         'trigesimo_at', 'trigesimo_luogo', 'trigesimo_indirizzo', 'testo',
         'og_image', 'card_canvas', 'manifesto', 'manifesto_anteprima', 'manifesto_canvas', 'manifesto_formato',
     ];
 
     protected $casts = [
+        'occasione' => Occasione::class,
+        'numero_anniversario' => 'integer',
         'trigesimo_at' => 'datetime',
         'pubblicazione_consenso' => 'boolean',
         'pubblicazione_autorizzata_at' => 'datetime',

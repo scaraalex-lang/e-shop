@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Catalog\Models\Category;
 use Modules\Catalog\Models\Product;
 use Modules\Commerce\Enums\MetodoPagamento;
+use Modules\Commerce\Enums\Occasione;
 use Modules\Commerce\Models\Ordine;
 use Modules\Commerce\Tests\Concerns\CreaSoggetti;
 use Tests\TestCase;
@@ -88,5 +89,43 @@ class OrdineScadenzaSuggeritaTest extends TestCase
 
         $this->assertSame('Anniversario', $suggerito['etichetta']);
         $this->assertTrue($suggerito['quando']->isSameDay($ordine->created_at->copy()->addYear()));
+    }
+
+    public function test_occasione_esplicita_ha_la_precedenza_sull_euristica_di_categoria(): void
+    {
+        // Kit trigesimo nel carrello (category slug articoli-trigesimali, che
+        // da solo suggerirebbe "Anniversario"), ma l'occasione dichiarata è
+        // "funerale": deve vincere il campo esplicito.
+        $ordine = $this->ordine(['occasione' => Occasione::Funerale->value]);
+        $ordine->forceFill(['defunto_id' => 1])->save();
+        $ordine->righe()->create([
+            'product_id' => $this->prodotto('articoli-trigesimali')->id,
+            'sku' => 'X', 'nome' => 'Kit Trigesimo', 'quantita' => 1,
+            'prezzo_pieno' => 2600, 'prezzo' => 2600,
+        ]);
+
+        $suggerito = $ordine->fresh(['righe.product.category'])->prossimaScadenzaSuggerita();
+
+        $this->assertSame('Trigesimo', $suggerito['etichetta']);
+        $this->assertTrue($suggerito['quando']->isSameDay($ordine->created_at->copy()->addDays(30)));
+    }
+
+    public function test_occasione_esplicita_trigesimo_suggerisce_l_anniversario(): void
+    {
+        $ordine = $this->ordine(['occasione' => Occasione::Trigesimo->value]);
+        $ordine->forceFill(['defunto_id' => 1])->save();
+
+        $suggerito = $ordine->fresh()->prossimaScadenzaSuggerita();
+
+        $this->assertSame('Anniversario', $suggerito['etichetta']);
+        $this->assertTrue($suggerito['quando']->isSameDay($ordine->created_at->copy()->addYear()));
+    }
+
+    public function test_occasione_esplicita_anniversario_non_suggerisce_nulla(): void
+    {
+        $ordine = $this->ordine(['occasione' => Occasione::Anniversario->value]);
+        $ordine->forceFill(['defunto_id' => 1])->save();
+
+        $this->assertNull($ordine->fresh()->prossimaScadenzaSuggerita());
     }
 }

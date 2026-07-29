@@ -45,8 +45,9 @@ class PraticheController extends Controller
         $defunti = Defunto::whereIn('id', $ordini->pluck('defunto_id')->filter())->get()->keyBy('id');
 
         // I crediti sono un percorso solo per le agenzie: accesso ai servizi
-        // editor senza comprare un kit. Il consumo non è ancora costruito,
-        // qui si vede solo il saldo e si compra la ricarica.
+        // editor senza comprare un kit, pagando in crediti invece che a
+        // carrello con un kit fisico dentro. Aprire un servizio crea un
+        // ordine come un altro (stesso CreaOrdine, stessa lavorazione).
         $agenzia = $utente->agenzia;
 
         return view('photoprint::pratiche.index', [
@@ -54,6 +55,9 @@ class PraticheController extends Controller
             'defunti' => $defunti,
             'creditiSaldo' => $agenzia?->creditiSaldo(),
             'prodottoCrediti' => $agenzia ? Product::active()->where('sku', 'SRV-CREDITI-100')->first() : null,
+            'prodottiServizio' => $agenzia
+                ? Product::active()->whereIn('sku', ['SRV-NECRO-FUNERALE', 'SRV-NECRO-TRIGESIMO', 'SRV-NECRO-ANNIVERSARIO'])->get()->keyBy('sku')
+                : null,
         ]);
     }
 }

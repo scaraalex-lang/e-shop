@@ -37,6 +37,29 @@
                 </div>
             @endif
 
+            <div>
+                <x-input-label value="Occasione" />
+                @php $occasioneAttuale = old('occasione', $necrologio->occasione?->value ?? 'trigesimo'); @endphp
+                <div class="mt-1 flex flex-wrap gap-4">
+                    @foreach (['funerale' => 'Funerale', 'trigesimo' => 'Trigesimo', 'anniversario' => 'Anniversario'] as $valore => $etichetta)
+                        <label class="inline-flex items-center gap-2 font-sans font-light text-[14px]">
+                            <input type="radio" name="occasione" value="{{ $valore }}"
+                                onchange="document.getElementById('campo-numero-anniversario').style.display = this.value === 'anniversario' ? 'block' : 'none'"
+                                @checked($occasioneAttuale === $valore)>
+                            {{ $etichetta }}
+                        </label>
+                    @endforeach
+                </div>
+                <x-input-error :messages="$errors->get('occasione')" />
+
+                <div id="campo-numero-anniversario" class="mt-3 max-w-[10rem]" style="display: {{ $occasioneAttuale === 'anniversario' ? 'block' : 'none' }}">
+                    <x-input-label for="numero_anniversario" value="Quale anniversario" />
+                    <x-text-input id="numero_anniversario" name="numero_anniversario" type="number" min="1" max="99"
+                        :value="old('numero_anniversario', $necrologio->numero_anniversario)" />
+                    <x-input-error :messages="$errors->get('numero_anniversario')" />
+                </div>
+            </div>
+
             <div class="grid gap-6 sm:grid-cols-2">
                 <div>
                     <x-input-label for="trigesimo_at" value="Quando è il trigesimo" />

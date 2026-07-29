@@ -10,6 +10,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Illuminate\Validation\Rule;
+use Modules\Commerce\Enums\Occasione;
 use Modules\Commerce\Models\Agenzia;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\ManifestoTemplate;
@@ -61,6 +63,8 @@ class NecrologiController extends Controller
             'defunto_id' => $defunto->id,
             'agenzia_id' => $agenzia->id,
             'percorso' => Necrologio::componiPercorso($defunto),
+            'occasione' => $dati['occasione'],
+            'numero_anniversario' => $dati['numero_anniversario'] ?? null,
             'trigesimo_at' => $dati['trigesimo_at'] ?? null,
             'trigesimo_luogo' => $dati['trigesimo_luogo'] ?? null,
             'trigesimo_indirizzo' => $dati['trigesimo_indirizzo'] ?? null,
@@ -92,6 +96,8 @@ class NecrologiController extends Controller
         $dati = $this->valida($request, $necrologio);
 
         $necrologio->update([
+            'occasione' => $dati['occasione'],
+            'numero_anniversario' => $dati['numero_anniversario'] ?? null,
             'trigesimo_at' => $dati['trigesimo_at'] ?? null,
             'trigesimo_luogo' => $dati['trigesimo_luogo'] ?? null,
             'trigesimo_indirizzo' => $dati['trigesimo_indirizzo'] ?? null,
@@ -524,6 +530,8 @@ class NecrologiController extends Controller
     {
         return $request->validate([
             'defunto_id' => [$necrologio ? 'nullable' : 'required', 'integer', 'exists:defunti,id'],
+            'occasione' => ['required', Rule::in(array_column(Occasione::cases(), 'value'))],
+            'numero_anniversario' => ['required_if:occasione,anniversario', 'nullable', 'integer', 'min:1', 'max:99'],
             'trigesimo_at' => ['nullable', 'date'],
             'trigesimo_luogo' => ['nullable', 'string', 'max:150'],
             'trigesimo_indirizzo' => ['nullable', 'string', 'max:255'],
@@ -532,6 +540,7 @@ class NecrologiController extends Controller
         ], [
             'manifesto.mimes' => 'Il manifesto dev\'essere un PDF o un\'immagine.',
             'manifesto.max' => 'Il manifesto supera i 12 MB.',
+            'numero_anniversario.required_if' => 'Indica di quale anniversario si tratta.',
         ]);
     }
 

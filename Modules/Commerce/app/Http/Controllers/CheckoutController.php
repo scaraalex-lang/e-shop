@@ -41,6 +41,13 @@ class CheckoutController extends Controller
             );
         }
 
+        if ($mancantiCrediti = $this->carrelli->creditiMancanti($carrello, $agenzia)) {
+            return redirect()->route('carrello')->with(
+                'stato',
+                "Servono {$mancantiCrediti['richiesti']} crediti, ne avete {$mancantiCrediti['saldo']}: mancano {$mancantiCrediti['mancano']}.",
+            );
+        }
+
         return view('commerce::checkout.create', [
             'conto' => $carrello->conto($this->listino, $utente),
             'carrello' => $carrello,
@@ -61,6 +68,10 @@ class CheckoutController extends Controller
         $agenzia = $utente->eAgenziaApprovata() ? $utente->agenzia : null;
 
         if (! $carrello->soloCrediti() && $this->pezziMancanti($carrello->pezzi(), $agenzia?->ordineMinimoPezzi() ?? 0)) {
+            return redirect()->route('carrello');
+        }
+
+        if ($this->carrelli->creditiMancanti($carrello, $agenzia)) {
             return redirect()->route('carrello');
         }
 

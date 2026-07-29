@@ -11,12 +11,13 @@ class RigaOrdine extends Model
     protected $table = 'righe_ordine';
 
     protected $fillable = [
-        'product_id', 'sku', 'nome', 'quantita',
+        'product_id', 'sku', 'nome', 'quantita', 'numero_anniversario',
         'prezzo_pieno', 'prezzo', 'sconto_percentuale', 'richiede_foto',
     ];
 
     protected $casts = [
         'quantita' => 'integer',
+        'numero_anniversario' => 'integer',
         'prezzo_pieno' => 'integer',
         'prezzo' => 'integer',
         'sconto_percentuale' => 'decimal:2',
