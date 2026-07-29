@@ -1,8 +1,9 @@
 @extends('layouts.gestione')
 
 @section('title', $preghiera->exists ? 'Modifica testo' : 'Nuovo testo')
+@section('titolo', $preghiera->exists ? 'Modifica testo' : 'Nuovo testo')
 
-@section('content')
+@section('gestione')
 @php
     $campo = 'w-full border-2 border-caffe bg-bianco px-4 py-3 font-sans text-[15px] text-testo '
            . 'placeholder:text-testo-soft/60 focus:outline-none focus:border-oro-scuro transition-colors';
@@ -10,7 +11,10 @@
 @endphp
 
 <div class="max-w-2xl">
-    <h1 class="font-serif text-4xl text-caffe">{{ $preghiera->exists ? 'Modifica testo' : 'Nuovo testo' }}</h1>
+    <a href="{{ route('gestione.preghiere.index') }}"
+       class="font-sans text-[11px] tracking-[0.22em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
+        ← Archivio preghiere
+    </a>
 
     @if ($errors->any())
         <div role="alert" class="mt-6 border-2 border-oro-scuro bg-panna px-5 py-4">

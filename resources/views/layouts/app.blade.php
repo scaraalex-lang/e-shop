@@ -14,6 +14,12 @@
 </head>
 <body class="min-h-screen flex flex-col bg-bianco text-testo antialiased">
 
+    {{-- ============ VETRINA PUBBLICA (topbar, header, menu con carrello) ============ --}}
+    {{-- Le pagine di /gestione e /account per lo staff dichiarano
+         @section('senza-vetrina', 1): sono operatività pura, non hanno
+         niente a che fare con la navigazione da cliente (carrello incluso). --}}
+    @sectionMissing('senza-vetrina')
+
     {{-- ============ TOPBAR (scorre via) ============ --}}
     <div class="bg-caffe text-bianco/80 text-[11px] tracking-[0.25em] uppercase">
         <div class="mx-auto max-w-7xl px-6 h-9 flex items-center justify-center text-center">
@@ -151,6 +157,8 @@
         </script>
     @endpush
 
+    @endif
+
     {{-- ============ HERO A TUTTA LARGHEZZA (opzionale) ============ --}}
     @yield('hero')
 
@@ -181,6 +189,7 @@
     </div>
 
     {{-- ============ FOOTER ============ --}}
+    @sectionMissing('senza-vetrina')
     <footer class="bg-caffe text-bianco/70">
         <div class="mx-auto max-w-7xl px-6 py-16
                     grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
@@ -233,6 +242,7 @@
             </div>
         </div>
     </footer>
+    @endif
 
     @stack('scripts')
 </body>

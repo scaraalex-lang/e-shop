@@ -1,16 +1,14 @@
 @extends('layouts.gestione')
 
 @section('title', 'Archivio preghiere')
+@section('titolo', 'Archivio preghiere')
 
-@section('content')
+@section('gestione')
 <div class="flex flex-wrap items-end justify-between gap-4">
-    <div>
-        <h1 class="font-serif text-4xl text-caffe">Archivio preghiere</h1>
-        <p class="mt-3 font-sans font-light text-testo-soft leading-relaxed max-w-2xl">
-            È la galleria che si apre nel Ricordino Designer: la preghiera si sceglie da qui,
-            non si riscrive ogni volta. Tieni i testi corti — su un ricordino ci stanno poche righe.
-        </p>
-    </div>
+    <p class="max-w-2xl font-sans font-light text-testo-soft leading-relaxed">
+        È la galleria che si apre nel Ricordino Designer: la preghiera si sceglie da qui,
+        non si riscrive ogni volta. Tieni i testi corti — su un ricordino ci stanno poche righe.
+    </p>
     <x-button variant="piena" :href="route('gestione.preghiere.create')">Nuovo testo</x-button>
 </div>
 

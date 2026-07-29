@@ -53,8 +53,10 @@ class ProdottoRequest extends FormRequest
             'included_units' => ['nullable', 'required_if:is_kit,1', 'integer', 'min:0'],
             'extra_unit_price' => ['nullable', 'required_if:is_kit,1', 'string'],
 
-            'foto_catalogo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'foto_zoom' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            // 12288 KB: una foto da telefono raramente supera i 10MB, e
+            // nginx/php-fpm sono allineati a 32M lato upload.
+            'foto_catalogo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:12288'],
+            'foto_zoom' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:12288'],
         ];
     }
 
