@@ -24,6 +24,8 @@
     <meta property="og:locale" content="it_IT">
     @if ($immagine)
         <meta property="og:image" content="{{ $immagine }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
         <meta property="og:image:alt" content="Ritratto di {{ $nome }}">
     @endif
     <meta name="twitter:card" content="{{ $immagine ? 'summary_large_image' : 'summary' }}">

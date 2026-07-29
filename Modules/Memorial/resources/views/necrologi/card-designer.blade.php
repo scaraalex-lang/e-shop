@@ -40,7 +40,7 @@ nav{background:#1a1a2e;padding:0 1.5rem;display:flex;align-items:center;justify-
 .tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;padding:.5rem;overflow-y:auto;flex:1}
 .tpl-item{border:2px solid transparent;border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .2s;position:relative}
 .tpl-item:hover,.tpl-item.active{border-color:#c8a96e}
-.tpl-item img{width:100%;aspect-ratio:3/4;object-fit:contain;display:block;background:#0d0d1a}
+.tpl-item img{width:100%;aspect-ratio:1200/630;object-fit:contain;display:block;background:#0d0d1a}
 .tpl-item-name{font-size:.7rem;color:#c8a96e;text-align:center;padding:.3rem .5rem;background:rgba(0,0,0,.6);position:absolute;bottom:0;left:0;right:0}
 .tpl-empty{padding:1.5rem;text-align:center;color:rgba(200,169,110,.4);font-size:.8rem}
 .upload-tpl{margin:.5rem .75rem;display:flex;flex-direction:column;gap:.4rem}
@@ -203,6 +203,7 @@ nav{background:#1a1a2e;padding:0 1.5rem;display:flex;align-items:center;justify-
 <script>
 const NECRO_ID = {{ $necrologio->id }};
 const csrfToken = '{{ csrf_token() }}';
+const savedCanvas = @json($savedCanvas ?? null);
 
 // Allega CSRF e sessione a tutte le chiamate /admin/api/, come nel Ricordino
 // Designer: gli endpoint sono protetti dall'autenticazione dell'area studio.
@@ -279,8 +280,11 @@ function modale(opzioni) {
 }
 function chiudiModale(valore) { if (_modaleChiudi) _modaleChiudi(valore); }
 
-// Canvas 910x1093 scalato per schermo
-const ORIG_W = 910, ORIG_H = 1093;
+// Canvas 1200x630 (1.91:1) scalato per schermo: è il formato che Facebook e
+// WhatsApp si aspettano per l'anteprima grande di un link. Un formato diverso
+// non viene ridimensionato ma ritagliato al centro, perdendo quello che sta
+// sopra e sotto (successo con la vecchia card verticale 910x1093).
+const ORIG_W = 1200, ORIG_H = 630;
 let canvasScale = 1;
 
 function initCanvas() {
@@ -297,7 +301,7 @@ function initCanvas() {
 var _history = [], _historyRedo = [], _historyLock = false;
 function saveHistory() {
   if (_historyLock) return;
-  _history.push(JSON.stringify(canvas.toJSON(['name','selectable','evented'])));
+  _history.push(JSON.stringify(canvas.toJSON(['name','selectable','evented','customType'])));
   if (_history.length > 30) _history.shift();
   _historyRedo = [];
 }
@@ -359,19 +363,19 @@ function addTesto() {
   var colorDate = document.getElementById('txt-colore-date').value;
 
   nomeObj = new fabric.Text(nome, {
-    left: 455 * s, top: 646 * s,
+    left: 880 * s, top: 270 * s,
     originX: 'center', originY: 'center',
     fontSize: 52 * s, fontWeight: 'bold',
     fill: colorNome, fontFamily: font,
-    selectable: true
+    selectable: true, customType: 'nome'
   });
 
   dateObj = new fabric.Text(date, {
-    left: 455 * s, top: 710 * s,
+    left: 880 * s, top: 340 * s,
     originX: 'center', originY: 'center',
     fontSize: 30 * s,
     fill: colorDate, fontFamily: font,
-    selectable: true
+    selectable: true, customType: 'date'
   });
 
   canvas.add(nomeObj);
@@ -401,7 +405,7 @@ function loadTemplateImage(path) {
   if (templateObj) canvas.remove(templateObj);
   fabric.Image.fromURL(path, function(img) {
     img.scaleToWidth(canvas.width);
-    img.set({ left: 0, top: 0, selectable: false, evented: false });
+    img.set({ left: 0, top: 0, selectable: false, evented: false, customType: 'template' });
     templateObj = img;
     canvas.add(img);
     img.bringToFront();
@@ -467,8 +471,8 @@ function loadFoto(input) {
     if (fotoObj) canvas.remove(fotoObj);
     fabric.Image.fromURL(e.target.result, function(img) {
       const s = canvasScale;
-      img.scaleToWidth(471 * s * 2 * 0.8);
-      img.set({ left: 471 * s, top: 281 * s, originX: 'center', originY: 'center', selectable: true, hasControls: true, lockRotation: false, cornerColor: '#c8a96e', cornerStrokeColor: '#0d1128', cornerStyle: 'circle', cornerSize: 16, borderColor: '#c8a96e', transparentCorners: false, rotatingPointOffset: 40 });
+      img.scaleToWidth(280 * s * 2 * 0.8);
+      img.set({ left: 340 * s, top: 315 * s, originX: 'center', originY: 'center', selectable: true, hasControls: true, lockRotation: false, cornerColor: '#c8a96e', cornerStrokeColor: '#0d1128', cornerStyle: 'circle', cornerSize: 16, borderColor: '#c8a96e', transparentCorners: false, rotatingPointOffset: 40, customType: 'foto' });
       fotoObj = img;
       canvas.add(img);
       if (nomeObj) nomeObj.bringToFront();
@@ -484,13 +488,13 @@ function loadFoto(input) {
 function scaleFoto(val) {
   if (!fotoObj) return;
   const s = canvasScale;
-  fotoObj.scaleToWidth(471 * s * 2 * (val / 100));
+  fotoObj.scaleToWidth(280 * s * 2 * (val / 100));
   canvas.renderAll();
 }
 
 function centerFoto() {
   if (!fotoObj) return;
-  fotoObj.set({ left: 471 * canvasScale, top: 281 * canvasScale, originX: 'center', originY: 'center' });
+  fotoObj.set({ left: 340 * canvasScale, top: 315 * canvasScale, originX: 'center', originY: 'center' });
   canvas.renderAll();
 }
 
@@ -501,10 +505,13 @@ function salvaCard() {
   const multiplier = ORIG_W / canvas.width;
   const dataURL = canvas.toDataURL({ format: 'png', multiplier: multiplier });
 
+  const canvasJson = canvas.toJSON(['customType']);
+  canvasJson._scale = canvasScale;
+
   fetch('/admin/api/necrologi/'+NECRO_ID+'/salva-card', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify({ image_data: dataURL })
+    body: JSON.stringify({ image_data: dataURL, canvas: JSON.stringify(canvasJson) })
   }).then(r => r.json().then(d => ({ ok: r.ok, d: d }))).then(({ ok, d }) => {
     document.getElementById('saving-overlay').style.display = 'none';
     if (ok && d.success) {
@@ -624,23 +631,51 @@ function aggiungiSimbolo(sym) {
   canvas.renderAll();
 }
 
-addTesto();
-
-@if ($fotoPrincipale)
-(function() {
-  const s = canvasScale;
-  fabric.Image.fromURL("{{ $fotoPrincipale }}", function(img) {
-    img.scaleToWidth(471 * s * 2 * 0.8);
-    img.set({ left: 471*s, top: 281*s, originX:"center", originY:"center", selectable:true, hasControls: true, lockRotation: false, cornerColor: '#c8a96e', cornerStrokeColor: '#0d1128', cornerStyle: 'circle', cornerSize: 16, borderColor: '#c8a96e', transparentCorners: false, rotatingPointOffset: 40 });
-    fotoObj = img;
-    canvas.add(img);
-    if (nomeObj) nomeObj.bringToFront();
-    if (dateObj) dateObj.bringToFront();
-    if (templateObj) templateObj.bringToFront();
+// Progetto già salvato in precedenza: lo si ritrova così com'era, invece di
+// ripartire sempre da un canvas vuoto (foto della pratica + nome/date di
+// default). Il canvas è stato serializzato in coordinate della finestra di
+// chi ha salvato (`_scale`): si riproporziona su quella di chi lo riapre,
+// altrimenti su uno schermo diverso il progetto torna spostato o fuori scala.
+if (savedCanvas && savedCanvas.objects && savedCanvas.objects.length) {
+  canvas.loadFromJSON(savedCanvas, function () {
+    var savedScale = savedCanvas._scale || canvasScale;
+    var ratio = canvasScale / savedScale;
+    if (Math.abs(ratio - 1) > 0.001) {
+      canvas.getObjects().forEach(function (o) {
+        var upd = { left: o.left * ratio, top: o.top * ratio, scaleX: o.scaleX * ratio, scaleY: o.scaleY * ratio };
+        if (o.fontSize) upd.fontSize = o.fontSize * ratio;
+        o.set(upd);
+        o.setCoords();
+      });
+    }
+    canvas.getObjects().forEach(function (o) {
+      if (o.customType === 'foto') fotoObj = o;
+      if (o.customType === 'nome') nomeObj = o;
+      if (o.customType === 'date') dateObj = o;
+      if (o.customType === 'template') templateObj = o;
+    });
     canvas.renderAll();
+    aggiornaLayersPanel();
   });
-})();
-@endif
+} else {
+  addTesto();
+
+  @if ($fotoPrincipale)
+  (function() {
+    const s = canvasScale;
+    fabric.Image.fromURL("{{ $fotoPrincipale }}", function(img) {
+      img.scaleToWidth(280 * s * 2 * 0.8);
+      img.set({ left: 340*s, top: 315*s, originX:"center", originY:"center", selectable:true, hasControls: true, lockRotation: false, cornerColor: '#c8a96e', cornerStrokeColor: '#0d1128', cornerStyle: 'circle', cornerSize: 16, borderColor: '#c8a96e', transparentCorners: false, rotatingPointOffset: 40, customType: 'foto' });
+      fotoObj = img;
+      canvas.add(img);
+      if (nomeObj) nomeObj.bringToFront();
+      if (dateObj) dateObj.bringToFront();
+      if (templateObj) templateObj.bringToFront();
+      canvas.renderAll();
+    });
+  })();
+  @endif
+}
 </script>
 </body>
 </html>

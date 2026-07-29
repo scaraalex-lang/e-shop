@@ -16,7 +16,7 @@ class Necrologio extends Model
     protected $fillable = [
         'defunto_id', 'agenzia_id', 'percorso',
         'trigesimo_at', 'trigesimo_luogo', 'trigesimo_indirizzo', 'testo',
-        'og_image', 'manifesto', 'manifesto_anteprima', 'manifesto_canvas', 'manifesto_formato',
+        'og_image', 'card_canvas', 'manifesto', 'manifesto_anteprima', 'manifesto_canvas', 'manifesto_formato',
     ];
 
     protected $casts = [
@@ -25,6 +25,7 @@ class Necrologio extends Model
         'pubblicazione_autorizzata_at' => 'datetime',
         'pubblicato' => 'boolean',
         'pubblicato_fino_al' => 'date',
+        'card_canvas' => 'array',
         'manifesto_canvas' => 'array',
     ];
 

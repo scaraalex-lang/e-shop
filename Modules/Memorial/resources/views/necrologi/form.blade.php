@@ -105,9 +105,9 @@
             <div class="mt-5 flex flex-wrap items-end gap-6">
                 @if ($necrologio->og_image)
                     <img src="{{ asset('storage/'.$necrologio->og_image) }}" alt="Anteprima della card"
-                         class="h-40 w-auto border border-caffe/15">
+                         class="h-32 w-auto border border-caffe/15">
                 @else
-                    <div class="flex h-40 w-32 items-center justify-center border border-dashed border-caffe/25 bg-panna/40
+                    <div class="flex h-32 w-60 items-center justify-center border border-dashed border-caffe/25 bg-panna/40
                                 font-sans text-[11px] text-testo-soft text-center px-3">
                         Nessuna card ancora
                     </div>

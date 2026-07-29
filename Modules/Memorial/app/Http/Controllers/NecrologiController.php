@@ -196,6 +196,7 @@ class NecrologiController extends Controller
             'defunto' => $necrologio->defunto,
             'templates' => NecrologioCardTemplate::where('agenzia_id', $necrologio->agenzia_id)->latest()->get(),
             'fotoPrincipale' => $fotoPrincipale ? '/storage/'.ltrim($fotoPrincipale, '/') : null,
+            'savedCanvas' => $necrologio->card_canvas,
         ]);
     }
 
@@ -254,7 +255,10 @@ class NecrologiController extends Controller
     {
         $this->soloSuo($request, $necrologio);
 
-        $dati = $request->validate(['image_data' => ['required', 'string']]);
+        $dati = $request->validate([
+            'image_data' => ['required', 'string'],
+            'canvas' => ['nullable', 'string'],
+        ]);
 
         if (! preg_match('/^data:image\/png;base64,(.+)$/', $dati['image_data'], $m)) {
             abort(422, 'Immagine non valida.');
@@ -263,6 +267,12 @@ class NecrologiController extends Controller
         $binario = base64_decode($m[1], true);
         abort_if($binario === false, 422, 'Immagine non valida.');
 
+        $canvas = null;
+        if ($dati['canvas'] ?? null) {
+            $canvas = json_decode($dati['canvas'], true);
+            abort_if(! is_array($canvas), 422, 'Il progetto della card non è valido.');
+        }
+
         $vecchia = $necrologio->og_image;
         $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
 
@@ -270,7 +280,7 @@ class NecrologiController extends Controller
         $scritto = Storage::disk('public')->put($path, $binario);
         abort_if($scritto === false, 500, 'Salvataggio della card fallito, riprova.');
 
-        $necrologio->update(['og_image' => $path]);
+        $necrologio->update(['og_image' => $path, 'card_canvas' => $canvas]);
 
         if ($vecchia) {
             Storage::disk('public')->delete($vecchia);
