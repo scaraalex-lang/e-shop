@@ -27,6 +27,10 @@
         @endif
     </nav>
 
+    @if ($prodotto->category?->slug === 'photoceramiche')
+        <x-avviso-app-fotoceramiche />
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
 
         {{-- ============ immagini ============ --}}

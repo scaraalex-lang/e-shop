@@ -29,6 +29,8 @@ class GestioneContenutiController extends Controller
         'cta.bottone_primario', 'cta.bottone_primario_url',
         'cta.bottone_secondario', 'cta.bottone_secondario_url',
         'footer.testo_brand',
+        'photoceramiche.avviso_titolo', 'photoceramiche.avviso_testo',
+        'photoceramiche.avviso_bottone', 'photoceramiche.avviso_url',
     ];
 
     public function edit(): View

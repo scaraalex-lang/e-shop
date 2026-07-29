@@ -23,6 +23,10 @@
         </p>
     </header>
 
+    @if ($categoria->slug === 'photoceramiche')
+        <x-avviso-app-fotoceramiche />
+    @endif
+
     {{-- griglia prodotti --}}
     @if ($prodotti->isNotEmpty())
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">

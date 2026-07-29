@@ -180,6 +180,34 @@
             </div>
         </fieldset>
 
+        <fieldset class="border border-caffe/15 bg-bianco px-7 py-7 space-y-5">
+            <legend class="font-serif text-xl font-medium px-1">Photoceramiche — avviso app</legend>
+            <p class="font-sans font-light text-[12px] text-testo-soft">
+                Mostrato nella categoria Photoceramiche e nella scheda dei suoi prodotti.
+                Lascia "Testo" vuoto per non mostrare nulla.
+            </p>
+            <div>
+                <x-input-label for="photoceramiche_avviso_titolo" value="Titolo" />
+                <x-text-input id="photoceramiche_avviso_titolo" name="valori[photoceramiche.avviso_titolo]" value="{{ $v('photoceramiche.avviso_titolo') }}" />
+            </div>
+            <div>
+                <x-input-label for="photoceramiche_avviso_testo" value="Testo" />
+                <textarea id="photoceramiche_avviso_testo" name="valori[photoceramiche.avviso_testo]" rows="2"
+                          class="block w-full bg-bianco border border-caffe/25 px-4 py-3 font-sans font-light text-[15px]
+                                 focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40">{{ $v('photoceramiche.avviso_testo') }}</textarea>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2">
+                <div>
+                    <x-input-label for="photoceramiche_avviso_bottone" value="Bottone — etichetta" />
+                    <x-text-input id="photoceramiche_avviso_bottone" name="valori[photoceramiche.avviso_bottone]" value="{{ $v('photoceramiche.avviso_bottone') }}" />
+                </div>
+                <div>
+                    <x-input-label for="photoceramiche_avviso_url" value="...indirizzo dell'app" />
+                    <x-text-input id="photoceramiche_avviso_url" name="valori[photoceramiche.avviso_url]" value="{{ $v('photoceramiche.avviso_url') }}" />
+                </div>
+            </div>
+        </fieldset>
+
         <x-primary-button>Salva i contenuti</x-primary-button>
     </form>
 @endsection
