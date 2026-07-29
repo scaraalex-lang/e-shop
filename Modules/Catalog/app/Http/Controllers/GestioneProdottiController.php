@@ -66,11 +66,30 @@ class GestioneProdottiController extends Controller
             ->with('stato', "Prodotto \"{$prodotto->name}\" creato.");
     }
 
+    /**
+     * Precedente/successivo nello stesso ordine alfabetico dell'elenco: così
+     * lo staff scorre i prodotti per fare modifiche senza tornare ogni volta
+     * all'indice. (name, id) come chiave composta perché il nome non è unico.
+     */
     public function edit(Product $prodotto): View
     {
+        $precedente = Product::query()
+            ->where(fn ($q) => $q->where('name', '<', $prodotto->name)
+                ->orWhere(fn ($q2) => $q2->where('name', $prodotto->name)->where('id', '<', $prodotto->id)))
+            ->orderByDesc('name')->orderByDesc('id')
+            ->first();
+
+        $successivo = Product::query()
+            ->where(fn ($q) => $q->where('name', '>', $prodotto->name)
+                ->orWhere(fn ($q2) => $q2->where('name', $prodotto->name)->where('id', '>', $prodotto->id)))
+            ->orderBy('name')->orderBy('id')
+            ->first();
+
         return view('catalog::gestione.prodotti.edit', [
             'prodotto' => $prodotto->load('images'),
             'categorie' => Category::orderBy('name')->get(),
+            'precedente' => $precedente,
+            'successivo' => $successivo,
         ]);
     }
 

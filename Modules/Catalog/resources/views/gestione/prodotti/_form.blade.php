@@ -3,6 +3,10 @@
     $vecchio = fn (string $campo, $default = null) => old($campo, $p?->{$campo} ?? $default);
 @endphp
 
+<div class="flex justify-end mb-8">
+    <x-primary-button>{{ $p ? 'Salva le modifiche' : 'Crea il prodotto' }}</x-primary-button>
+</div>
+
 <div class="grid gap-10 lg:grid-cols-[1fr_20rem]">
     <div class="space-y-8">
 
