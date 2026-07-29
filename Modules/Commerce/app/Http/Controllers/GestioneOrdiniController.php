@@ -43,7 +43,7 @@ class GestioneOrdiniController extends Controller
     public function show(Ordine $ordine): View
     {
         return view('commerce::gestione.ordini.show', [
-            'ordine' => $ordine->load(['user', 'agenzia', 'righe']),
+            'ordine' => $ordine->load(['user', 'agenzia', 'righe', 'servizi.servizioEditor']),
         ]);
     }
 

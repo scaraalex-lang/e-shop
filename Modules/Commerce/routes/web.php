@@ -6,6 +6,7 @@ use Modules\Commerce\Http\Controllers\CheckoutController;
 use Modules\Commerce\Http\Controllers\GestioneAgentiController;
 use Modules\Commerce\Http\Controllers\GestioneAgenzieController;
 use Modules\Commerce\Http\Controllers\GestioneOrdiniController;
+use Modules\Commerce\Http\Controllers\GestioneServiziController;
 use Modules\Commerce\Http\Controllers\OrdiniController;
 use Modules\Commerce\Http\Controllers\RegistrazioneAgenziaController;
 
@@ -35,6 +36,9 @@ Route::middleware('auth')->group(function () {
     Route::post('ordine/conferma', [CheckoutController::class, 'store']);
 
     Route::get('account/ordini', [OrdiniController::class, 'index'])->name('ordini');
+    // Prima di {ordine}: altrimenti "nuovo" verrebbe letto come un numero d'ordine.
+    Route::get('account/ordini/nuovo', [OrdiniController::class, 'nuovo'])->name('ordini.nuovo');
+    Route::post('account/ordini/servizio', [OrdiniController::class, 'attivaServizi'])->name('ordini.servizio');
     Route::get('account/ordini/{ordine}', [OrdiniController::class, 'show'])->name('ordine');
 });
 
@@ -79,4 +83,9 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
     Route::get('ordini/{ordine}', [GestioneOrdiniController::class, 'show'])->name('ordini.show');
     Route::post('ordini/{ordine}/spedisci', [GestioneOrdiniController::class, 'spedisci'])->name('ordini.spedisci');
     Route::post('ordini/{ordine}/consegnato', [GestioneOrdiniController::class, 'segnaConsegnato'])->name('ordini.consegnato');
+
+    // Il catalogo servizi (ricordini/manifesti/necrologi): righe fisse, solo
+    // costo e attivo/non attivo modificabili — niente create/delete.
+    Route::get('servizi', [GestioneServiziController::class, 'index'])->name('servizi.index');
+    Route::put('servizi/{servizio}', [GestioneServiziController::class, 'update'])->name('servizi.aggiorna');
 });

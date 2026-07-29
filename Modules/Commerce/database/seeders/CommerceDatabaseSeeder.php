@@ -13,6 +13,7 @@ class CommerceDatabaseSeeder extends Seeder
     {
         $this->call([
             ScaglioniPrezzoSeeder::class,
+            ServiziEditorSeeder::class,
         ]);
     }
 }

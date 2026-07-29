@@ -59,6 +59,31 @@ class Ordine extends Model
         return $this->hasMany(RigaOrdine::class)->orderBy('id');
     }
 
+    /** I servizi editor attivati su questo ordine (ricordini/manifesti/necrologi), se è un ordine di solo servizio. */
+    public function servizi(): HasMany
+    {
+        return $this->hasMany(OrdineServizio::class);
+    }
+
+    /**
+     * Se aprire il designer `$codice` (ricordini/manifesti/necrologi) è
+     * consentito su questo ordine.
+     *
+     * Un ordine senza righe in `ordine_servizi` è un ordine "normale" (un
+     * kit fisico comprato dal Catalog): l'uso dei designer è incluso, come
+     * deciso dal committente ("col kit trigesimo il designer è incluso") —
+     * accesso pieno, nessun gating. Un ordine DI SOLO SERVIZIO invece apre
+     * solo i designer corrispondenti ai servizi effettivamente attivati.
+     */
+    public function designerAbilitato(string $codice): bool
+    {
+        if ($this->servizi->isEmpty()) {
+            return true;
+        }
+
+        return $this->servizi->contains(fn (OrdineServizio $s) => $s->servizioEditor?->codice === $codice);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -112,9 +137,10 @@ class Ordine extends Model
      * Promemoria leggero, solo un suggerimento mostrato dopo aver creato
      * l'ordine — nessun automatismo, nessuna nuova pratica generata.
      *
-     * Preferisce `occasione`, scelta esplicitamente dall'agenzia (il
-     * servizio flaggato nel carrello): un Funerale suggerisce il Trigesimo
-     * fra 30 giorni, un Trigesimo suggerisce l'Anniversario fra un anno, un
+     * Preferisce `occasione`, scelta esplicitamente dall'agenzia (etichetta
+     * indipendente da quali servizi sono stati attivati): un Funerale
+     * suggerisce il Trigesimo fra 30 giorni, un Trigesimo suggerisce
+     * l'Anniversario fra un anno, un
      * Anniversario non suggerisce nulla di automatico (il prossimo non è
      * deducibile senza sapere quale numero sarà). Per gli ordini vecchi
      * senza il campo, resta l'euristica sulla categoria degli articoli

@@ -16,6 +16,7 @@
         ['Prodotti', route('gestione.prodotti.index'), 'gestione.prodotti.*'],
         ['Categorie', route('gestione.categorie.index'), 'gestione.categorie.*'],
         ['Kit', route('gestione.kit.index'), 'gestione.kit.*'],
+        ['Servizi', route('gestione.servizi.index'), 'gestione.servizi.*'],
         ['Agenti', route('gestione.agenti.index'), 'gestione.agenti.*'],
         ['Menu', route('gestione.menu.index'), 'gestione.menu.*'],
         ['Contenuti home', route('gestione.contenuti.edit'), 'gestione.contenuti.*'],

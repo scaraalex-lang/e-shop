@@ -271,6 +271,7 @@
     </section>
 
     {{-- ============ 3. il ricordino ============ --}}
+    @if ($ordine->designerAbilitato('ricordini'))
     <section class="bg-bianco px-7 py-8 {{ $foto->isNotEmpty() ? '' : 'opacity-45 pointer-events-none' }}">
         <header class="flex flex-wrap items-baseline justify-between gap-3">
             <h2 class="font-serif text-2xl font-medium">Il ricordino</h2>
@@ -323,9 +324,10 @@
             </x-button>
         </div>
     </section>
+    @endif
 
     {{-- ============ necrologio e manifesto (solo agenzie) ============ --}}
-    @if ($ordine->agenzia_id)
+    @if ($ordine->agenzia_id && ($ordine->designerAbilitato('necrologi') || $ordine->designerAbilitato('manifesti')))
         <section class="bg-bianco px-7 py-8 {{ $foto->isNotEmpty() ? '' : 'opacity-45 pointer-events-none' }}">
             <h2 class="font-serif text-2xl font-medium">Necrologio e manifesto</h2>
             <p class="mt-2 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
@@ -333,14 +335,18 @@
             </p>
 
             <div class="mt-6 flex flex-wrap gap-4">
-                <form method="POST" action="{{ route('lavorazione.necrologio', $ordine) }}">
-                    @csrf
-                    <x-button type="submit">Apri il Necrologio</x-button>
-                </form>
-                <form method="POST" action="{{ route('lavorazione.manifesto', $ordine) }}">
-                    @csrf
-                    <x-button type="submit">Apri il Manifesto</x-button>
-                </form>
+                @if ($ordine->designerAbilitato('necrologi'))
+                    <form method="POST" action="{{ route('lavorazione.necrologio', $ordine) }}">
+                        @csrf
+                        <x-button type="submit">Apri il Necrologio</x-button>
+                    </form>
+                @endif
+                @if ($ordine->designerAbilitato('manifesti'))
+                    <form method="POST" action="{{ route('lavorazione.manifesto', $ordine) }}">
+                        @csrf
+                        <x-button type="submit">Apri il Manifesto</x-button>
+                    </form>
+                @endif
             </div>
         </section>
     @endif

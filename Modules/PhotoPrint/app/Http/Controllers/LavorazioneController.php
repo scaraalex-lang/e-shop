@@ -36,7 +36,7 @@ class LavorazioneController extends Controller
         $ricordino = $defunto?->ricordini()->latest()->first();
 
         return view('photoprint::lavorazione.show', [
-            'ordine' => $ordine,
+            'ordine' => $ordine->load('servizi.servizioEditor'),
             'defunto' => $defunto,
             'ricordino' => $ricordino,
             'foto' => FotoPratica::where('ordine_id', $ordine->id)->latest()->get(),

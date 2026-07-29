@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\Catalog\Models\Product;
-use Modules\Commerce\Enums\Occasione;
 use Modules\Commerce\Models\Agenzia;
 use Modules\Commerce\Models\Carrello;
 use Modules\Commerce\Models\RigaCarrello;
@@ -69,41 +68,16 @@ class GestoreCarrello
     /**
      * Aggiunge pezzi al carrello. Se il prodotto c'è già, si somma alla riga
      * esistente invece di aprirne una seconda.
-     *
-     * Un servizio (funerale/trigesimo/anniversario) fa eccezione: un ordine
-     * ha un solo defunto quindi una sola occasione, la quantità resta
-     * sempre 1 (non si somma) e porta con sé il numero dell'anniversario,
-     * se è quello il servizio. Il conflitto tra occasioni diverse nello
-     * stesso carrello si controlla PRIMA di chiamare questo metodo (vedi
-     * `occasioneNelCarrello()`), qui si assume già validato.
      */
-    public function aggiungi(Product $prodotto, int $quantita, ?int $numeroAnniversario = null): RigaCarrello
+    public function aggiungi(Product $prodotto, int $quantita): RigaCarrello
     {
         $carrello = $this->correnteOCrea();
-        $eServizio = Occasione::daSku($prodotto->sku) !== null;
 
         $riga = $carrello->righe()->firstOrNew(['product_id' => $prodotto->id]);
-        $riga->quantita = $eServizio ? 1 : max(($riga->quantita ?? 0) + $quantita, 1);
-
-        if ($eServizio) {
-            $riga->numero_anniversario = $numeroAnniversario;
-        }
-
+        $riga->quantita = max(($riga->quantita ?? 0) + $quantita, 1);
         $riga->save();
 
         return $riga;
-    }
-
-    /** L'occasione già presente nel carrello, se c'è un servizio dentro. */
-    public function occasioneNelCarrello(Carrello $carrello): ?Occasione
-    {
-        foreach ($carrello->righe as $riga) {
-            if ($occasione = Occasione::daSku($riga->product?->sku ?? '')) {
-                return $occasione;
-            }
-        }
-
-        return null;
     }
 
     /**

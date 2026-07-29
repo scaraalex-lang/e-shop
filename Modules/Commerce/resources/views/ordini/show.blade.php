@@ -87,6 +87,23 @@
     @endif
 </section>
 
+@if ($ordine->servizi->isNotEmpty())
+    {{-- ============ servizi attivati (ordine a crediti) ============ --}}
+    <section class="mt-12">
+        <h2 class="font-sans text-[11px] tracking-[0.25em] uppercase text-oro-scuro">Servizi attivati</h2>
+
+        <div class="mt-5 border border-caffe/15">
+            @foreach ($ordine->servizi as $servizio)
+                <article class="flex items-center justify-between gap-5 px-6 py-4 border-b border-caffe/10 last:border-b-0">
+                    <h3 class="font-serif text-lg leading-snug">{{ $servizio->servizioEditor?->etichetta }}</h3>
+                    <span class="font-sans text-[13px] text-testo-soft tabular-nums">{{ $servizio->costo_crediti }} crediti</span>
+                </article>
+            @endforeach
+        </div>
+    </section>
+@endif
+
+@if ($ordine->righe->isNotEmpty())
 {{-- ============ articoli ============ --}}
 <section class="mt-12">
     <h2 class="font-sans text-[11px] tracking-[0.25em] uppercase text-oro-scuro">Cosa hai ordinato</h2>
@@ -121,6 +138,7 @@
         @endforeach
     </div>
 </section>
+@endif
 
 {{-- ============ conto e consegna ============ --}}
 <div class="mt-12 grid gap-10 lg:grid-cols-2">
@@ -143,6 +161,12 @@
     <section>
         <h2 class="font-sans text-[11px] tracking-[0.25em] uppercase text-oro-scuro">Il conto</h2>
 
+        @if ($ordine->righe->isEmpty() && $ordine->servizi->isNotEmpty())
+            <p class="mt-4 font-sans text-[14px]">
+                Pagato in crediti:
+                <span class="font-serif text-2xl tabular-nums">{{ $ordine->servizi->sum('costo_crediti') }}</span>
+            </p>
+        @else
         <dl class="mt-4 font-sans text-[14px]">
             @if ($ordine->haSconti())
                 <div class="flex justify-between py-1 text-testo-soft">
@@ -187,6 +211,7 @@
             <p class="mt-1 font-sans font-light text-[12px] text-testo-soft/70 tabular-nums">
                 Riferimento {{ $ordine->riferimento_pagamento }}
             </p>
+        @endif
         @endif
     </section>
 </div>

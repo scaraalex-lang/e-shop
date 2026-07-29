@@ -79,6 +79,20 @@
                 </section>
             @endif
 
+            @if ($ordine->servizi->isNotEmpty())
+                <section class="bg-bianco px-7 py-7">
+                    <h2 class="font-serif text-xl font-medium">Servizi attivati</h2>
+                    <div class="mt-4 divide-y divide-caffe/10">
+                        @foreach ($ordine->servizi as $servizio)
+                            <div class="flex items-center justify-between gap-4 py-4">
+                                <p class="font-sans text-[14px]">{{ $servizio->servizioEditor?->etichetta }}</p>
+                                <span class="font-sans text-[13px] text-testo-soft tabular-nums">{{ $servizio->costo_crediti }} crediti</span>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             <section class="bg-bianco px-7 py-7">
                 <h2 class="font-serif text-xl font-medium">Cosa contiene</h2>
                 <div class="mt-4 divide-y divide-caffe/10">

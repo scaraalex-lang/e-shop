@@ -22,8 +22,18 @@
         ]
         : [
             ['Panoramica', route('account'), 'account'],
-            ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']],
         ];
+
+    // Dove si sceglie cosa mettere in un ordine nuovo (servizio/prodotto/kit):
+    // un percorso da agenzia, l'equivalente B2B dello sfogliare la vetrina.
+    // Prima di "I miei ordini": si comincia da qui, poi si tiene traccia.
+    if (! $utente->eStaff() && $utente->eAgenziaApprovata()) {
+        $voci[] = ['Nuovo ordine', route('ordini.nuovo'), 'ordini.nuovo'];
+    }
+
+    if (! $utente->eStaff()) {
+        $voci[] = ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']];
+    }
 
     // I necrologi sono uno strumento dell'agenzia, non un prodotto: non
     // passano dall'ordine e stanno accanto agli editor.
