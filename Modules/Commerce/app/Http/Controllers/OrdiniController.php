@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Modules\Catalog\Models\Category;
 use Modules\Catalog\Models\Product;
 use Modules\Commerce\Http\Requests\AttivaServiziOrdineRequest;
 use Modules\Commerce\Models\Ordine;
@@ -36,10 +37,39 @@ class OrdiniController extends Controller
      * ha una pagina a sé, vedi servizi() — è l'operatività quotidiana
      * dell'agenzia, merita una voce di menu propria invece di stare
      * nascosto in fondo a "Nuovo ordine".
+     *
+     * I prodotti singoli sono elencati qui per categoria invece di rimandare
+     * alla vetrina pubblica: l'agenzia lavora da dentro il proprio account,
+     * non naviga il sito come un cliente B2C (vedi CLAUDE.md/memoria
+     * b2b-b2c-separazione-catalogo). Stesso listino e stesso motore prezzi
+     * del pubblico: lo sconto B2B si applica in carrello, non qui.
      */
     public function nuovo(Request $request): View
     {
+        $categorie = Category::query()
+            ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->whereNull('parent_id')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function (Category $categoria) {
+                $ids = $categoria->children->pluck('id')->push($categoria->id);
+
+                $categoria->setRelation('prodotti', Product::active()
+                    ->whereIn('category_id', $ids)
+                    ->where('is_kit', false)
+                    ->where('is_componibile', false)
+                    ->with('category', 'primaryImage')
+                    ->orderBy('sort_order')
+                    ->get());
+
+                return $categoria;
+            })
+            ->filter(fn (Category $categoria) => $categoria->prodotti->isNotEmpty())
+            ->values();
+
         return view('commerce::ordini.nuovo', [
+            'categorie' => $categorie,
             'kit' => Product::active()
                 ->where(fn ($q) => $q->where('is_kit', true)->orWhere('is_componibile', true))
                 ->with('category', 'primaryImage')
