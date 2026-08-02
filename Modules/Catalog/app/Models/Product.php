@@ -21,7 +21,7 @@ class Product extends Model
         'is_configurable', 'is_photo_printable', 'has_qr_memorial',
         'is_kit', 'included_units', 'extra_unit_price', 'crediti',
         'stock', 'is_active', 'sort_order',
-        'is_componibile', 'is_featured',
+        'is_componibile', 'is_featured', 'is_hero',
     ];
 
     protected $casts = [
@@ -39,6 +39,7 @@ class Product extends Model
         'is_active'          => 'boolean',
         'is_componibile'     => 'boolean',
         'is_featured'        => 'boolean',
+        'is_hero'            => 'boolean',
     ];
 
     public function category(): BelongsTo

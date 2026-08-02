@@ -62,6 +62,9 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 .block-btn:hover{border-color:var(--gold);background:rgba(200,169,110,.05)}
 .block-icon{font-size:1rem;width:20px;text-align:center}
 
+.simbolo-btn{width:100%;aspect-ratio:1;border:1px solid var(--border);border-radius:6px;background:var(--cream);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.simbolo-btn:hover{border-color:var(--gold);background:rgba(200,169,110,.1)}
+
 .upload-area{padding:.75rem;border-top:1px solid var(--border)}
 .upload-btn{width:100%;padding:.6rem;border:2px dashed var(--border);border-radius:8px;background:none;color:var(--gray);font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center;transition:all .2s}
 .upload-btn:hover{border-color:var(--gold);color:var(--gold)}
@@ -213,6 +216,26 @@ function flipOggetto(asse) {
       </div>
     </details>
 
+    <details class="acc" id="acc-simboli">
+      <summary class="panel-title"><span class="acc-lbl">Simboli Religiosi</span><span class="acc-arrow">▾</span></summary>
+      <div style="padding:.5rem">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem" id="simboli-grid">
+        <button class="simbolo-btn" onclick="insertSimbolo('croce_latina')" title="Croce Latina">✝</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('croce_greca')" title="Croce Greca">✚</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('croce_ortodossa')" title="Croce Ortodossa">☦</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('croce_decorata')" title="Croce Decorata">✛</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('stella')" title="Stella">✦</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('stella6')" title="Stella 6 punte">✡</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('omega')" title="Omega">Ω</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('chi_rho')" title="Chi-Rho">☧</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('giglio')" title="Giglio">⚜</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('colomba')" title="Colomba">🕊</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('infinito')" title="Infinito">∞</button>
+        <button class="simbolo-btn" onclick="insertSimbolo('alfa_omega')" title="Alfa e Omega">Αω</button>
+        </div>
+      </div>
+    </details>
+
     <details class="acc" id="acc-template">
       <summary class="panel-title"><span class="acc-lbl">I miei template</span><span class="acc-arrow">▾</span></summary>
       <div id="saved-templates-list" style="padding:.4rem">
@@ -350,6 +373,13 @@ function flipOggetto(asse) {
           <div style="display:flex;align-items:center;gap:.5rem;margin-top:.25rem">
             <input type="range" id="prop-lineh" min="0.8" max="4" step="0.1" value="1.2" oninput="updateProp('lineHeight');document.getElementById('prop-lineh-val').textContent=parseFloat(this.value).toFixed(1)" style="flex:1">
             <span id="prop-lineh-val" style="font-size:.75rem;min-width:24px;color:var(--gray)">1.2</span>
+          </div>
+        </div>
+        <div style="margin-top:.6rem">
+          <span class="prop-label">Interspazio lettere</span>
+          <div style="display:flex;align-items:center;gap:.5rem;margin-top:.25rem">
+            <input type="range" id="prop-charspacing" min="-200" max="800" step="10" value="0" oninput="updateProp('charSpacing');document.getElementById('prop-charspacing-val').textContent=this.value" style="flex:1">
+            <span id="prop-charspacing-val" style="font-size:.75rem;min-width:24px;color:var(--gray)">0</span>
           </div>
         </div>
         <div style="margin-top:.6rem">
@@ -802,6 +832,33 @@ function addDivisore(tipo){
   });
 }
 
+// ── SIMBOLI RELIGIOSI ──
+function insertSimbolo(tipo) {
+  var W = (typeof CANVAS_W !== 'undefined') ? CANVAS_W : canvas.getWidth();
+  var H = (typeof CANVAS_H !== 'undefined') ? CANVAS_H : canvas.getHeight();
+  var simboli = {
+    croce_latina: '✝', croce_greca: '✚', croce_ortodossa: '☦', croce_decorata: '✛',
+    stella: '✦', stella6: '✡', omega: 'Ω', chi_rho: '☧',
+    giglio: '⚜', colomba: '🕊', infinito: '∞', alfa_omega: 'Αω'
+  };
+  var char = simboli[tipo] || '✝';
+  var fontSize = Math.round(Math.min(W, H) * 0.08);
+  var obj = new fabric.Text(char, {
+    left: W / 2,
+    top: H / 2,
+    fontSize: fontSize,
+    fontFamily: 'serif',
+    fill: '#1a1a2e',
+    originX: 'center',
+    originY: 'center',
+    selectable: true,
+    editable: false,
+  });
+  canvas.add(obj);
+  canvas.setActiveObject(obj);
+  canvas.renderAll();
+}
+
 // ── BLOCCHI TESTO ──
 // Blocchi che contengono dati di UNA persona: vanno riempiti col defunto
 // corrente e non devono mai finire dentro un template (tornano segnaposto).
@@ -973,6 +1030,8 @@ function updatePropsPanel() {
     document.getElementById('prop-text').value = obj.text || '';
     document.getElementById('prop-font').value = obj.fontFamily || 'Cormorant Garamond';
     document.getElementById('prop-size').value = obj.fontSize || 20;
+    document.getElementById('prop-charspacing').value = obj.charSpacing || 0;
+    document.getElementById('prop-charspacing-val').textContent = obj.charSpacing || 0;
     document.getElementById('prop-color').value = obj.fill || '#000000';
     document.getElementById('prop-color-hex').value = obj.fill || '#000000';
     document.getElementById('btn-bold').classList.toggle('active', obj.fontWeight === 'bold');
@@ -1014,7 +1073,12 @@ function changeFontSize(delta) {
   const step = current >= 100 ? 5 : current >= 50 ? 2 : 1;
   const newSize = Math.max(8, Math.min(800, current + delta * step));
   input.value = newSize;
-  obj.set('fontSize', newSize);
+  if (obj.isEditing && obj.selectionStart !== obj.selectionEnd) {
+    obj.setSelectionStyles({ fontSize: newSize });
+    obj.dirty = true;
+  } else {
+    obj.set('fontSize', newSize);
+  }
   canvas.renderAll();
 }
 
@@ -1024,9 +1088,21 @@ function updateProp(prop) {
   if (prop === 'text' && (obj.type === 'textbox' || obj.type === 'text')) {
     obj.set('text', document.getElementById('prop-text').value);
   } else if (prop === 'font') {
-    obj.set('fontFamily', document.getElementById('prop-font').value);
+    const font = document.getElementById('prop-font').value;
+    if (obj.isEditing && obj.selectionStart !== obj.selectionEnd) {
+      obj.setSelectionStyles({ fontFamily: font });
+      obj.dirty = true;
+    } else {
+      obj.set('fontFamily', font);
+    }
   } else if (prop === 'size') {
-    obj.set('fontSize', parseInt(document.getElementById('prop-size').value));
+    const size = parseInt(document.getElementById('prop-size').value);
+    if (obj.isEditing && obj.selectionStart !== obj.selectionEnd) {
+      obj.setSelectionStyles({ fontSize: size });
+      obj.dirty = true;
+    } else {
+      obj.set('fontSize', size);
+    }
   } else if (prop === 'color') {
     const c = document.getElementById('prop-color').value;
     applicaColoreObj(obj, c);
@@ -1039,6 +1115,10 @@ function updateProp(prop) {
     if (obj.type === 'textbox') obj.set('width', parseInt(document.getElementById('prop-width').value));
   } else if (prop === 'lineHeight') {
     obj.set('lineHeight', parseFloat(document.getElementById('prop-lineh').value));
+  } else if (prop === 'charSpacing') {
+    // Non è uno stile per-carattere in Fabric (non è in _styleProperties):
+    // si applica sempre a tutto il blocco, anche con una selezione attiva.
+    obj.set('charSpacing', parseInt(document.getElementById('prop-charspacing').value));
   } else if (prop === 'stroke') {
     if (obj.type === 'textbox' || obj.type === 'text') {
       obj.set('stroke', document.getElementById('prop-stroke').value);
@@ -1089,11 +1169,24 @@ function syncColor() {
 function toggleStyle(style) {
   const obj = canvas.getActiveObject();
   if (!obj || (obj.type !== 'textbox' && obj.type !== 'text')) return;
+  const parziale = obj.isEditing && obj.selectionStart !== obj.selectionEnd;
   if (style === 'bold') {
-    obj.set('fontWeight', obj.fontWeight === 'bold' ? 'normal' : 'bold');
+    if (parziale) {
+      const corrente = obj.getSelectionStyles()[0] || {};
+      obj.setSelectionStyles({ fontWeight: corrente.fontWeight === 'bold' ? 'normal' : 'bold' });
+      obj.dirty = true;
+    } else {
+      obj.set('fontWeight', obj.fontWeight === 'bold' ? 'normal' : 'bold');
+    }
     document.getElementById('btn-bold').classList.toggle('active');
   } else if (style === 'italic') {
-    obj.set('fontStyle', obj.fontStyle === 'italic' ? 'normal' : 'italic');
+    if (parziale) {
+      const corrente = obj.getSelectionStyles()[0] || {};
+      obj.setSelectionStyles({ fontStyle: corrente.fontStyle === 'italic' ? 'normal' : 'italic' });
+      obj.dirty = true;
+    } else {
+      obj.set('fontStyle', obj.fontStyle === 'italic' ? 'normal' : 'italic');
+    }
     document.getElementById('btn-italic').classList.toggle('active');
   }
   canvas.renderAll();

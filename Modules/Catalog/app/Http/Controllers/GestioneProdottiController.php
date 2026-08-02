@@ -57,8 +57,11 @@ class GestioneProdottiController extends Controller
 
     public function store(ProdottoRequest $request): RedirectResponse
     {
-        $prodotto = Product::create($request->datiProdotto());
+        $dati = $request->datiProdotto();
 
+        $prodotto = Product::create($dati);
+
+        $this->applicaHeroUnico($dati, $prodotto);
         $this->salvaFoto($request, $prodotto);
 
         return redirect()
@@ -95,13 +98,24 @@ class GestioneProdottiController extends Controller
 
     public function update(ProdottoRequest $request, Product $prodotto): RedirectResponse
     {
-        $prodotto->update($request->datiProdotto());
+        $dati = $request->datiProdotto();
 
+        $prodotto->update($dati);
+
+        $this->applicaHeroUnico($dati, $prodotto);
         $this->salvaFoto($request, $prodotto);
 
         return redirect()
             ->route('gestione.prodotti.edit', $prodotto)
             ->with('stato', "Prodotto \"{$prodotto->name}\" aggiornato.");
+    }
+
+    /** L'hero della home è uno solo: attivarlo su un prodotto lo spegne su tutti gli altri. */
+    private function applicaHeroUnico(array $dati, Product $prodotto): void
+    {
+        if ($dati['is_hero'] ?? false) {
+            Product::where('id', '!=', $prodotto->id)->where('is_hero', true)->update(['is_hero' => false]);
+        }
     }
 
     /**

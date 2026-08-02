@@ -30,6 +30,9 @@
 
         <fieldset class="border border-caffe/15 bg-bianco px-7 py-7 space-y-5">
             <legend class="font-serif text-xl font-medium px-1">Hero</legend>
+            <p class="font-sans font-light text-[12px] text-testo-soft">
+                L'immagine si sceglie dalla scheda del prodotto ("Immagine hero in home"), qui solo i testi.
+            </p>
             <div>
                 <x-input-label for="hero_occhiello" value="Occhiello" />
                 <x-text-input id="hero_occhiello" name="valori[hero.occhiello]" value="{{ $v('hero.occhiello') }}" />

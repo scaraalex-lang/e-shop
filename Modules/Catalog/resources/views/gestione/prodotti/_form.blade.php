@@ -178,6 +178,16 @@
             In evidenza in home
         </label>
 
+        <label class="flex items-center gap-3 font-sans text-[14px]">
+            <input type="hidden" name="is_hero" value="0">
+            <input type="checkbox" name="is_hero" value="1" @checked($vecchio('is_hero'))
+                   class="border-caffe/40 text-oro focus:ring-oro/40">
+            Immagine hero in home
+        </label>
+        <p class="font-sans font-light text-[12px] text-testo-soft -mt-2">
+            Uno solo alla volta: attivandolo qui si spegne automaticamente sull'eventuale altro prodotto.
+        </p>
+
         <hr class="h-px w-full border-0 bg-caffe/15">
 
         <h2 class="font-serif text-xl font-medium">Flussi collegati</h2>

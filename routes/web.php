@@ -10,7 +10,7 @@ use Modules\Catalog\Models\Product;
 use Modules\Catalog\Models\Category;
 
 Route::get('/', function () {
-    $hero = Product::with('primaryImage')->where('sku', 'COR-MET-ORO')->first();
+    $hero = Product::with('primaryImage')->where('is_hero', true)->first();
 
     $evidenza = Product::with('category', 'primaryImage')
         ->where('is_active', true)

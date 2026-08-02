@@ -429,6 +429,14 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
             <button onclick="changeRicordinoLineH(0.1)" style="width:30px;height:30px;border:1px solid var(--border);border-radius:4px;background:var(--cream);cursor:pointer;font-size:1.1rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0">+</button>
           </div>
         </div>
+        <div style="margin-top:.5rem">
+          <span class="prop-label">Interspazio lettere</span>
+          <div style="display:flex;align-items:center;gap:.3rem;margin-top:.25rem">
+            <button onclick="changeRicordinoCharSpacing(-10)" style="width:30px;height:30px;border:1px solid var(--border);border-radius:4px;background:var(--cream);cursor:pointer;font-size:1.1rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0">−</button>
+            <input type="number" class="prop-input" id="prop-charspacing" value="0" min="-200" max="800" step="10" oninput="updateProp('charSpacing')" style="text-align:center;width:60px">
+            <button onclick="changeRicordinoCharSpacing(10)" style="width:30px;height:30px;border:1px solid var(--border);border-radius:4px;background:var(--cream);cursor:pointer;font-size:1.1rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0">+</button>
+          </div>
+        </div>
       </div>
       <div class="prop-group">
         <div class="prop-row">
@@ -1310,6 +1318,7 @@ function updatePropsPanel() {
     document.getElementById('prop-font').value = obj.fontFamily || 'Cormorant Garamond';
     document.getElementById('prop-size').value = obj.fontSize || 10;
     document.getElementById('prop-lineheight').value = obj.lineHeight || 1.4;
+    document.getElementById('prop-charspacing').value = obj.charSpacing || 0;
     document.getElementById('prop-color').value = obj.fill || '#000000';
     document.getElementById('prop-color-hex').value = obj.fill || '#000000';
     document.getElementById('btn-bold').classList.toggle('active', obj.fontWeight === 'bold');
@@ -1354,8 +1363,16 @@ function changeRicordinoSize(delta) {
   var step = current >= 60 ? 2 : 1;
   var newVal = Math.max(6, Math.min(200, current + delta * step));
   input.value = newVal;
-  var obj = getActiveCanvas().getActiveObject();
-  if (obj) { obj.set('fontSize', newVal); getActiveCanvas().renderAll(); }
+  var c = getActiveCanvas();
+  var obj = c.getActiveObject();
+  if (!obj) return;
+  if (obj.isEditing && obj.selectionStart !== obj.selectionEnd) {
+    obj.setSelectionStyles({ fontSize: newVal });
+    obj.dirty = true;
+  } else {
+    obj.set('fontSize', newVal);
+  }
+  c.renderAll();
 }
 
 function changeRicordinoLineH(delta) {
@@ -1367,15 +1384,40 @@ function changeRicordinoLineH(delta) {
   if (obj) { obj.set('lineHeight', newVal); getActiveCanvas().renderAll(); }
 }
 
+// Fabric non prevede charSpacing come stile per-carattere (non è in
+// _styleProperties): è una proprietà dell'intero blocco, si applica sempre
+// a tutto il testo anche con una selezione attiva.
+function changeRicordinoCharSpacing(delta) {
+  var input = document.getElementById('prop-charspacing');
+  var current = parseInt(input.value) || 0;
+  var newVal = Math.max(-200, Math.min(800, current + delta));
+  input.value = newVal;
+  var c = getActiveCanvas();
+  var obj = c.getActiveObject();
+  if (!obj) return;
+  obj.set('charSpacing', newVal);
+  c.renderAll();
+}
+
 function updateProp(prop) {
   const c = getActiveCanvas();
   const obj = c.getActiveObject();
   if (!obj) return;
+  const parziale = obj.isEditing && obj.selectionStart !== obj.selectionEnd;
   if (prop === 'text') obj.set('text', document.getElementById('prop-text').value);
-  else if (prop === 'font') obj.set('fontFamily', document.getElementById('prop-font').value);
-  else if (prop === 'size') obj.set('fontSize', parseInt(document.getElementById('prop-size').value));
+  else if (prop === 'font') {
+    const font = document.getElementById('prop-font').value;
+    if (parziale) { obj.setSelectionStyles({ fontFamily: font }); obj.dirty = true; }
+    else obj.set('fontFamily', font);
+  }
+  else if (prop === 'size') {
+    const size = parseInt(document.getElementById('prop-size').value);
+    if (parziale) { obj.setSelectionStyles({ fontSize: size }); obj.dirty = true; }
+    else obj.set('fontSize', size);
+  }
   else if (prop === 'color') { const col = document.getElementById('prop-color').value; obj.set('fill',col); document.getElementById('prop-color-hex').value=col; }
   else if (prop === 'lineHeight') obj.set('lineHeight', parseFloat(document.getElementById('prop-lineheight').value));
+  else if (prop === 'charSpacing') obj.set('charSpacing', parseInt(document.getElementById('prop-charspacing').value));
   else if (prop === 'x') obj.set('left', parseInt(document.getElementById('prop-x').value));
   else if (prop === 'y') obj.set('top', parseInt(document.getElementById('prop-y').value));
   obj.setCoords(); c.renderAll();
@@ -1394,8 +1436,27 @@ function toggleStyle(style) {
   const c = getActiveCanvas();
   const obj = c.getActiveObject();
   if (!obj) return;
-  if (style === 'bold') { obj.set('fontWeight', obj.fontWeight==='bold'?'normal':'bold'); document.getElementById('btn-bold').classList.toggle('active'); }
-  else if (style === 'italic') { obj.set('fontStyle', obj.fontStyle==='italic'?'normal':'italic'); document.getElementById('btn-italic').classList.toggle('active'); }
+  const parziale = obj.isEditing && obj.selectionStart !== obj.selectionEnd;
+  if (style === 'bold') {
+    if (parziale) {
+      const corrente = obj.getSelectionStyles()[0] || {};
+      obj.setSelectionStyles({ fontWeight: corrente.fontWeight === 'bold' ? 'normal' : 'bold' });
+      obj.dirty = true;
+    } else {
+      obj.set('fontWeight', obj.fontWeight==='bold'?'normal':'bold');
+    }
+    document.getElementById('btn-bold').classList.toggle('active');
+  }
+  else if (style === 'italic') {
+    if (parziale) {
+      const corrente = obj.getSelectionStyles()[0] || {};
+      obj.setSelectionStyles({ fontStyle: corrente.fontStyle === 'italic' ? 'normal' : 'italic' });
+      obj.dirty = true;
+    } else {
+      obj.set('fontStyle', obj.fontStyle==='italic'?'normal':'italic');
+    }
+    document.getElementById('btn-italic').classList.toggle('active');
+  }
   c.renderAll();
 }
 
