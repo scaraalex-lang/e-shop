@@ -25,36 +25,6 @@
 
     @section('senza-sidebar', 1)
 
-    @php
-        $voci = [
-            ['Panoramica', route('account'), 'account'],
-        ];
-
-        // Dove si sceglie cosa mettere in un ordine nuovo (servizio/prodotto/kit):
-        // un percorso da agenzia, l'equivalente B2B dello sfogliare la vetrina.
-        // Prima di "I miei ordini": si comincia da qui, poi si tiene traccia.
-        if ($utente->eAgenziaApprovata()) {
-            $voci[] = ['Nuovo ordine', route('ordini.nuovo'), 'ordini.nuovo'];
-        }
-
-        $voci[] = ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']];
-
-        // I necrologi sono uno strumento dell'agenzia, non un prodotto: non
-        // passano dall'ordine e stanno accanto agli editor.
-        if ($utente->eAgenzia()) {
-            $voci[] = ['Necrologi', route('necrologi.index'), 'necrologi.*'];
-        }
-
-        // Gli editor compaiono solo a chi li apre di mestiere: il cliente ci
-        // arriva dalla lavorazione del proprio ordine (vedi AccessoStudio). Si
-        // entra dall'archivio delle pratiche, non dritti nel designer.
-        if ($utente->eAgenziaApprovata()) {
-            $voci[] = ['Studio ricordini', route('pratiche.index'), ['pratiche.*', 'studio.*']];
-        }
-
-        $voci[] = ['Profilo e accesso', route('account.profilo'), 'account.profilo'];
-    @endphp
-
     @section('content')
         <div class="flex flex-col lg:flex-row gap-12">
 
@@ -67,9 +37,16 @@
                     <p class="mt-3 font-serif text-2xl leading-tight">{{ $utente->name }}</p>
                     <span class="mt-4 block h-px w-12 bg-oro"></span>
 
+                    @if ($utente->eAgenziaApprovata())
+                        <div class="mt-5 flex items-center justify-between border border-caffe/15 bg-panna/40 px-4 py-3">
+                            <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-oro-scuro">Crediti</span>
+                            <span class="font-serif text-lg tabular-nums" data-saldo-crediti>{{ $utente->agenzia->creditiSaldo() }}</span>
+                        </div>
+                    @endif
+
                     <nav aria-label="Menu account" class="mt-6">
                         <ul class="flex flex-col gap-3 font-sans text-[12px] tracking-[0.16em] uppercase">
-                            @foreach ($voci as [$voce, $href, $rotta])
+                            @foreach ($vociAccount as [$voce, $href, $rotta])
                                 @php $attiva = request()->routeIs(...(array) $rotta); @endphp
                                 <li>
                                     <a href="{{ $href }}"

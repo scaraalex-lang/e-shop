@@ -28,6 +28,7 @@ Route::middleware('auth')->prefix('account/necrologi')->name('necrologi.')->grou
     Route::post('{necrologio}/revoca', [NecrologiController::class, 'revoca'])->name('revoca');
     Route::post('{necrologio}/pubblica', [NecrologiController::class, 'pubblica'])->name('pubblica');
     Route::post('{necrologio}/ritira', [NecrologiController::class, 'ritira'])->name('ritira');
+    Route::post('{necrologio}/embed', [NecrologiController::class, 'acquistaEmbed'])->name('embed');
 
     Route::get('{necrologio}/designer', [NecrologiController::class, 'designer'])->name('designer');
     Route::get('{necrologio}/manifesto', [NecrologiController::class, 'manifestoDesigner'])->name('manifesto');

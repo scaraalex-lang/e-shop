@@ -32,10 +32,14 @@
                 </div>
 
                 <p class="flex-1 min-w-[10rem] font-sans font-light text-[13px] text-testo-soft">
-                    {{ $ordine->righe->count() }} {{ $ordine->righe->count() === 1 ? 'articolo' : 'articoli' }}
-                    · {{ $ordine->pezzi() }} pezzi
-                    @if ($ordine->richiede_lavorazione)
-                        <span class="text-oro-scuro">· con fotografia</span>
+                    @if ($ordine->righe->isEmpty() && $ordine->servizi->isNotEmpty())
+                        Servizio digitale · {{ $ordine->servizi->pluck('servizioEditor.etichetta')->filter()->implode(', ') }}
+                    @else
+                        {{ $ordine->righe->count() }} {{ $ordine->righe->count() === 1 ? 'articolo' : 'articoli' }}
+                        · {{ $ordine->pezzi() }} pezzi
+                        @if ($ordine->richiede_lavorazione)
+                            <span class="text-oro-scuro">· con fotografia</span>
+                        @endif
                     @endif
                 </p>
 
@@ -43,7 +47,13 @@
                     {{ $ordine->stato->etichetta() }}
                 </span>
 
-                <x-prezzo :centesimi="$ordine->totale" class="font-serif text-lg text-right min-w-[6rem]" />
+                @if ($ordine->righe->isEmpty() && $ordine->servizi->isNotEmpty())
+                    <p class="font-serif text-lg text-right min-w-[6rem] tabular-nums">
+                        {{ $ordine->servizi->sum('costo_crediti') }} crediti
+                    </p>
+                @else
+                    <x-prezzo :centesimi="$ordine->totale" class="font-serif text-lg text-right min-w-[6rem]" />
+                @endif
             </article>
         @endforeach
     </div>

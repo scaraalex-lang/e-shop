@@ -95,11 +95,52 @@
                 <button type="button" aria-label="Cerca" class="hover:text-oro-scuro transition-colors duration-300">
                     <x-icon.search class="w-5 h-5" />
                 </button>
-                <a href="{{ auth()->check() ? route('account') : route('login') }}"
-                   aria-label="{{ auth()->user()?->eStaff() ? 'Area staff' : (auth()->check() ? 'Il mio account' : 'Accedi') }}"
-                   class="hover:text-oro-scuro transition-colors duration-300">
-                    <x-icon.account class="w-5 h-5" />
-                </a>
+                @auth
+                    @php
+                        $utente = auth()->user();
+                    @endphp
+                    <details class="relative">
+                        <summary class="list-none flex items-center gap-1.5 cursor-pointer hover:text-oro-scuro transition-colors duration-300"
+                                 aria-label="{{ $utente->eStaff() ? 'Area staff' : 'Il mio account' }}">
+                            <x-icon.account class="w-5 h-5" />
+                            <span class="hidden md:inline font-sans text-[11px] tracking-[0.08em] max-w-[9rem] truncate">
+                                {{ $utente->name }}
+                            </span>
+                        </summary>
+
+                        <div class="absolute right-0 top-full mt-3 w-56 bg-bianco border border-caffe/15 shadow-lg z-50 py-2 text-testo">
+                            <div class="px-4 py-2.5 border-b border-caffe/10">
+                                <p class="font-sans text-[10px] tracking-[0.2em] uppercase text-oro-scuro">
+                                    {{ $utente->eStaff() ? 'Area staff' : ($utente->eAgenzia() ? 'Area agenzia' : 'Il mio account') }}
+                                </p>
+                                <p class="mt-1 font-serif text-[15px] truncate">{{ $utente->name }}</p>
+                            </div>
+
+                            <nav class="flex flex-col py-1">
+                                @foreach ($vociAccount as [$etichetta, $href])
+                                    <a href="{{ $href }}"
+                                       class="px-4 py-2 font-sans text-[11px] tracking-[0.12em] uppercase text-testo hover:text-oro-scuro hover:bg-panna/50 transition-colors duration-300">
+                                        {{ $etichetta }}
+                                    </a>
+                                @endforeach
+                            </nav>
+
+                            <form method="POST" action="{{ route('logout') }}" class="border-t border-caffe/10 pt-1">
+                                @csrf
+                                <button type="submit"
+                                        class="w-full text-left px-4 py-2 font-sans text-[11px] tracking-[0.12em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300 cursor-pointer">
+                                    Esci
+                                </button>
+                            </form>
+                        </div>
+                    </details>
+                @else
+                    <a href="{{ route('login') }}"
+                       aria-label="Accedi"
+                       class="hover:text-oro-scuro transition-colors duration-300">
+                        <x-icon.account class="w-5 h-5" />
+                    </a>
+                @endauth
                 @php
                     // Legge il carrello senza crearlo: aprire la home non deve
                     // lasciare una riga a database per ogni visitatore.

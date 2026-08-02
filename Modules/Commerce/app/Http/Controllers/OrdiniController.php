@@ -3,6 +3,7 @@
 namespace Modules\Commerce\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -22,30 +23,23 @@ class OrdiniController extends Controller
     {
         return view('commerce::ordini.index', [
             'ordini' => Ordine::di($request->user())
-                ->with('righe')
+                ->with('righe', 'servizi.servizioEditor')
                 ->latest()
                 ->paginate(10),
         ]);
     }
 
     /**
-     * Il punto d'ingresso per cominciare un ordine: servizio (crediti, solo
-     * agenzia), prodotto singolo (vetrina) o kit (prodotto composto, oggi
-     * solo il kit trigesimo — vedi Product::is_kit/is_componibile).
-     *
-     * I crediti/servizi sono un percorso da agenzia: prima stavano nella
-     * pagina "Le pratiche" (Studio ricordini), ma lì si va per riprendere
-     * una lavorazione già aperta, non per iniziarne una — spostato qui.
+     * Il punto d'ingresso per cominciare un ordine: prodotto singolo
+     * (vetrina) o kit (prodotto composto, oggi solo il kit trigesimo — vedi
+     * Product::is_kit/is_componibile). Il percorso a crediti (servizi editor)
+     * ha una pagina a sé, vedi servizi() — è l'operatività quotidiana
+     * dell'agenzia, merita una voce di menu propria invece di stare
+     * nascosto in fondo a "Nuovo ordine".
      */
     public function nuovo(Request $request): View
     {
-        $utente = $request->user();
-        $agenzia = $utente->agenzia;
-
         return view('commerce::ordini.nuovo', [
-            'creditiSaldo' => $agenzia?->creditiSaldo(),
-            'prodottoCrediti' => $agenzia ? Product::active()->where('sku', 'SRV-CREDITI-100')->first() : null,
-            'servizi' => $agenzia ? ServizioEditor::attivi()->get() : null,
             'kit' => Product::active()
                 ->where(fn ($q) => $q->where('is_kit', true)->orWhere('is_componibile', true))
                 ->with('category', 'primaryImage')
@@ -55,10 +49,29 @@ class OrdiniController extends Controller
     }
 
     /**
+     * Servizi a crediti (ricordini/manifesti/necrologi): il percorso da
+     * agenzia più usato, prima incastonato dentro "Nuovo ordine".
+     */
+    public function servizi(Request $request): View
+    {
+        $agenzia = $request->user()->agenzia;
+
+        return view('commerce::servizi.index', [
+            'creditiSaldo' => $agenzia?->creditiSaldo(),
+            'prodottoCrediti' => $agenzia ? Product::active()->where('sku', 'SRV-CREDITI-100')->first() : null,
+            'servizi' => $agenzia ? ServizioEditor::attivi()->attivabiliSuOrdine()->get() : null,
+        ]);
+    }
+
+    /**
      * Attiva uno o più servizi editor (ricordini/manifesti/necrologi) su un
      * ordine nuovo, pagati in crediti — vedi AttivaServiziOrdine.
+     *
+     * Risponde in JSON quando il form la chiama via fetch (progressive
+     * enhancement): la pagina Servizi aggiorna il saldo a vista prima di
+     * passare alla lavorazione, invece di sparire subito in un redirect.
      */
-    public function attivaServizi(AttivaServiziOrdineRequest $request, AttivaServiziOrdine $attiva): RedirectResponse
+    public function attivaServizi(AttivaServiziOrdineRequest $request, AttivaServiziOrdine $attiva): RedirectResponse|JsonResponse
     {
         $utente = $request->user();
         $agenzia = $utente->eAgenziaApprovata() ? $utente->agenzia : null;
@@ -74,9 +87,20 @@ class OrdiniController extends Controller
         );
 
         if (is_array($esito)) {
+            if ($request->wantsJson()) {
+                return response()->json(['errore' => "Servono {$esito['richiesti']} crediti, ne avete {$esito['saldo']}: mancano {$esito['mancano']}."], 422);
+            }
+
             return redirect()
-                ->route('ordini.nuovo')
+                ->route('servizi')
                 ->with('stato', "Servono {$esito['richiesti']} crediti, ne avete {$esito['saldo']}: mancano {$esito['mancano']}.");
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'saldo' => $agenzia->creditiSaldo(),
+                'redirect' => route('lavorazione', $esito),
+            ]);
         }
 
         return redirect()->route('lavorazione', $esito);

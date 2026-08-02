@@ -22,7 +22,7 @@ class AttivaServiziOrdineRequest extends FormRequest
             // Solo i servizi ancora attivi: un pannello che ne disattiva uno
             // deve bloccare anche un form già aperto altrove.
             'servizi' => ['required', 'array', 'min:1'],
-            'servizi.*' => ['string', Rule::in(ServizioEditor::attivi()->pluck('codice'))],
+            'servizi.*' => ['string', Rule::in(ServizioEditor::attivi()->attivabiliSuOrdine()->pluck('codice'))],
         ];
     }
 

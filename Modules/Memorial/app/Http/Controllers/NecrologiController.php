@@ -7,12 +7,15 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Illuminate\Validation\Rule;
 use Modules\Commerce\Enums\Occasione;
 use Modules\Commerce\Models\Agenzia;
+use Modules\Commerce\Models\MovimentoCredito;
+use Modules\Commerce\Models\ServizioEditor;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\ManifestoTemplate;
 use Modules\Memorial\Models\MessaggioCordoglio;
@@ -31,6 +34,7 @@ class NecrologiController extends Controller
     {
         return view('memorial::necrologi.index', [
             'necrologi' => Necrologio::query()
+                ->select(['id', 'defunto_id', 'agenzia_id', 'percorso', 'trigesimo_at', 'pubblicazione_consenso', 'pubblicato', 'pubblicato_fino_al', 'created_at'])
                 ->where('agenzia_id', $this->agenzia($request)->id)
                 ->with('defunto')
                 ->latest()
@@ -83,10 +87,14 @@ class NecrologiController extends Controller
     {
         $this->soloSuo($request, $necrologio);
 
+        $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
+
         return view('memorial::necrologi.form', [
             'necrologio' => $necrologio->load(['defunto', 'messaggiCordoglio']),
             'defunti' => $this->defuntiDisponibili($request),
             'agenzia' => $this->agenzia($request),
+            'servizioEmbed' => ServizioEditor::where('codice', 'embed')->first(),
+            'creditiSaldo' => $agenzia->creditiSaldo(),
         ]);
     }
 
@@ -169,6 +177,53 @@ class NecrologiController extends Controller
 
         return redirect()->route('necrologi.modifica', $necrologio)
             ->with('stato', 'Pagina ritirata. Ricorda: quello che è già stato condiviso resta nelle chat.');
+    }
+
+    /**
+     * L'URL pubblico (social/WhatsApp) è già incluso nel necrologio.
+     * Incorporarlo in un iframe sul sito proprio dell'agenzia è un livello a
+     * parte, a pagamento — vedi Necrologio::embeddabile(). Si compra una
+     * volta sola: non ha un "ritira" come il consenso alla pubblicazione.
+     */
+    public function acquistaEmbed(Request $request, Necrologio $necrologio): RedirectResponse
+    {
+        $this->soloSuo($request, $necrologio);
+
+        if ($necrologio->embed_abilitato) {
+            return redirect()->route('necrologi.modifica', $necrologio);
+        }
+
+        $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
+        $servizio = ServizioEditor::where('codice', 'embed')->firstOrFail();
+
+        $esito = DB::transaction(function () use ($agenzia, $servizio, $necrologio) {
+            // Lock sui movimenti dell'agenzia: due conferme quasi simultanee
+            // non devono poter portare il saldo sotto zero insieme — stesso
+            // schema di AttivaServiziOrdine.
+            $saldo = (int) $agenzia->movimentiCredito()->lockForUpdate()->sum('quantita');
+
+            if ($saldo < $servizio->costo_crediti) {
+                return false;
+            }
+
+            MovimentoCredito::create([
+                'agenzia_id' => $agenzia->id,
+                'ordine_id' => null,
+                'quantita' => -$servizio->costo_crediti,
+                'causale' => 'Embed attivato per il necrologio di '.($necrologio->defunto?->nomeCompleto() ?? 'un defunto'),
+            ]);
+
+            $necrologio->abilitaEmbed();
+
+            return true;
+        });
+
+        return redirect()->route('necrologi.modifica', $necrologio)->with(
+            'stato',
+            $esito
+                ? 'Embed attivato: trovate il codice da incollare qui sotto.'
+                : "Servono {$servizio->costo_crediti} crediti e non ne avete abbastanza.",
+        );
     }
 
     /** Un messaggio di cordoglio fuori luogo: solo l'agenzia del necrologio può toglierlo. */

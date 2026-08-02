@@ -257,6 +257,56 @@
             @endif
         </section>
 
+        {{-- ============ embed sul sito dell'agenzia ============ --}}
+        @unless ($nuovo)
+            <section class="bg-bianco px-7 py-8">
+                <div class="flex flex-wrap items-baseline justify-between gap-3">
+                    <h2 class="font-serif text-2xl font-medium">Embed sul vostro sito</h2>
+                    @if ($necrologio->embed_abilitato)
+                        <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-successo">Acquistato</span>
+                    @endif
+                </div>
+                <p class="mt-2 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+                    L'indirizzo qui sopra si condivide già gratis su social e WhatsApp. Se avete un sito vostro e
+                    volete la card del necrologio incorporata dentro una sua pagina, questo è il codice da incollare.
+                </p>
+
+                @if ($necrologio->embeddabile())
+                    <div class="mt-6 max-w-2xl">
+                        <p class="font-sans text-[11px] tracking-[0.2em] uppercase text-oro-scuro">
+                            Incollate questo nella pagina del vostro sito
+                        </p>
+                        <textarea readonly rows="4" onclick="this.select()"
+                                  class="mt-2 w-full bg-panna/40 border border-caffe/15 px-4 py-3 font-mono text-[12px] text-testo"
+                        ><iframe src="{{ $necrologio->url($agenzia->slug) }}" id="memorai-necrologio-{{ $necrologio->id }}" style="width:100%;border:0;display:block;" title="Necrologio"></iframe>
+<script>window.addEventListener('message',function(e){if(e.data&&e.data.memorai&&e.data.tipo==='necrologio-altezza'){var f=document.getElementById('memorai-necrologio-{{ $necrologio->id }}');if(f)f.style.height=e.data.altezza+'px';}});</script></textarea>
+                        <p class="mt-2 font-sans font-light text-[12px] text-testo-soft">
+                            Si ridimensiona da solo: niente barre di scorrimento, l'altezza segue il contenuto.
+                        </p>
+                    </div>
+                @elseif ($necrologio->embed_abilitato)
+                    <p class="mt-5 font-sans font-light text-[13px] text-testo-soft italic">
+                        Acquistato: il codice compare qui appena il necrologio è pubblicato online (qui sopra).
+                    </p>
+                @elseif ($servizioEmbed)
+                    <form method="POST" action="{{ route('necrologi.embed', $necrologio) }}" class="mt-6">
+                        @csrf
+                        <p class="font-sans text-[13px] text-testo-soft">
+                            Costa <strong class="font-normal text-testo">{{ $servizioEmbed->costo_crediti }} crediti</strong>
+                            — ne avete {{ $creditiSaldo }}.
+                        </p>
+                        @if ($creditiSaldo >= $servizioEmbed->costo_crediti)
+                            <x-button type="submit" class="mt-3">Acquista embed</x-button>
+                        @else
+                            <p class="mt-3 font-sans font-light text-[13px] text-errore">
+                                Crediti insufficienti — <a href="{{ route('servizi') }}" class="underline underline-offset-4 decoration-oro/40">ricaricate da qui</a>.
+                            </p>
+                        @endif
+                    </form>
+                @endif
+            </section>
+        @endunless
+
         {{-- ============ messaggi di cordoglio ============ --}}
         @if ($necrologio->messaggiCordoglio->isNotEmpty())
             <section class="bg-bianco px-7 py-8">

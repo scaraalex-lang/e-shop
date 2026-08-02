@@ -36,5 +36,16 @@ class AppServiceProvider extends ServiceProvider
                 'legaleVoci' => VoceMenu::inZona(ZonaMenu::Legale)->attive()->get(),
             ]);
         });
+
+        /**
+         * Voci del menu utente (chi è loggato, per ruolo): condivise fra il
+         * menu a tendina della barra pubblica e la sidebar di /account,
+         * calcolate una sola volta per richiesta — vedi User::vociAccount().
+         */
+        View::composer(['layouts.app', 'layouts.account'], function ($view) {
+            if (auth()->check()) {
+                $view->with('vociAccount', auth()->user()->vociAccount());
+            }
+        });
     }
 }

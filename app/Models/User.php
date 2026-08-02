@@ -63,4 +63,42 @@ class User extends Authenticatable
     {
         return $this->eAgenzia() && $this->agenzia?->eApprovata() === true;
     }
+
+    /**
+     * Le voci di menu per competenza di ruolo — [etichetta, url, pattern di
+     * rotta per lo stato attivo]. Un solo posto: le usano sia la sidebar di
+     * /account sia il menu a tendina della barra pubblica, così staff/
+     * agenzia/privato vedono sempre lo stesso set di voci ovunque compaia.
+     */
+    public function vociAccount(): array
+    {
+        $voci = [
+            ['Panoramica', route('account'), 'account'],
+        ];
+
+        // L'attività quotidiana dell'agenzia: subito dopo Panoramica, non in
+        // fondo al menu.
+        if ($this->eAgenziaApprovata()) {
+            $voci[] = ['Acquisto Servizi', route('servizi'), 'servizi'];
+            $voci[] = ['Nuovo ordine', route('ordini.nuovo'), 'ordini.nuovo'];
+        }
+
+        if (! $this->eStaff()) {
+            $voci[] = ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']];
+        }
+
+        // I necrologi sono uno strumento dell'agenzia, non un prodotto: non
+        // passano dall'ordine e stanno accanto agli editor.
+        if ($this->eAgenzia()) {
+            $voci[] = ['Necrologi', route('necrologi.index'), 'necrologi.*'];
+        }
+
+        if ($this->eAgenziaApprovata()) {
+            $voci[] = ['Studio ricordini', route('pratiche.index'), ['pratiche.*', 'studio.*']];
+        }
+
+        $voci[] = ['Profilo e accesso', route('account.profilo'), 'account.profilo'];
+
+        return $voci;
+    }
 }

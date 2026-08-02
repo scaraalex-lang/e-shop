@@ -28,6 +28,7 @@ class Necrologio extends Model
         'pubblicazione_autorizzata_at' => 'datetime',
         'pubblicato' => 'boolean',
         'pubblicato_fino_al' => 'date',
+        'embed_abilitato' => 'boolean',
         'card_canvas' => 'array',
         'manifesto_canvas' => 'array',
     ];
@@ -90,6 +91,23 @@ class Necrologio extends Model
     {
         return $this->pubblicato_fino_al !== null
             && $this->pubblicato_fino_al->endOfDay()->isPast();
+    }
+
+    /**
+     * L'URL pubblico (social/WhatsApp) è sempre incluso nel servizio
+     * necrologio. Incorporarlo in un iframe sul sito dell'agenzia è un
+     * livello a pagamento a parte: serve sia il consenso/interruttore che
+     * l'acquisto — vedi NecrologiController::acquistaEmbed().
+     */
+    public function embeddabile(): bool
+    {
+        return $this->embed_abilitato && $this->pubblico();
+    }
+
+    /** Accende l'embed: non torna mai indietro da sola (nessun "ritira", si paga una volta e resta). */
+    public function abilitaEmbed(): void
+    {
+        $this->forceFill(['embed_abilitato' => true])->save();
     }
 
     public function scopePubblici(Builder $query): Builder

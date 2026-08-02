@@ -5,6 +5,7 @@ namespace Modules\Memorial\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 use Modules\Commerce\Models\Agenzia;
 use Modules\Memorial\Models\Necrologio;
@@ -20,16 +21,29 @@ use Modules\Memorial\Models\Necrologio;
  */
 class NecrologioPubblicoController extends Controller
 {
-    public function show(string $agenzia, string $percorso): View
+    /**
+     * Bloccata dentro un iframe altrui per chi non ha comprato l'embed
+     * (`Necrologio::embeddabile()`): l'URL di condivisione resta pubblico e
+     * apribile diretto (social/WhatsApp), incorporarla sul sito di qualcun
+     * altro è il livello a pagamento — vedi NecrologiController::acquistaEmbed().
+     */
+    public function show(string $agenzia, string $percorso): Response
     {
         [$necrologio, $onoranza] = $this->risolvi($agenzia, $percorso);
 
-        return view('memorial::necrologi.pubblico', [
+        $response = response()->view('memorial::necrologi.pubblico', [
             'necrologio' => $necrologio,
             'defunto' => $necrologio->defunto,
             'agenzia' => $onoranza,
             'indirizzo' => $necrologio->url($onoranza->slug),
         ]);
+
+        if (! $necrologio->embeddabile()) {
+            $response->headers->set('X-Frame-Options', 'DENY');
+            $response->headers->set('Content-Security-Policy', "frame-ancestors 'none'");
+        }
+
+        return $response;
     }
 
     /**

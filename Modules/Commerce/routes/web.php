@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::get('account/ordini', [OrdiniController::class, 'index'])->name('ordini');
     // Prima di {ordine}: altrimenti "nuovo" verrebbe letto come un numero d'ordine.
     Route::get('account/ordini/nuovo', [OrdiniController::class, 'nuovo'])->name('ordini.nuovo');
+    Route::get('account/servizi', [OrdiniController::class, 'servizi'])->name('servizi');
     Route::post('account/ordini/servizio', [OrdiniController::class, 'attivaServizi'])->name('ordini.servizio');
     Route::get('account/ordini/{ordine}', [OrdiniController::class, 'show'])->name('ordine');
 });

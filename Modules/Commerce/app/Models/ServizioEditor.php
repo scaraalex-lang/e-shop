@@ -22,6 +22,15 @@ class ServizioEditor extends Model
         'attivo' => 'boolean',
     ];
 
+    /**
+     * I soli codici attivabili su un ordine nuovo (checkbox in "Acquisto
+     * servizio digitale"): sbloccano un designer via Ordine::designerAbilitato().
+     * `embed` sta nella stessa tabella (riusa il costo in crediti modificabile
+     * da staff) ma si acquista direttamente da un necrologio già esistente,
+     * non da un ordine — vedi NecrologiController::acquistaEmbed().
+     */
+    public const CODICI_ORDINE = ['ricordini', 'manifesti', 'necrologi'];
+
     public function attivazioni(): HasMany
     {
         return $this->hasMany(OrdineServizio::class);
@@ -30,5 +39,10 @@ class ServizioEditor extends Model
     public function scopeAttivi(Builder $query): Builder
     {
         return $query->where('attivo', true);
+    }
+
+    public function scopeAttivabiliSuOrdine(Builder $query): Builder
+    {
+        return $query->whereIn('codice', self::CODICI_ORDINE);
     }
 }

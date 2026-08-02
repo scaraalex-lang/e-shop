@@ -172,4 +172,32 @@
         @endif
     </p>
 </div>
+
+@if ($necrologio->embeddabile())
+    @push('scripts')
+        <script>
+            // In esecuzione dentro l'iframe di chi ha comprato l'embed: comunica
+            // l'altezza reale al genitore così lo snippet può ridimensionare senza
+            // barre di scorrimento. Fuori da un iframe non fa nulla.
+            (function () {
+                if (window.self === window.top) return;
+
+                function invia() {
+                    window.parent.postMessage({
+                        memorai: true,
+                        tipo: 'necrologio-altezza',
+                        altezza: document.documentElement.scrollHeight,
+                    }, '*');
+                }
+
+                window.addEventListener('load', invia);
+                if (window.ResizeObserver) {
+                    new ResizeObserver(invia).observe(document.body);
+                } else {
+                    window.setInterval(invia, 1000);
+                }
+            })();
+        </script>
+    @endpush
+@endif
 @endsection
