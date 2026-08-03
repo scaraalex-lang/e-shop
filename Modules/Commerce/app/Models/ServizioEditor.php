@@ -15,10 +15,11 @@ class ServizioEditor extends Model
 {
     protected $table = 'servizi_editor';
 
-    protected $fillable = ['codice', 'etichetta', 'costo_crediti', 'attivo'];
+    protected $fillable = ['codice', 'etichetta', 'costo_crediti', 'costo_crediti_a_termine', 'attivo'];
 
     protected $casts = [
         'costo_crediti' => 'integer',
+        'costo_crediti_a_termine' => 'integer',
         'attivo' => 'boolean',
     ];
 

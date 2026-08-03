@@ -8,6 +8,10 @@
         I servizi che un'agenzia può attivare a crediti da "Nuovo ordine": ricordini, manifesti, necrologi. Righe
         fisse — qui si cambia solo il costo in crediti e se il servizio è proponibile.
     </p>
+    <p class="mt-2 font-sans font-light text-[13px] text-testo-soft max-w-2xl">
+        "Costo a termine" è il prezzo scontato per chi sceglie una scadenza (non oltre sei mesi) invece
+        dell'acquisto perpetuo — oggi si applica solo a "embed". Vuoto = nessuna opzione a termine offerta.
+    </p>
 
     @if (session('stato'))
         <p class="mt-6 border-l-2 border-successo bg-panna px-5 py-4 font-sans text-[13px]">{{ session('stato') }}</p>
@@ -18,7 +22,8 @@
             <thead>
                 <tr class="bg-panna text-left font-sans text-[10px] tracking-[0.22em] uppercase text-testo-soft">
                     <th class="px-5 py-4 font-normal">Servizio</th>
-                    <th class="px-5 py-4 font-normal">Costo in crediti</th>
+                    <th class="px-5 py-4 font-normal">Costo in crediti (perpetuo)</th>
+                    <th class="px-5 py-4 font-normal">Costo a termine (≤ 6 mesi)</th>
                     <th class="px-5 py-4 font-normal">Attivo</th>
                     <th class="px-5 py-4 font-normal"></th>
                 </tr>
@@ -33,6 +38,11 @@
                         </td>
                         <td class="px-5 py-4">
                             <input type="number" form="{{ $formId }}" name="costo_crediti" min="0" value="{{ old('costo_crediti', $servizio->costo_crediti) }}"
+                                class="w-24 border-caffe/25 focus:border-oro focus:ring-oro rounded-md shadow-sm text-sm">
+                        </td>
+                        <td class="px-5 py-4">
+                            <input type="number" form="{{ $formId }}" name="costo_crediti_a_termine" min="0" placeholder="—"
+                                value="{{ old('costo_crediti_a_termine', $servizio->costo_crediti_a_termine) }}"
                                 class="w-24 border-caffe/25 focus:border-oro focus:ring-oro rounded-md shadow-sm text-sm">
                         </td>
                         <td class="px-5 py-4">

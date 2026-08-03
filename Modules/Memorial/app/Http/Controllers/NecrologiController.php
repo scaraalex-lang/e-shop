@@ -95,6 +95,7 @@ class NecrologiController extends Controller
             'agenzia' => $this->agenzia($request),
             'servizioEmbed' => ServizioEditor::where('codice', 'embed')->first(),
             'creditiSaldo' => $agenzia->creditiSaldo(),
+            'embedTermineMax' => Carbon::now()->addMonths(Necrologio::EMBED_TERMINE_MESI_MASSIMI)->format('Y-m-d'),
         ]);
     }
 
@@ -182,38 +183,64 @@ class NecrologiController extends Controller
     /**
      * L'URL pubblico (social/WhatsApp) è già incluso nel necrologio.
      * Incorporarlo in un iframe sul sito proprio dell'agenzia è un livello a
-     * parte, a pagamento — vedi Necrologio::embeddabile(). Si compra una
-     * volta sola: non ha un "ritira" come il consenso alla pubblicazione.
+     * parte, a pagamento — vedi Necrologio::embeddabile(). Due modalità
+     * scelte al momento dell'acquisto: "a termine" (scadenza scelta
+     * dall'agenzia, non oltre EMBED_TERMINE_MESI_MASSIMI, costo ridotto) o
+     * "perpetuo" (scadenza tecnica a EMBED_PERPETUO_ANNI, costo pieno). Un
+     * embed "a termine" già scaduto si può ricomprare/rinnovare da qui.
      */
     public function acquistaEmbed(Request $request, Necrologio $necrologio): RedirectResponse
     {
         $this->soloSuo($request, $necrologio);
 
-        if ($necrologio->embed_abilitato) {
+        if ($necrologio->embeddabile()) {
             return redirect()->route('necrologi.modifica', $necrologio);
         }
+
+        $dati = $request->validate([
+            'tipo' => ['required', 'in:termine,perpetuo'],
+            'fino_al' => ['required_if:tipo,termine', 'nullable', 'date', 'after:today'],
+        ]);
+
+        $limiteTermine = Carbon::now()->addMonths(Necrologio::EMBED_TERMINE_MESI_MASSIMI);
+        $aTermine = $dati['tipo'] === 'termine'
+            && isset($dati['fino_al'])
+            && Carbon::parse($dati['fino_al'])->lessThanOrEqualTo($limiteTermine);
 
         $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
         $servizio = ServizioEditor::where('codice', 'embed')->firstOrFail();
 
-        $esito = DB::transaction(function () use ($agenzia, $servizio, $necrologio) {
+        // "A termine" costa meno solo se lo staff ha configurato quel prezzo
+        // da /gestione/servizi: senza, non si offre mai un costo nullo.
+        $tipoEffettivo = $aTermine && $servizio->costo_crediti_a_termine !== null ? 'termine' : 'perpetuo';
+        $scadenza = $tipoEffettivo === 'termine'
+            ? Carbon::parse($dati['fino_al'])->startOfDay()
+            : Carbon::now()->addYears(Necrologio::EMBED_PERPETUO_ANNI);
+        $costo = $tipoEffettivo === 'termine' ? $servizio->costo_crediti_a_termine : $servizio->costo_crediti;
+
+        $esito = DB::transaction(function () use ($agenzia, $costo, $necrologio, $scadenza, $tipoEffettivo) {
             // Lock sui movimenti dell'agenzia: due conferme quasi simultanee
             // non devono poter portare il saldo sotto zero insieme — stesso
             // schema di AttivaServiziOrdine.
             $saldo = (int) $agenzia->movimentiCredito()->lockForUpdate()->sum('quantita');
 
-            if ($saldo < $servizio->costo_crediti) {
+            if ($saldo < $costo) {
                 return false;
             }
 
             MovimentoCredito::create([
                 'agenzia_id' => $agenzia->id,
                 'ordine_id' => null,
-                'quantita' => -$servizio->costo_crediti,
-                'causale' => 'Embed attivato per il necrologio di '.($necrologio->defunto?->nomeCompleto() ?? 'un defunto'),
+                'quantita' => -$costo,
+                'causale' => sprintf(
+                    'Embed %s (fino al %s) per il necrologio di %s',
+                    $tipoEffettivo,
+                    $scadenza->format('d/m/Y'),
+                    $necrologio->defunto?->nomeCompleto() ?? 'un defunto',
+                ),
             ]);
 
-            $necrologio->abilitaEmbed();
+            $necrologio->abilitaEmbed($scadenza, $tipoEffettivo);
 
             return true;
         });
@@ -221,8 +248,8 @@ class NecrologiController extends Controller
         return redirect()->route('necrologi.modifica', $necrologio)->with(
             'stato',
             $esito
-                ? 'Embed attivato: trovate il codice da incollare qui sotto.'
-                : "Servono {$servizio->costo_crediti} crediti e non ne avete abbastanza.",
+                ? "Embed attivato ({$tipoEffettivo}, fino al {$scadenza->format('d/m/Y')}): trovate il codice da incollare qui sotto."
+                : "Servono {$costo} crediti e non ne avete abbastanza.",
         );
     }
 

@@ -14,6 +14,12 @@ class Necrologio extends Model
 {
     protected $table = 'necrologi';
 
+    /** Oltre questa durata scelta dall'agenzia, l'acquisto embed diventa "perpetuo" (vedi abilitaEmbed). */
+    public const EMBED_TERMINE_MESI_MASSIMI = 6;
+
+    /** "Perpetuo" è garantito solo fino a questo orizzonte, non davvero infinito. */
+    public const EMBED_PERPETUO_ANNI = 3;
+
     protected $fillable = [
         'defunto_id', 'agenzia_id', 'percorso', 'occasione', 'numero_anniversario',
         'trigesimo_at', 'trigesimo_luogo', 'trigesimo_indirizzo', 'testo',
@@ -29,6 +35,7 @@ class Necrologio extends Model
         'pubblicato' => 'boolean',
         'pubblicato_fino_al' => 'date',
         'embed_abilitato' => 'boolean',
+        'embed_scaduto_il' => 'date',
         'card_canvas' => 'array',
         'manifesto_canvas' => 'array',
     ];
@@ -101,13 +108,33 @@ class Necrologio extends Model
      */
     public function embeddabile(): bool
     {
-        return $this->embed_abilitato && $this->pubblico();
+        return $this->embed_abilitato && $this->pubblico() && ! $this->embedScaduto();
     }
 
-    /** Accende l'embed: non torna mai indietro da sola (nessun "ritira", si paga una volta e resta). */
-    public function abilitaEmbed(): void
+    /**
+     * Vero solo per un embed "a termine" oltre la sua scadenza. Un embed
+     * "perpetuo" (o comprato prima di questa modifica, `embed_scaduto_il`
+     * null) non scade mai da qui: vedi EMBED_PERPETUO_ANNI per il limite
+     * tecnico impostato all'acquisto.
+     */
+    public function embedScaduto(): bool
     {
-        $this->forceFill(['embed_abilitato' => true])->save();
+        return $this->embed_scaduto_il !== null
+            && $this->embed_scaduto_il->endOfDay()->isPast();
+    }
+
+    /**
+     * Accende l'embed (o lo rinnova, se era "a termine" e scaduto). Non ha un
+     * "ritira" come il consenso alla pubblicazione: resta acceso fino alla
+     * scadenza scelta.
+     */
+    public function abilitaEmbed(Carbon $scadenza, string $tipo): void
+    {
+        $this->forceFill([
+            'embed_abilitato' => true,
+            'embed_scaduto_il' => $scadenza,
+            'embed_tipo' => $tipo,
+        ])->save();
     }
 
     public function scopePubblici(Builder $query): Builder

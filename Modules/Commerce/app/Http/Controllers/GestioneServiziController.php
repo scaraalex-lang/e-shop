@@ -25,11 +25,13 @@ class GestioneServiziController extends Controller
     {
         $dati = $request->validate([
             'costo_crediti' => ['required', 'integer', 'min:0'],
+            'costo_crediti_a_termine' => ['nullable', 'integer', 'min:0'],
             'attivo' => ['nullable', 'boolean'],
         ]);
 
         $servizio->update([
             'costo_crediti' => $dati['costo_crediti'],
+            'costo_crediti_a_termine' => $dati['costo_crediti_a_termine'] ?? null,
             'attivo' => (bool) ($dati['attivo'] ?? false),
         ]);
 

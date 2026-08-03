@@ -259,10 +259,15 @@
 
         {{-- ============ embed sul sito dell'agenzia ============ --}}
         @unless ($nuovo)
+            @php
+                $embedScaduto = $necrologio->embed_abilitato && $necrologio->embedScaduto();
+            @endphp
             <section class="bg-bianco px-7 py-8">
                 <div class="flex flex-wrap items-baseline justify-between gap-3">
                     <h2 class="font-serif text-2xl font-medium">Embed sul vostro sito</h2>
-                    @if ($necrologio->embed_abilitato)
+                    @if ($embedScaduto)
+                        <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-errore">Scaduto</span>
+                    @elseif ($necrologio->embed_abilitato)
                         <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-successo">Acquistato</span>
                     @endif
                 </div>
@@ -281,28 +286,71 @@
                         ><iframe src="{{ $necrologio->url($agenzia->slug) }}" id="memorai-necrologio-{{ $necrologio->id }}" style="width:100%;border:0;display:block;" title="Necrologio"></iframe>
 <script>window.addEventListener('message',function(e){if(e.data&&e.data.memorai&&e.data.tipo==='necrologio-altezza'){var f=document.getElementById('memorai-necrologio-{{ $necrologio->id }}');if(f)f.style.height=e.data.altezza+'px';}});</script></textarea>
                         <p class="mt-2 font-sans font-light text-[12px] text-testo-soft">
-                            Si ridimensiona da solo: niente barre di scorrimento, l'altezza segue il contenuto.
+                            @if ($necrologio->embed_scaduto_il)
+                                Attivo fino al {{ $necrologio->embed_scaduto_il->format('d/m/Y') }}.
+                            @else
+                                Senza scadenza.
+                            @endif
+                            Niente barre di scorrimento: si ridimensiona da solo, l'altezza segue il contenuto.
                         </p>
                     </div>
-                @elseif ($necrologio->embed_abilitato)
-                    <p class="mt-5 font-sans font-light text-[13px] text-testo-soft italic">
-                        Acquistato: il codice compare qui appena il necrologio è pubblicato online (qui sopra).
-                    </p>
-                @elseif ($servizioEmbed)
-                    <form method="POST" action="{{ route('necrologi.embed', $necrologio) }}" class="mt-6">
-                        @csrf
-                        <p class="font-sans text-[13px] text-testo-soft">
-                            Costa <strong class="font-normal text-testo">{{ $servizioEmbed->costo_crediti }} crediti</strong>
-                            — ne avete {{ $creditiSaldo }}.
+                @else
+                    @if ($embedScaduto)
+                        <p class="mt-5 font-sans font-light text-[13px] text-errore">
+                            Era a termine ed è scaduto il {{ $necrologio->embed_scaduto_il->format('d/m/Y') }}. Rinnovatelo qui sotto.
                         </p>
-                        @if ($creditiSaldo >= $servizioEmbed->costo_crediti)
-                            <x-button type="submit" class="mt-3">Acquista embed</x-button>
-                        @else
-                            <p class="mt-3 font-sans font-light text-[13px] text-errore">
-                                Crediti insufficienti — <a href="{{ route('servizi') }}" class="underline underline-offset-4 decoration-oro/40">ricaricate da qui</a>.
-                            </p>
-                        @endif
-                    </form>
+                    @elseif ($necrologio->embed_abilitato)
+                        <p class="mt-5 font-sans font-light text-[13px] text-testo-soft italic">
+                            Acquistato: il codice compare qui appena il necrologio è pubblicato online (qui sopra).
+                        </p>
+                    @endif
+
+                    @if ($servizioEmbed && (! $necrologio->embed_abilitato || $embedScaduto))
+                        @php
+                            $costoTermine = $servizioEmbed->costo_crediti_a_termine;
+                            $costoMinimo = $costoTermine !== null ? min($costoTermine, $servizioEmbed->costo_crediti) : $servizioEmbed->costo_crediti;
+                        @endphp
+                        <form method="POST" action="{{ route('necrologi.embed', $necrologio) }}" class="mt-6 max-w-md space-y-4">
+                            @csrf
+                            <p class="font-sans text-[13px] text-testo-soft">Avete {{ $creditiSaldo }} crediti.</p>
+
+                            <div class="space-y-3">
+                                @if ($costoTermine !== null)
+                                    <label class="flex items-start gap-3 font-sans text-[13px] text-testo">
+                                        <input type="radio" name="tipo" value="termine" class="mt-1" checked>
+                                        <span class="block w-full">
+                                            <strong class="font-normal">A termine</strong> — {{ $costoTermine }} crediti.
+                                            <span class="block mt-2">
+                                                <x-input-label for="embed_fino_al" value="Resta attivo fino al" />
+                                                <x-text-input id="embed_fino_al" name="fino_al" type="date"
+                                                    max="{{ $embedTermineMax }}" :value="old('fino_al')" class="mt-1" />
+                                                <span class="block mt-1 font-sans font-light text-[11px] text-testo-soft">
+                                                    Non oltre sei mesi da oggi.
+                                                </span>
+                                                <x-input-error :messages="$errors->get('fino_al')" />
+                                            </span>
+                                        </span>
+                                    </label>
+                                @endif
+
+                                <label class="flex items-start gap-3 font-sans text-[13px] text-testo">
+                                    <input type="radio" name="tipo" value="perpetuo" class="mt-1" @if($costoTermine === null) checked @endif>
+                                    <span>
+                                        <strong class="font-normal">Perpetuo</strong> — {{ $servizioEmbed->costo_crediti }} crediti
+                                        (garantito fino a tre anni).
+                                    </span>
+                                </label>
+                            </div>
+
+                            @if ($creditiSaldo >= $costoMinimo)
+                                <x-button type="submit" class="mt-3">{{ $necrologio->embed_abilitato ? 'Rinnova embed' : 'Acquista embed' }}</x-button>
+                            @else
+                                <p class="mt-3 font-sans font-light text-[13px] text-errore">
+                                    Crediti insufficienti — <a href="{{ route('servizi') }}" class="underline underline-offset-4 decoration-oro/40">ricaricate da qui</a>.
+                                </p>
+                            @endif
+                        </form>
+                    @endif
                 @endif
             </section>
         @endunless
