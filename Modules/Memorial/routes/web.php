@@ -83,6 +83,7 @@ Route::middleware('auth')->prefix('admin/api')->group(function () {
     Route::put('manifesto-templates/{template}', [NecrologiController::class, 'manifestoTemplatesUpdate']);
     Route::delete('manifesto-templates/{template}', [NecrologiController::class, 'manifestoTemplatesDestroy']);
     Route::post('manifesti/{manifesto}/salva', [ManifestiController::class, 'salva']);
+    Route::post('manifesti/{manifesto}/testo-funerale', [ManifestiController::class, 'generaTestoFunerale']);
 
     // Chiamati anche dal Ricordino Designer (Modules/PhotoPrint): lì "pratica"
     // è il defunto (PhotoPrintController::ricordinoDesigner passa

@@ -157,6 +157,25 @@
                 </div>
             </div>
 
+            <div class="grid gap-6 sm:grid-cols-[1fr_6rem]">
+                <div>
+                    <x-input-label for="citta" value="Città della cerimonia" />
+                    {{-- Si autocompila scegliendo un indirizzo qui sopra da Google
+                         Places; resta comunque un campo modificabile a mano. --}}
+                    <x-text-input id="citta" name="citta" autocomplete="off"
+                        placeholder="Es. Boscoreale"
+                        :value="old('citta', $defunto?->citta)" />
+                    <x-input-error :messages="$errors->get('citta')" />
+                </div>
+                <div>
+                    <x-input-label for="provincia" value="Prov." />
+                    <x-text-input id="provincia" name="provincia" autocomplete="off" maxlength="2"
+                        placeholder="NA" style="text-transform:uppercase"
+                        :value="old('provincia', $defunto?->provincia)" />
+                    <x-input-error :messages="$errors->get('provincia')" />
+                </div>
+            </div>
+
             <div>
                 <x-input-label for="preghiera" value="Preghiera o dedica (sul retro)" />
                 <textarea id="preghiera" name="preghiera" rows="4"
@@ -205,16 +224,70 @@
                 // DOMContentLoaded "places" potrebbe non essere pronto ancora.
                 // Il callback ufficiale parte solo a libreria caricata davvero.
                 window.inizializzaAutocompleteLuoghi = function () {
-                    var opzioni = { componentRestrictions: { country: 'it' }, fields: ['name', 'formatted_address'] };
+                    var opzioni = {
+                        componentRestrictions: { country: 'it' },
+                        fields: ['name', 'formatted_address', 'address_components'],
+                    };
 
-                    // Indirizzi semplici: la ricerca compila il campo stesso. Anche
-                    // "Cimitero" resta qui — molti cimiteri su Google Places non hanno
-                    // un indirizzo stradale, solo la città: lo split lasciava il
-                    // campo indirizzo con "Milano" e niente altro.
-                    ['indirizzo_cerimonia', 'indirizzo_chiesa', 'cimitero'].forEach(function (id) {
+                    // Città e sigla provincia per il testo del manifesto (formato
+                    // "Via Roma 1, Boscoreale, NA"): li estrae dal primo indirizzo
+                    // scelto e li scrive nei due campi sotto, che restano comunque
+                    // editabili a mano — l'ultima scelta vince, ma in pratica
+                    // partenza/chiesa/cimitero sono quasi sempre nello stesso comune.
+                    function riempiCittaProvincia(componenti) {
+                        if (!componenti) return;
+                        var elCitta = document.getElementById('citta');
+                        var elProvincia = document.getElementById('provincia');
+                        (componenti || []).forEach(function (c) {
+                            if (elCitta && (c.types.indexOf('locality') !== -1 || c.types.indexOf('administrative_area_level_3') !== -1)) {
+                                elCitta.value = c.long_name;
+                            }
+                            if (elProvincia && c.types.indexOf('administrative_area_level_2') !== -1) {
+                                elProvincia.value = (c.short_name || '').toUpperCase();
+                            }
+                        });
+                    }
+
+                    // Solo via e civico: "formatted_address" arriva già con città,
+                    // CAP e "Italia" in coda, che finirebbero ripetuti nel testo del
+                    // manifesto visto che città/provincia ora sono campi a parte.
+                    // Senza una via riconosciuta (raro ma capita) torna null e il
+                    // chiamante lascia l'indirizzo completo così com'è.
+                    function indirizzoBreve(componenti) {
+                        var via = null, civico = null;
+                        (componenti || []).forEach(function (c) {
+                            if (c.types.indexOf('route') !== -1) via = c.long_name;
+                            if (c.types.indexOf('street_number') !== -1) civico = c.long_name;
+                        });
+                        return via ? (civico ? via + ', ' + civico : via) : null;
+                    }
+
+                    // Indirizzo della partenza: qui la via breve conta, è quella che
+                    // finisce nel testo del manifesto ("Partenza da Via Roma 1,
+                    // Boscoreale, NA").
+                    var elIndirizzoCerimonia = document.getElementById('indirizzo_cerimonia');
+                    if (elIndirizzoCerimonia) {
+                        var autocompletePartenza = new google.maps.places.Autocomplete(elIndirizzoCerimonia, opzioni);
+                        autocompletePartenza.addListener('place_changed', function () {
+                            var luogo = autocompletePartenza.getPlace();
+                            var breve = indirizzoBreve(luogo.address_components);
+                            if (breve) elIndirizzoCerimonia.value = breve;
+                            riempiCittaProvincia(luogo.address_components);
+                        });
+                    }
+
+                    // "Indirizzo chiesa" e "Cimitero" restano con l'indirizzo completo:
+                    // non finiscono nel testo generato (la chiesa ci va solo col nome,
+                    // il cimitero resta generico — vedi GeneratoreTestoFunerale), e per
+                    // il cimitero molti luoghi su Google Places non hanno comunque una
+                    // via propria, solo la città: lo split lascerebbe il campo vuoto.
+                    ['indirizzo_chiesa', 'cimitero'].forEach(function (id) {
                         var el = document.getElementById(id);
                         if (el) {
-                            new google.maps.places.Autocomplete(el, opzioni);
+                            var autocomplete = new google.maps.places.Autocomplete(el, opzioni);
+                            autocomplete.addListener('place_changed', function () {
+                                riempiCittaProvincia(autocomplete.getPlace().address_components);
+                            });
                         }
                     });
 
@@ -229,6 +302,7 @@
                             var luogo = autocompleteChiesa.getPlace();
                             if (luogo.name) elChiesa.value = luogo.name;
                             if (luogo.formatted_address) elIndirizzoChiesa.value = luogo.formatted_address;
+                            riempiCittaProvincia(luogo.address_components);
                         });
                     }
                 };

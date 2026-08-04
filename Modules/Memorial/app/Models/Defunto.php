@@ -19,7 +19,7 @@ class Defunto extends Model
         'frase', 'preghiera',
         'luogo_partenza', 'indirizzo_cerimonia', 'cerimonia_at',
         'chiesa', 'indirizzo_chiesa',
-        'cimitero',
+        'cimitero', 'citta', 'provincia',
         'gdpr_consenso', 'gdpr_autorizzato_da', 'gdpr_parentela',
         'gdpr_autorizzato_at', 'gdpr_note',
         'ordine_id',
@@ -116,6 +116,8 @@ class Defunto extends Model
             'chiesa'              => $this->chiesa,
             'indirizzo_chiesa'    => $this->indirizzo_chiesa,
             'cimitero'            => $this->cimitero,
+            'citta'               => $this->citta,
+            'provincia'           => $this->provincia,
         ];
     }
 }

@@ -14,6 +14,7 @@ use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\Manifesto;
 use Modules\Memorial\Models\Necrologio;
+use Modules\Memorial\Servizi\GeneratoreTestoFunerale;
 
 /**
  * I manifesti collegati a un defunto: secondo passo del percorso canalizzato
@@ -166,6 +167,19 @@ class ManifestiController extends Controller
         }
 
         return response()->json(['success' => true, 'pdf' => $manifesto->pdfUrl(), 'web' => $manifesto->webUrl()]);
+    }
+
+    /**
+     * Il blocco "Info funerale" nel formato editoriale a 4 righe, composto
+     * dai dati già in scheda — vedi GeneratoreTestoFunerale. L'operatore lo
+     * riceve come testo pronto da mettere sul canvas, modificabile e
+     * rigenerabile a piacere, non salvato automaticamente da qui.
+     */
+    public function generaTestoFunerale(Request $request, Manifesto $manifesto, GeneratoreTestoFunerale $generatore): JsonResponse
+    {
+        $this->soloSuo($request, $manifesto->defunto);
+
+        return response()->json(['testo' => $generatore->generaPerDefunto($manifesto->defunto)]);
     }
 
     /** Clona layout e formato: utile per passare dal manifesto del funerale a quello del trigesimo. */

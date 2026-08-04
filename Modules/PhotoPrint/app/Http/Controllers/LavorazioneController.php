@@ -66,6 +66,8 @@ class LavorazioneController extends Controller
             'chiesa' => ['nullable', 'string', 'max:150'],
             'indirizzo_chiesa' => ['nullable', 'string', 'max:255'],
             'cimitero' => ['nullable', 'string', 'max:255'],
+            'citta' => ['nullable', 'string', 'max:100'],
+            'provincia' => ['nullable', 'string', 'size:2', 'alpha'],
             'gdpr_parentela' => ['required', 'string', 'max:80'],
             'gdpr_consenso' => ['accepted'],
         ], [
@@ -91,6 +93,8 @@ class LavorazioneController extends Controller
             'chiesa' => $dati['chiesa'] ?? null,
             'indirizzo_chiesa' => $dati['indirizzo_chiesa'] ?? null,
             'cimitero' => $dati['cimitero'] ?? null,
+            'citta' => $dati['citta'] ?? null,
+            'provincia' => isset($dati['provincia']) ? strtoupper($dati['provincia']) : null,
             'ordine_id' => $ordine->id,
         ])->save();
 

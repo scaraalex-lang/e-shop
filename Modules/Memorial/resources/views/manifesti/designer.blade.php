@@ -191,6 +191,7 @@ function flipOggetto(asse) {
         <button class="block-btn" onclick="addBlock('frase')"><span class="block-icon">✨</span>Frase apertura</button>
         <button class="block-btn" onclick="addBlock('parenti')"><span class="block-icon">👨‍👩‍👧</span>Parenti</button>
         <button class="block-btn" onclick="addBlock('funerale')"><span class="block-icon">⛪</span>Info funerale</button>
+        <button class="block-btn" id="btn-testo-funerale-ai" onclick="generaTestoFuneraleAI()"><span class="block-icon">🤖</span>Genera testo funerale (AI)</button>
         <button class="block-btn" onclick="addBlock('agenzia')"><span class="block-icon">🏢</span>Agenzia</button>
         <button class="block-btn" onclick="addBlock('eta')"><span class="block-icon">🔢</span>Età (anni vissuti)</button>
         <button class="block-btn" onclick="addBlock('testo')"><span class="block-icon">📝</span>Testo libero</button>
@@ -985,6 +986,50 @@ function addBlock(type) {
   canvas.add(obj);
   canvas.setActiveObject(obj);
   canvas.renderAll();
+}
+
+/**
+ * Come addBlock('funerale'), ma il testo lo compone GeneratoreTestoFunerale
+ * lato server (formato editoriale a 4 righe, oggi/domani calcolati in PHP,
+ * l'AI solo per la resa linguistica se è configurata una chiave). Arriva
+ * come un blocco normale, modificabile e rigenerabile quante volte serve:
+ * ogni click aggiunge un nuovo blocco, quello vecchio va tolto a mano se
+ * non serve più — stesso comportamento di tutti gli altri blocchi qui sopra.
+ */
+async function generaTestoFuneraleAI() {
+  var btn = document.getElementById('btn-testo-funerale-ai');
+  var originale = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="block-icon">⏳</span>Generazione...';
+
+  try {
+    var res = await fetch('/admin/api/manifesti/{{ $manifesto->id }}/testo-funerale', { method: 'POST' });
+    if (!res.ok) throw new Error('risposta ' + res.status);
+    var dati = await res.json();
+
+    var obj = new fabric.Textbox(dati.testo, {
+      left: 50,
+      top: 100 + canvas.getObjects().length * 30,
+      width: CANVAS_W - 100,
+      fontSize: 35,
+      fontFamily: 'Cormorant Garamond',
+      fontStyle: 'normal',
+      fontWeight: 'normal',
+      textAlign: 'center',
+      fill: '#1a1a2e',
+      editable: true,
+      customBlockType: 'funerale',
+    });
+    canvas.add(obj);
+    canvas.setActiveObject(obj);
+    canvas.renderAll();
+    toastMsg('✓ Testo generato — modificalo se serve');
+  } catch (e) {
+    alert('Non sono riuscito a generare il testo. Riprova.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originale;
+  }
 }
 
 // ── QR NECROLOGIO ──
