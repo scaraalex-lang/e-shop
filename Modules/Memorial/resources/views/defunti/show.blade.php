@@ -64,13 +64,11 @@
             <ul class="mt-5 space-y-5">
                 @foreach ($manifesti as $manifesto)
                     <li class="border border-caffe/15">
-                        <div class="aspect-[4/3] border-b border-caffe/15 bg-panna overflow-hidden">
+                        <div class="h-40 flex items-center justify-center border-b border-caffe/15 bg-panna overflow-hidden">
                             @if ($manifesto->webUrl())
-                                <img src="{{ $manifesto->webUrl() }}" alt="" class="h-full w-full object-cover">
+                                <img src="{{ $manifesto->webUrl() }}" alt="" class="max-h-full max-w-full object-contain">
                             @else
-                                <div class="flex h-full items-center justify-center">
-                                    <span class="font-sans text-[10px] tracking-[0.15em] uppercase text-testo-soft/50">Nessuna anteprima</span>
-                                </div>
+                                <span class="font-sans text-[10px] tracking-[0.15em] uppercase text-testo-soft/50">Nessuna anteprima</span>
                             @endif
                         </div>
                         <div class="px-4 py-4">
@@ -215,10 +213,12 @@
     </div>
 @endif
 
-<p class="mt-8">
-    <a href="{{ route('necrologi.index') }}"
-       class="font-sans text-[11px] tracking-[0.2em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
-        ← Tutti i necrologi
-    </a>
-</p>
+@if ($ordinePrincipale)
+    <p class="mt-8">
+        <a href="{{ route('lavorazione', $ordinePrincipale) }}"
+           class="font-sans text-[11px] tracking-[0.2em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
+            ← Torna alla scheda dati del defunto
+        </a>
+    </p>
+@endif
 @endsection
