@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Commerce\Enums\StatoOrdine;
 use Modules\Commerce\Models\Ordine;
+use Modules\Memorial\Models\Defunto;
 
 /**
  * Gli ordini di tutta la piattaforma, visti da chi produce e spedisce —
@@ -42,8 +43,18 @@ class GestioneOrdiniController extends Controller
 
     public function show(Ordine $ordine): View
     {
+        $ordine->load(['user', 'agenzia', 'righe', 'servizi.servizioEditor']);
+
+        // Solo per gli ordini di servizi digitali (Manifesti/Necrologi/
+        // Ricordini): chi lavora l'ordine vede subito di quale foto si
+        // tratta, senza dover aprire la Scheda Defunto a parte.
+        $defunto = $ordine->defunto_id ? Defunto::find($ordine->defunto_id) : null;
+        $fotoPath = $defunto?->fotoPrincipalePath();
+
         return view('commerce::gestione.ordini.show', [
-            'ordine' => $ordine->load(['user', 'agenzia', 'righe', 'servizi.servizioEditor']),
+            'ordine' => $ordine,
+            'defunto' => $defunto,
+            'fotoUrl' => $fotoPath ? '/storage/'.ltrim($fotoPath, '/') : null,
         ]);
     }
 

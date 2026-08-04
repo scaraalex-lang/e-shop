@@ -71,11 +71,17 @@
             <ul class="mt-6 grid gap-8 sm:grid-cols-2">
                 @foreach ($manifesti as $manifesto)
                     <li class="border border-caffe/15">
-                        <div class="aspect-[3/4] flex items-center justify-center border-b border-caffe/15 bg-panna overflow-hidden">
+                        {{-- Niente aspect-ratio fisso: i manifesti sono a volte
+                             verticali, a volte orizzontali (vedi $formati sopra) — un
+                             riquadro fisso avrebbe sempre lasciato bande vuote su
+                             metà di loro. L'immagine detta l'altezza della card. --}}
+                        <div class="border-b border-caffe/15 bg-panna">
                             @if ($manifesto->webUrl())
-                                <img src="{{ $manifesto->webUrl() }}" alt="" class="max-h-full max-w-full object-contain">
+                                <img src="{{ $manifesto->webUrl() }}" alt="" class="block w-full h-auto">
                             @else
-                                <span class="font-sans text-[10px] tracking-[0.15em] uppercase text-testo-soft/50">Nessuna anteprima</span>
+                                <div class="flex h-40 items-center justify-center">
+                                    <span class="font-sans text-[10px] tracking-[0.15em] uppercase text-testo-soft/50">Nessuna anteprima</span>
+                                </div>
                             @endif
                         </div>
                         <div class="px-5 py-5">
@@ -141,11 +147,11 @@
 
         @if ($necrologioFunerale)
             <div class="mt-6 max-w-md border border-caffe/15">
-                <div class="aspect-[4/3] border-b border-caffe/15 bg-panna overflow-hidden">
+                <div class="border-b border-caffe/15 bg-panna">
                     @if ($necrologioFunerale->og_image)
-                        <img src="{{ '/storage/'.ltrim($necrologioFunerale->og_image, '/') }}" alt="" class="h-full w-full object-cover">
+                        <img src="{{ '/storage/'.ltrim($necrologioFunerale->og_image, '/') }}" alt="" class="block w-full h-auto">
                     @else
-                        <div class="flex h-full items-center justify-center">
+                        <div class="flex h-40 items-center justify-center">
                             <span class="font-sans text-[10px] tracking-[0.15em] uppercase text-testo-soft/50">Nessuna anteprima</span>
                         </div>
                     @endif
@@ -174,19 +180,9 @@
 
         @if ($ordinePrincipale)
             @if ($ricordino)
-                <div class="mt-6 max-w-md border border-caffe/15">
-                    <div class="aspect-[4/3] border-b border-caffe/15 bg-panna overflow-hidden">
-                        @if ($ricordino->anteprima_fronte)
-                            <img src="{{ '/storage/'.ltrim($ricordino->anteprima_fronte, '/') }}" alt="" class="h-full w-full object-cover">
-                        @else
-                            <div class="flex h-full items-center justify-center">
-                                <span class="font-sans text-[10px] tracking-[0.15em] uppercase text-testo-soft/50">Nessuna anteprima</span>
-                            </div>
-                        @endif
-                    </div>
-                    <div class="px-5 py-5">
-                        <x-button :href="route('studio.ricordino')" class="w-full">Riprendi la bozza</x-button>
-                    </div>
+                <x-bozza-ricordino :ricordino="$ricordino" larghezza="w-52" class="mt-6" />
+                <div class="mt-5">
+                    <x-button :href="route('studio.ricordino')">Riprendi la bozza</x-button>
                 </div>
             @else
                 <div class="mt-6">
@@ -208,11 +204,11 @@
         <ul class="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ($necrologiAltri as $n)
                 <li class="border border-caffe/15">
-                    <div class="aspect-[4/3] border-b border-caffe/15 bg-panna overflow-hidden">
+                    <div class="border-b border-caffe/15 bg-panna">
                         @if ($n->og_image)
-                            <img src="{{ '/storage/'.ltrim($n->og_image, '/') }}" alt="" class="h-full w-full object-cover">
+                            <img src="{{ '/storage/'.ltrim($n->og_image, '/') }}" alt="" class="block w-full h-auto">
                         @else
-                            <div class="flex h-full items-center justify-center">
+                            <div class="flex h-40 items-center justify-center">
                                 <span class="font-sans text-[10px] tracking-[0.15em] uppercase text-testo-soft/50">Nessuna anteprima</span>
                             </div>
                         @endif

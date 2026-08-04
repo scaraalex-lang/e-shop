@@ -92,6 +92,18 @@
     <section class="mt-12">
         <h2 class="font-sans text-[11px] tracking-[0.25em] uppercase text-oro-scuro">Servizi attivati</h2>
 
+        @if ($fotoUrl)
+            <div class="mt-5 flex items-center gap-4">
+                <div class="h-24 w-24 shrink-0 border border-oro/40 bg-panna overflow-hidden">
+                    <img src="{{ $fotoUrl }}" alt="" class="h-full w-full object-cover">
+                </div>
+                <div>
+                    <p class="font-sans text-[10px] tracking-[0.2em] uppercase text-testo-soft">Foto principale</p>
+                    <p class="mt-1 font-serif text-lg">{{ $defunto->nomeCompleto() }}</p>
+                </div>
+            </div>
+        @endif
+
         <div class="mt-5 border border-caffe/15">
             @foreach ($ordine->servizi as $servizio)
                 <article class="flex items-center justify-between gap-5 px-6 py-4 border-b border-caffe/10 last:border-b-0">

@@ -82,6 +82,23 @@
             @if ($ordine->servizi->isNotEmpty())
                 <section class="bg-bianco px-7 py-7">
                     <h2 class="font-serif text-xl font-medium">Servizi attivati</h2>
+
+                    @if ($fotoUrl)
+                        <div class="mt-4 flex items-center gap-4">
+                            <div class="h-24 w-24 shrink-0 border border-oro/40 bg-panna overflow-hidden">
+                                <img src="{{ $fotoUrl }}" alt="" class="h-full w-full object-cover">
+                            </div>
+                            <div>
+                                <p class="font-sans text-[10px] tracking-[0.2em] uppercase text-testo-soft">Foto principale</p>
+                                <p class="mt-1 font-serif text-lg">{{ $defunto->nomeCompleto() }}</p>
+                            </div>
+                        </div>
+                    @elseif ($defunto)
+                        <p class="mt-3 font-sans font-light text-[13px] text-testo-soft">
+                            Foto non ancora confermata per {{ $defunto->nomeCompleto() }}.
+                        </p>
+                    @endif
+
                     <div class="mt-4 divide-y divide-caffe/10">
                         @foreach ($ordine->servizi as $servizio)
                             <div class="flex items-center justify-between gap-4 py-4">

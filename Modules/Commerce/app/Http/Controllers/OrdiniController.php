@@ -13,6 +13,7 @@ use Modules\Commerce\Http\Requests\AttivaServiziOrdineRequest;
 use Modules\Commerce\Models\Ordine;
 use Modules\Commerce\Models\ServizioEditor;
 use Modules\Commerce\Servizi\AttivaServiziOrdine;
+use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\Ricordino;
 
 /**
@@ -142,9 +143,14 @@ class OrdiniController extends Controller
         // dell'ordine di un altro non è un'informazione da dare.
         abort_unless($ordine->user_id === $request->user()->id, 404);
 
+        $defunto = $ordine->defunto_id ? Defunto::find($ordine->defunto_id) : null;
+        $fotoPath = $defunto?->fotoPrincipalePath();
+
         return view('commerce::ordini.show', [
             'ordine' => $ordine->load('righe.product.primaryImage', 'righe.product.category', 'servizi.servizioEditor'),
             'ricordino' => $this->bozzaDi($ordine),
+            'defunto' => $defunto,
+            'fotoUrl' => $fotoPath ? '/storage/'.ltrim($fotoPath, '/') : null,
         ]);
     }
 
