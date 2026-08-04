@@ -73,15 +73,28 @@ class NecrologiController extends Controller
                 ->with('stato', 'Prima crea il manifesto dalla scheda del defunto.');
         }
 
+        // Il Funerale non ha un "quando/dove" proprio: la pagina pubblica legge
+        // data/luogo dal defunto (Defunto::cerimonia_at/chiesa/indirizzo_chiesa,
+        // già raccolti in lavorazione), non da queste colonne — vedi
+        // necrologi/pubblico.blade.php. Scriverci sopra per il Funerale
+        // salverebbe un dato che non verrebbe mai mostrato.
+        if ($dati['occasione'] === 'funerale') {
+            $defunto->update([
+                'cerimonia_at' => $dati['trigesimo_at'] ?? null,
+                'chiesa' => $dati['trigesimo_luogo'] ?? null,
+                'indirizzo_chiesa' => $dati['trigesimo_indirizzo'] ?? null,
+            ]);
+        }
+
         $necrologio = Necrologio::create([
             'defunto_id' => $defunto->id,
             'agenzia_id' => $agenzia->id,
             'percorso' => Necrologio::componiPercorso($defunto),
             'occasione' => $dati['occasione'],
             'numero_anniversario' => $dati['numero_anniversario'] ?? null,
-            'trigesimo_at' => $dati['trigesimo_at'] ?? null,
-            'trigesimo_luogo' => $dati['trigesimo_luogo'] ?? null,
-            'trigesimo_indirizzo' => $dati['trigesimo_indirizzo'] ?? null,
+            'trigesimo_at' => $dati['occasione'] === 'funerale' ? null : ($dati['trigesimo_at'] ?? null),
+            'trigesimo_luogo' => $dati['occasione'] === 'funerale' ? null : ($dati['trigesimo_luogo'] ?? null),
+            'trigesimo_indirizzo' => $dati['occasione'] === 'funerale' ? null : ($dati['trigesimo_indirizzo'] ?? null),
             'testo' => $dati['testo'] ?? null,
             'og_image' => $this->immaginePredefinita($defunto),
         ]);
@@ -132,7 +145,17 @@ class NecrologiController extends Controller
                 'trigesimo_indirizzo' => ['nullable', 'string', 'max:255'],
             ]);
 
-            $necrologio->update($dati);
+            // Vedi store(): per il Funerale questi campi vivono sul defunto,
+            // non sul necrologio — è lì che li legge la pagina pubblica.
+            if ($necrologio->occasione === Occasione::Funerale) {
+                $necrologio->defunto->update([
+                    'cerimonia_at' => $dati['trigesimo_at'] ?? null,
+                    'chiesa' => $dati['trigesimo_luogo'] ?? null,
+                    'indirizzo_chiesa' => $dati['trigesimo_indirizzo'] ?? null,
+                ]);
+            } else {
+                $necrologio->update($dati);
+            }
 
             return redirect()
                 ->route('necrologi.modifica', $necrologio)
@@ -141,12 +164,20 @@ class NecrologiController extends Controller
 
         $dati = $this->valida($request, $necrologio);
 
+        if ($dati['occasione'] === 'funerale') {
+            $necrologio->defunto->update([
+                'cerimonia_at' => $dati['trigesimo_at'] ?? null,
+                'chiesa' => $dati['trigesimo_luogo'] ?? null,
+                'indirizzo_chiesa' => $dati['trigesimo_indirizzo'] ?? null,
+            ]);
+        }
+
         $necrologio->update([
             'occasione' => $dati['occasione'],
             'numero_anniversario' => $dati['numero_anniversario'] ?? null,
-            'trigesimo_at' => $dati['trigesimo_at'] ?? null,
-            'trigesimo_luogo' => $dati['trigesimo_luogo'] ?? null,
-            'trigesimo_indirizzo' => $dati['trigesimo_indirizzo'] ?? null,
+            'trigesimo_at' => $dati['occasione'] === 'funerale' ? null : ($dati['trigesimo_at'] ?? null),
+            'trigesimo_luogo' => $dati['occasione'] === 'funerale' ? null : ($dati['trigesimo_luogo'] ?? null),
+            'trigesimo_indirizzo' => $dati['occasione'] === 'funerale' ? null : ($dati['trigesimo_indirizzo'] ?? null),
             'testo' => $dati['testo'] ?? null,
         ]);
 

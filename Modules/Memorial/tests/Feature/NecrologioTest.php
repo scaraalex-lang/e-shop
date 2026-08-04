@@ -273,4 +273,47 @@ class NecrologioTest extends TestCase
             ->assertSee('2° Anniversario della scomparsa di Luigia Rossetti')
             ->assertSee('2° anniversario della scomparsa');
     }
+
+    /**
+     * Bug trovato in verifica: "Aggiorna orario e luogo" dopo la
+     * pubblicazione scriveva su trigesimo_at/luogo/indirizzo del necrologio,
+     * ma per il Funerale la pagina pubblica legge quei dati dal defunto
+     * (cerimonia_at/chiesa/indirizzo_chiesa) — l'aggiornamento non compariva
+     * mai. Vedi NecrologiController::update().
+     */
+    public function test_aggiornare_orario_e_luogo_del_funerale_dopo_la_pubblicazione_scrive_sul_defunto(): void
+    {
+        [$referente, $agenzia] = $this->agenziaConReferente();
+        $defunto = Defunto::create([
+            'nome' => 'Luigia', 'cognome' => 'Rossetti', 'sesso' => 'F',
+            'cerimonia_at' => Carbon::now()->addDays(2)->setTime(10, 0),
+            'chiesa' => 'Chiesa di San Carlo', 'indirizzo_chiesa' => 'Via Roma 1',
+        ]);
+        $n = Necrologio::create([
+            'defunto_id' => $defunto->id, 'agenzia_id' => $agenzia->id,
+            'percorso' => Necrologio::componiPercorso($defunto),
+            'occasione' => 'funerale',
+        ]);
+        $n->autorizzaPubblicazione('Giulia Ferrari', 'figlia');
+        $n->pubblica();
+
+        $nuovoOrario = Carbon::now()->addDays(3)->setTime(16, 0);
+        $this->actingAs($referente)->patch(route('necrologi.aggiorna', $n), [
+            'trigesimo_at' => $nuovoOrario->format('Y-m-d\TH:i'),
+            'trigesimo_luogo' => 'Chiesa di San Michele',
+            'trigesimo_indirizzo' => 'Via Nuova 2',
+        ])->assertRedirect();
+
+        $defunto->refresh();
+        $this->assertSame('Chiesa di San Michele', $defunto->chiesa);
+        $this->assertSame('Via Nuova 2', $defunto->indirizzo_chiesa);
+        $this->assertTrue($nuovoOrario->equalTo($defunto->cerimonia_at));
+
+        // il necrologio non tiene una copia propria per il Funerale: la
+        // pagina pubblica legge dal defunto appena aggiornato.
+        $this->get($n->fresh()->url($agenzia->slug))
+            ->assertOk()
+            ->assertSee('Chiesa di San Michele')
+            ->assertDontSee('Chiesa di San Carlo');
+    }
 }

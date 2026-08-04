@@ -18,18 +18,20 @@
 @endphp
 
 {{-- ============ il percorso principale ============ --}}
-<div class="grid gap-px bg-caffe/15 border border-caffe/15 sm:grid-cols-4">
+{{-- Sezioni impilate a piena larghezza (non affiancate in colonne strette):
+     ogni fase merita spazio vero per mostrare l'anteprima del lavoro. --}}
+<div class="space-y-10">
 
     {{-- 1. foto --}}
-    <section class="bg-bianco px-6 py-7">
-        <h2 class="font-serif text-xl font-medium">1. Foto</h2>
-        <p class="mt-2 font-sans text-[10px] tracking-[0.2em] uppercase {{ $fotoBloccata ? 'text-successo' : ($fotoPronta ? 'text-oro-scuro' : 'text-testo-soft') }}">
+    <section class="border border-caffe/15 bg-bianco px-6 py-8 sm:px-10 sm:py-10">
+        <h2 class="font-serif text-2xl font-medium">1. Foto</h2>
+        <p class="mt-2 font-sans text-[11px] tracking-[0.2em] uppercase {{ $fotoBloccata ? 'text-successo' : ($fotoPronta ? 'text-oro-scuro' : 'text-testo-soft') }}">
             @if ($fotoBloccata) 🔒 Confermata
             @elseif ($fotoPronta) Pronta
             @else Da fare
             @endif
         </p>
-        <p class="mt-3 font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+        <p class="mt-3 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
             @if ($fotoBloccata)
                 Foto scelta ed elaborata: pronta per proseguire con le prossime elaborazioni.
             @else
@@ -40,39 +42,44 @@
         @if ($fotoUrl)
             {{-- Solo per capire a colpo d'occhio quale foto è stata scelta: non
                  riapre il Foto Manager, che a foto confermata è comunque bloccato. --}}
-            <div class="mt-5 h-24 w-24 border border-oro/40 bg-panna overflow-hidden">
-                <img src="{{ $fotoUrl }}" alt="" class="h-full w-full object-cover">
+            <div class="mt-6 w-full max-w-[220px]">
+                <div class="aspect-[3/4] border border-oro/40 bg-panna overflow-hidden">
+                    <img src="{{ $fotoUrl }}" alt="" class="h-full w-full object-cover">
+                </div>
+                @if ($fotoBloccata)
+                    <p class="mt-2 font-sans text-[10px] tracking-[0.15em] uppercase text-oro-scuro">★ Principale</p>
+                @endif
             </div>
         @elseif ($ordinePrincipale)
-            <div class="mt-5">
+            <div class="mt-6">
                 <x-button :href="route('studio.foto')">Apri il Foto Manager</x-button>
             </div>
         @endif
     </section>
 
     {{-- 2. manifesto --}}
-    <section class="bg-bianco px-6 py-7 {{ $manifestiAbilitato ? '' : 'opacity-45 pointer-events-none' }}">
-        <h2 class="font-serif text-xl font-medium">2. Manifesto</h2>
-        <p class="mt-2 font-sans text-[10px] tracking-[0.2em] uppercase {{ $manifesti->isNotEmpty() ? 'text-successo' : 'text-testo-soft' }}">
+    <section class="border border-caffe/15 bg-bianco px-6 py-8 sm:px-10 sm:py-10 {{ $manifestiAbilitato ? '' : 'opacity-45 pointer-events-none' }}">
+        <h2 class="font-serif text-2xl font-medium">2. Manifesto</h2>
+        <p class="mt-2 font-sans text-[11px] tracking-[0.2em] uppercase {{ $manifesti->isNotEmpty() ? 'text-successo' : 'text-testo-soft' }}">
             {{ $manifesti->isNotEmpty() ? $manifesti->count().' '.($manifesti->count() === 1 ? 'manifesto' : 'manifesti') : 'Da fare' }}
         </p>
-        <p class="mt-3 font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+        <p class="mt-3 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
             Un defunto può avere più manifesti collegati (funerale, partecipazioni, trigesimo...).
         </p>
 
         @if ($manifesti->isNotEmpty())
-            <ul class="mt-5 space-y-5">
+            <ul class="mt-6 grid gap-8 sm:grid-cols-2">
                 @foreach ($manifesti as $manifesto)
                     <li class="border border-caffe/15">
-                        <div class="h-40 flex items-center justify-center border-b border-caffe/15 bg-panna overflow-hidden">
+                        <div class="aspect-[3/4] flex items-center justify-center border-b border-caffe/15 bg-panna overflow-hidden">
                             @if ($manifesto->webUrl())
                                 <img src="{{ $manifesto->webUrl() }}" alt="" class="max-h-full max-w-full object-contain">
                             @else
                                 <span class="font-sans text-[10px] tracking-[0.15em] uppercase text-testo-soft/50">Nessuna anteprima</span>
                             @endif
                         </div>
-                        <div class="px-4 py-4">
-                            <p class="font-serif text-base truncate">{{ $manifesto->etichetta }}</p>
+                        <div class="px-5 py-5">
+                            <p class="font-serif text-lg truncate">{{ $manifesto->etichetta }}</p>
                             @if ($manifesto->principale)
                                 <p class="mt-1 font-sans text-[10px] tracking-[0.15em] uppercase text-oro-scuro">★ Principale</p>
                             @endif
@@ -97,9 +104,9 @@
         @endif
 
         @if ($manifestiAbilitato)
-            <details class="mt-5">
-                <summary class="cursor-pointer font-sans text-[11px] tracking-[0.15em] uppercase text-oro-scuro">+ Nuovo manifesto</summary>
-                <form method="POST" action="{{ route('defunti.manifesti.store', $defunto) }}" class="mt-3 space-y-3">
+            <details class="mt-6">
+                <summary class="cursor-pointer font-sans text-[12px] tracking-[0.15em] uppercase text-oro-scuro">+ Nuovo manifesto</summary>
+                <form method="POST" action="{{ route('defunti.manifesti.store', $defunto) }}" class="mt-4 max-w-md space-y-3">
                     @csrf
                     <x-text-input name="etichetta" placeholder="Es. Manifesto funerale" required class="w-full text-sm" />
                     <select name="formato" class="block w-full border-caffe/25 rounded-md text-sm">
@@ -109,7 +116,7 @@
                     </select>
                     <x-button type="submit">Disegna nuovo</x-button>
                 </form>
-                <form method="POST" action="{{ route('defunti.manifesti.carica', $defunto) }}" enctype="multipart/form-data" class="mt-4 space-y-3">
+                <form method="POST" action="{{ route('defunti.manifesti.carica', $defunto) }}" enctype="multipart/form-data" class="mt-4 max-w-md space-y-3">
                     @csrf
                     <x-text-input name="etichetta" placeholder="Es. Partecipazioni" required class="w-full text-sm" />
                     <input type="file" name="file" accept=".pdf,image/*" required class="block w-full font-sans text-[13px]">
@@ -120,41 +127,54 @@
     </section>
 
     {{-- 3. necrologio --}}
-    <section class="bg-bianco px-6 py-7 {{ $necrologioAbilitato ? '' : 'opacity-45 pointer-events-none' }}">
-        <h2 class="font-serif text-xl font-medium">3. Necrologio</h2>
-        <p class="mt-2 font-sans text-[10px] tracking-[0.2em] uppercase {{ $necrologioFunerale?->pubblicato ? 'text-successo' : ($necrologioFunerale ? 'text-oro-scuro' : 'text-testo-soft') }}">
+    <section class="border border-caffe/15 bg-bianco px-6 py-8 sm:px-10 sm:py-10 {{ $necrologioAbilitato ? '' : 'opacity-45 pointer-events-none' }}">
+        <h2 class="font-serif text-2xl font-medium">3. Necrologio</h2>
+        <p class="mt-2 font-sans text-[11px] tracking-[0.2em] uppercase {{ $necrologioFunerale?->pubblicato ? 'text-successo' : ($necrologioFunerale ? 'text-oro-scuro' : 'text-testo-soft') }}">
             @if ($necrologioFunerale?->pubblicato) 🔒 Pubblicato
             @elseif ($necrologioFunerale) Bozza
             @else Da fare
             @endif
         </p>
-        <p class="mt-3 font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+        <p class="mt-3 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
             Testo, card social e — una volta pubblicato — solo data/ora/luogo restano modificabili.
         </p>
 
-        <div class="mt-5 space-y-3">
-            @if ($necrologioFunerale)
-                <x-button :href="route('necrologi.modifica', $necrologioFunerale)">Modifica testo e date</x-button><br>
-                <x-button :href="route('necrologi.designer', $necrologioFunerale)">Componi la card</x-button>
-            @elseif ($necrologioAbilitato)
+        @if ($necrologioFunerale)
+            <div class="mt-6 max-w-md border border-caffe/15">
+                <div class="aspect-[4/3] border-b border-caffe/15 bg-panna overflow-hidden">
+                    @if ($necrologioFunerale->og_image)
+                        <img src="{{ '/storage/'.ltrim($necrologioFunerale->og_image, '/') }}" alt="" class="h-full w-full object-cover">
+                    @else
+                        <div class="flex h-full items-center justify-center">
+                            <span class="font-sans text-[10px] tracking-[0.15em] uppercase text-testo-soft/50">Nessuna anteprima</span>
+                        </div>
+                    @endif
+                </div>
+                <div class="px-5 py-5 space-y-2">
+                    <x-button :href="route('necrologi.modifica', $necrologioFunerale)" class="w-full">Modifica testo e date</x-button>
+                    <x-button :href="route('necrologi.designer', $necrologioFunerale)" variant="contornata" class="w-full">Componi la card</x-button>
+                </div>
+            </div>
+        @elseif ($necrologioAbilitato)
+            <div class="mt-6">
                 <x-button :href="route('necrologi.nuovo', ['defunto_id' => $defunto->id])">Crea il necrologio</x-button>
-            @endif
-        </div>
+            </div>
+        @endif
     </section>
 
     {{-- 4. ricordino --}}
-    <section class="bg-bianco px-6 py-7 {{ $ricordinoAbilitato ? '' : 'opacity-45 pointer-events-none' }}">
-        <h2 class="font-serif text-xl font-medium">4. Ricordino</h2>
-        <p class="mt-2 font-sans text-[10px] tracking-[0.2em] uppercase {{ $ricordino ? 'text-successo' : 'text-testo-soft' }}">
+    <section class="border border-caffe/15 bg-bianco px-6 py-8 sm:px-10 sm:py-10 {{ $ricordinoAbilitato ? '' : 'opacity-45 pointer-events-none' }}">
+        <h2 class="font-serif text-2xl font-medium">4. Ricordino</h2>
+        <p class="mt-2 font-sans text-[11px] tracking-[0.2em] uppercase {{ $ricordino ? 'text-successo' : 'text-testo-soft' }}">
             {{ $ricordino ? 'Bozza salvata' : 'Disponibile' }}
         </p>
-        <p class="mt-3 font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+        <p class="mt-3 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
             Sempre acquistabile: non deve aspettare il manifesto né il necrologio.
         </p>
 
         @if ($ordinePrincipale)
             @if ($ricordino)
-                <div class="mt-5 border border-caffe/15">
+                <div class="mt-6 max-w-md border border-caffe/15">
                     <div class="aspect-[4/3] border-b border-caffe/15 bg-panna overflow-hidden">
                         @if ($ricordino->anteprima_fronte)
                             <img src="{{ '/storage/'.ltrim($ricordino->anteprima_fronte, '/') }}" alt="" class="h-full w-full object-cover">
@@ -164,12 +184,12 @@
                             </div>
                         @endif
                     </div>
-                    <div class="px-4 py-4">
+                    <div class="px-5 py-5">
                         <x-button :href="route('studio.ricordino')" class="w-full">Riprendi la bozza</x-button>
                     </div>
                 </div>
             @else
-                <div class="mt-5">
+                <div class="mt-6">
                     <x-button :href="route('studio.ricordino')">Apri il Designer</x-button>
                 </div>
             @endif

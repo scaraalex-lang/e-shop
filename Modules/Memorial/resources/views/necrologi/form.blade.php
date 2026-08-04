@@ -40,6 +40,14 @@
             @php
                 $occasioneAttuale = old('occasione', $necrologio->occasione?->value ?? 'trigesimo');
                 $etichettaQuando = ['funerale' => 'Quando è il funerale', 'trigesimo' => 'Quando è il trigesimo', 'anniversario' => 'Quando è la cerimonia'];
+
+                // Per il Funerale questi campi vivono sul defunto (Defunto::cerimonia_at/
+                // chiesa/indirizzo_chiesa), non sul necrologio: è lì che li legge la
+                // pagina pubblica — vedi NecrologiController::update()/store().
+                $ceremoniaDalDefunto = $occasioneAttuale === 'funerale' && $necrologio->defunto;
+                $valoreQuando = $ceremoniaDalDefunto ? $necrologio->defunto->cerimonia_at?->format('Y-m-d\TH:i') : $necrologio->trigesimo_at?->format('Y-m-d\TH:i');
+                $valoreLuogo = $ceremoniaDalDefunto ? $necrologio->defunto->chiesa : $necrologio->trigesimo_luogo;
+                $valoreIndirizzo = $ceremoniaDalDefunto ? $necrologio->defunto->indirizzo_chiesa : $necrologio->trigesimo_indirizzo;
             @endphp
             @if ($necrologio->pubblicato)
                 <p class="font-sans font-light text-[13px] text-testo-soft">
@@ -73,13 +81,13 @@
                 <div>
                     <x-input-label for="trigesimo_at" id="label-trigesimo-at" :value="$etichettaQuando[$occasioneAttuale] ?? $etichettaQuando['trigesimo']" />
                     <x-text-input id="trigesimo_at" name="trigesimo_at" type="datetime-local"
-                        :value="old('trigesimo_at', $necrologio->trigesimo_at?->format('Y-m-d\TH:i'))" />
+                        :value="old('trigesimo_at', $valoreQuando)" />
                     <x-input-error :messages="$errors->get('trigesimo_at')" />
                 </div>
                 <div>
                     <x-input-label for="trigesimo_luogo" value="Dove" />
                     <x-text-input id="trigesimo_luogo" name="trigesimo_luogo" placeholder="Chiesa di San Carlo"
-                        :value="old('trigesimo_luogo', $necrologio->trigesimo_luogo)" />
+                        :value="old('trigesimo_luogo', $valoreLuogo)" />
                     <x-input-error :messages="$errors->get('trigesimo_luogo')" />
                 </div>
             </div>
@@ -87,7 +95,7 @@
             <div>
                 <x-input-label for="trigesimo_indirizzo" value="Indirizzo" />
                 <x-text-input id="trigesimo_indirizzo" name="trigesimo_indirizzo" placeholder="Via Roma 12, Milano"
-                    :value="old('trigesimo_indirizzo', $necrologio->trigesimo_indirizzo)" />
+                    :value="old('trigesimo_indirizzo', $valoreIndirizzo)" />
             </div>
 
             @if ($necrologio->pubblicato)
