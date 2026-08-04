@@ -2012,6 +2012,31 @@ function chiudiImpaginatore() {
   document.getElementById('modal-impaginatore').style.display = 'none';
 }
 
+/**
+ * Ruota un'immagine (data URL) di 90° in senso orario disegnandola su un
+ * canvas offscreen con lati invertiti. Più affidabile del parametro di
+ * rotazione di jsPDF addImage, che ruota intorno all'angolo e richiede
+ * calcoli di compensazione facili da sbagliare: qui il JPEG arriva già
+ * ruotato e si piazza come un'immagine normale, larghezza e altezza
+ * scambiate.
+ */
+function ruotaImmagine90(dataUrl) {
+  return new Promise(function (resolve) {
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = img.height;
+      canvas.height = img.width;
+      var ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(90 * Math.PI / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    };
+    img.src = dataUrl;
+  });
+}
+
 async function generaPDF(formatoPagina) {
   var btn = document.getElementById('btn-genera-pdf');
   btn.textContent = 'Generazione in corso...';
@@ -2028,6 +2053,17 @@ async function generaPDF(formatoPagina) {
   var ricW = currentFormat === '7x10' ? 70 : 60;
   var ricH = currentFormat === '7x10' ? 100 : 90;
   var spazio = 3;
+
+  // Sul foglio A4 i ricordini (sempre verticali) si stampano ruotati di
+  // 90°: orizzontali si dispongono su più righe corte invece di poche
+  // righe alte, e nello stesso foglio ce ne stanno di più. L'A3, più
+  // grande, resta verticale com'era.
+  var ruotaA4 = formatoPagina === 'A4';
+  if (ruotaA4) {
+    imgFronte = await ruotaImmagine90(imgFronte);
+    imgRetro = await ruotaImmagine90(imgRetro);
+    var tmp = ricW; ricW = ricH; ricH = tmp;
+  }
 
   // Calcola quante colonne e righe entrano nel foglio
   var cols = Math.floor(pag.w / (ricW + spazio));
