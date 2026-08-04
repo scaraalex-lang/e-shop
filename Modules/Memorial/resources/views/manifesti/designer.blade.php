@@ -626,8 +626,21 @@ window.onload = function() {
   // Undo/redo + pannello livelli: un'unica registrazione per evento.
   canvas.on('object:added', function() { saveState(); refreshLayers(); });
   canvas.on('object:modified', function() { saveState(); refreshLayers(); });
-  canvas.on('object:removed', function() { saveState(); refreshLayers(); });
+  // Se la foto rimossa aveva una cornice (bordo su maschera ovale/angoli
+  // tondi — vedi sincronizzaCornice), la si toglie con lei: altrimenti
+  // resterebbe orfana sul canvas.
+  canvas.on('object:removed', function(e) {
+    var cornice = e.target && trovaCornice(e.target);
+    if (cornice) canvas.remove(cornice);
+    saveState(); refreshLayers();
+  });
   setTimeout(function(){ saveState(); }, 800);
+
+  // La cornice segue la foto mascherata in tempo reale durante il gesto,
+  // non solo a fine spostamento (object:modified arriverebbe troppo tardi).
+  ['object:moving', 'object:scaling', 'object:rotating'].forEach(function (evento) {
+    canvas.on(evento, function (e) { if (e.target) sincronizzaCornice(e.target); });
+  });
 
   canvas.on('selection:created', updatePropsPanel);
   canvas.on('selection:updated', updatePropsPanel);
@@ -1120,9 +1133,14 @@ function updatePropsPanel() {
   const borderGroup = document.getElementById('border-group');
   if (obj.type === 'image') {
     borderGroup.style.display = 'block';
-    document.getElementById('prop-stroke-width').value = obj.strokeWidth || 0;
-    document.getElementById('prop-stroke-color').value = obj.stroke || '#c8a96e';
-    document.getElementById('prop-stroke-hex').value = obj.stroke || '#c8a96e';
+    // Su una foto mascherata lo stroke vero vive sulla cornice a parte
+    // (vedi aggiornaCornice), non su obj.strokeWidth/stroke — altrimenti il
+    // pannello mostrerebbe sempre 0 anche a bordo visibile.
+    const cornice = trovaCornice(obj);
+    const strokeColore = cornice ? cornice.stroke : (obj.stroke || '#c8a96e');
+    document.getElementById('prop-stroke-width').value = cornice ? cornice.strokeWidth : (obj.strokeWidth || 0);
+    document.getElementById('prop-stroke-color').value = strokeColore;
+    document.getElementById('prop-stroke-hex').value = strokeColore;
   } else {
     borderGroup.style.display = 'none';
   }
@@ -1360,13 +1378,93 @@ function insertSantoFromGallery(url) {
 }
 
 // ── BORDO / MASCHERA FOTO ──
+// Un fabric.Image mascherato (clipPath ovale o ad angoli tondi) ritaglia via
+// anche il proprio stroke insieme al resto — uno stroke impostato
+// direttamente sull'immagine non si vede più. La "cornice" è quindi una
+// forma a parte (stessa geometria del clipPath, ma solo stroke/niente
+// fill), non selezionabile, tenuta sincronizzata con posizione/scala/
+// rotazione della foto ad ogni movimento — vedi sincronizzaCornice più
+// sotto e i listener object:moving/scaling/rotating registrati nel setup.
+function formaMaschera(kind, w, h, extra) {
+  if (kind === 'oval') {
+    return new fabric.Ellipse(Object.assign({ rx: w/2, ry: h/2, originX: 'center', originY: 'center' }, extra || {}));
+  }
+  if (kind === 'round') {
+    var r = parseInt((document.getElementById('prop-mask-radius')||{}).value || 30);
+    return new fabric.Rect(Object.assign({ width: w, height: h, rx: r, ry: r, originX: 'center', originY: 'center' }, extra || {}));
+  }
+  return null;
+}
+
+// Il legame foto↔cornice è un id condiviso (__fotoId / __corniceDiId), non
+// un riferimento diretto all'oggetto: un riferimento si romperebbe al primo
+// undo/redo o riapertura del manifesto salvato, perché quei percorsi
+// ricostruiscono gli oggetti Fabric da JSON (loadFromJSON), non riusano le
+// istanze in memoria. Con l'id (incluso nei toJSON([...]) di salvataggio,
+// undo/redo e — ripulito — anche nei template) trovaCornice() ritrova
+// sempre la cornice giusta, qualunque sia la sua istanza attuale.
+function generaIdCornice() {
+  return 'ft_' + Math.random().toString(36).slice(2, 9);
+}
+
+function trovaCornice(obj) {
+  if (!obj || !obj.__fotoId) return null;
+  return canvas.getObjects().find(function (o) { return o.isCorniceMaschera && o.__corniceDiId === obj.__fotoId; }) || null;
+}
+
+function sincronizzaCornice(obj) {
+  var cornice = trovaCornice(obj);
+  if (!cornice) return;
+  cornice.set({
+    left: obj.left, top: obj.top,
+    scaleX: obj.scaleX, scaleY: obj.scaleY,
+    angle: obj.angle,
+    originX: obj.originX, originY: obj.originY,
+  });
+  cornice.setCoords();
+}
+
+function rimuoviCornice(obj) {
+  var cornice = trovaCornice(obj);
+  if (cornice) canvas.remove(cornice);
+}
+
+/** Ricrea la cornice sulla foto selezionata secondo spessore/colore correnti del pannello, o la toglie se lo spessore è 0. */
+function aggiornaCornice(obj) {
+  if (!obj || obj.type !== 'image' || !obj.clipPath) { rimuoviCornice(obj); return; }
+
+  var sw = parseInt(document.getElementById('prop-stroke-width').value) || 0;
+  if (sw <= 0) { rimuoviCornice(obj); return; }
+
+  var sc = document.getElementById('prop-stroke-color').value;
+  var kind = obj.clipPath.type === 'ellipse' ? 'oval' : 'round';
+
+  rimuoviCornice(obj);
+  obj.__fotoId = obj.__fotoId || generaIdCornice();
+  var cornice = formaMaschera(kind, obj.width, obj.height, {
+    fill: null, stroke: sc, strokeWidth: sw,
+    selectable: false, evented: false,
+    isCorniceMaschera: true,
+    __corniceDiId: obj.__fotoId,
+  });
+  canvas.add(cornice);
+  sincronizzaCornice(obj);
+  canvas.bringToFront(cornice);
+}
+
 function updateBorder() {
   const obj = canvas.getActiveObject();
   if (!obj) return;
   const sw = parseInt(document.getElementById('prop-stroke-width').value) || 0;
   const sc = document.getElementById('prop-stroke-color').value;
-  obj.set({ strokeWidth: sw, stroke: sw > 0 ? sc : null });
   document.getElementById('prop-stroke-hex').value = sc;
+
+  if (obj.type === 'image' && obj.clipPath) {
+    // Mascherata: lo stroke diretto sparirebbe ritagliato, si aggiorna la cornice a parte.
+    aggiornaCornice(obj);
+  } else {
+    obj.set({ strokeWidth: sw, stroke: sw > 0 ? sc : null });
+  }
   canvas.renderAll();
 }
 
@@ -1386,17 +1484,11 @@ function setImageMask(kind) {
   if (kind === 'none') {
     obj.clipPath = null;
     if (radiusRow) radiusRow.style.display = 'none';
-  } else if (kind === 'oval') {
-    obj.clipPath = new fabric.Ellipse({
-      rx: w/2, ry: h/2, originX: 'center', originY: 'center'
-    });
-    if (radiusRow) radiusRow.style.display = 'none';
-  } else if (kind === 'round') {
-    var r = parseInt((document.getElementById('prop-mask-radius')||{}).value || 30);
-    obj.clipPath = new fabric.Rect({
-      width: w, height: h, rx: r, ry: r, originX: 'center', originY: 'center'
-    });
-    if (radiusRow) radiusRow.style.display = 'block';
+    rimuoviCornice(obj);
+  } else {
+    obj.clipPath = formaMaschera(kind, w, h);
+    if (radiusRow) radiusRow.style.display = (kind === 'round') ? 'block' : 'none';
+    aggiornaCornice(obj);
   }
   obj.dirty = true;
   canvas.renderAll();
@@ -1407,6 +1499,8 @@ function updateMaskRadius() {
   var r = parseInt(document.getElementById('prop-mask-radius').value);
   obj.clipPath.set({ rx: r, ry: r });
   obj.dirty = true;
+  var cornice = trovaCornice(obj);
+  if (cornice) { cornice.set({ rx: r, ry: r }); }
   canvas.renderAll();
 }
 function setStrokePreset(size) {
@@ -1603,7 +1697,7 @@ async function salvaManifesto() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        canvas: JSON.stringify(canvas.toJSON(['customType', 'customBlockType'])),
+        canvas: JSON.stringify(canvas.toJSON(['customType', 'customBlockType', '__fotoId', 'isCorniceMaschera', '__corniceDiId'])),
         formato: currentFormat,
         pdf: pdfDataUrl,
         web: web,
@@ -1642,8 +1736,11 @@ let templateCorrente = null;
  * chi applica il template lo sostituisce col proprio bottone "QR Necrologio".
  */
 function canvasTemplateJSON(c) {
-  const data = JSON.parse(JSON.stringify(c.toJSON(['customType', 'customBlockType'])));
-  data.objects = (data.objects || []).filter(o => o.customType !== 'photo');
+  const data = JSON.parse(JSON.stringify(c.toJSON(['customType', 'customBlockType', 'isCorniceMaschera'])));
+  // La cornice segue le dimensioni della foto specifica che l'ha generata
+  // (vedi aggiornaCornice): esclusa insieme a lei, altrimenti il template
+  // porterebbe un bordo vuoto senza immagine dentro.
+  data.objects = (data.objects || []).filter(o => o.customType !== 'photo' && !o.isCorniceMaschera);
   data.objects.forEach(o => {
     if (BLOCCHI_PERSONALI.indexOf(o.customBlockType) !== -1) {
       o.text = testoPersonale(o.customBlockType, null);
@@ -1861,7 +1958,9 @@ function layerLabel(o, idx) {
 function refreshLayers() {
   var box = document.getElementById('layers-list');
   if (!box) return;
-  var objs = window.canvas.getObjects().filter(function(o){ return o.customType !== 'background'; });
+  // La cornice di una foto mascherata (vedi aggiornaCornice) è un dettaglio
+  // della foto stessa, non un elemento a sé da gestire nell'elenco livelli.
+  var objs = window.canvas.getObjects().filter(function(o){ return o.customType !== 'background' && !o.isCorniceMaschera; });
   if (!objs.length) { box.innerHTML = '<div class="layers-empty">Nessun elemento nel manifesto</div>'; return; }
   var active = window.canvas.getActiveObjects();
   var html = '';
@@ -1915,7 +2014,7 @@ function saveState() {
   if (isUndoRedo) return;
   clearTimeout(undoTimer);
   undoTimer = setTimeout(function() {
-    var state = JSON.stringify(window.canvas.toJSON(['id','selectable','evented','excludeFromExport']));
+    var state = JSON.stringify(window.canvas.toJSON(['id','selectable','evented','excludeFromExport','__fotoId','isCorniceMaschera','__corniceDiId']));
     if (undoStack.length === 0 || undoStack[undoStack.length-1] !== state) {
       undoStack.push(state);
       if (undoStack.length > 25) undoStack.shift();
