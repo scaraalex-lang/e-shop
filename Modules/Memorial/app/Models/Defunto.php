@@ -68,6 +68,24 @@ class Defunto extends Model
     }
 
     /**
+     * Età al momento della morte, calcolata da nascita e decesso — non c'è
+     * (e non è mai stato) un campo del form dove digitarla a mano, quindi la
+     * colonna `anni` restava sempre NULL per ogni defunto reale (il blocco
+     * "Età" del ricordino/manifesto designer mostrava sempre il segnaposto
+     * "di anni ___"). La colonna resta come riserva se un giorno servisse
+     * un valore diverso da quello calcolato (es. età dichiarata senza date
+     * precise), ma il calcolo dalle date vince quando entrambe ci sono.
+     */
+    public function eta(): ?int
+    {
+        if ($this->data_nascita && $this->data_morte) {
+            return $this->data_nascita->diffInYears($this->data_morte);
+        }
+
+        return $this->anni;
+    }
+
+    /**
      * "È venuto/a a mancare", coniugato per genere — per la dicitura del
      * necrologio quando l'occasione è il funerale. Senza `sesso` (defunti
      * registrati prima che il campo esistesse) resta maschile: una scelta
@@ -104,7 +122,7 @@ class Defunto extends Model
         return [
             'nome'         => $this->nome,
             'cognome'      => $this->cognome,
-            'anni'         => $this->anni,
+            'anni'         => $this->eta(),
             'data_nascita' => optional($this->data_nascita)->format('d/m/Y'),
             'data_morte'   => optional($this->data_morte)->format('d/m/Y'),
             'frase'        => $this->frase,

@@ -969,6 +969,17 @@ function addBlock(type) {
       break;
   }
 
+  // Se il blocco selezionato è già dello stesso tipo, si aggiorna il testo
+  // sul posto — posizione, font, dimensione, colore restano quelli che
+  // l'operatore ha già impostato — invece di aggiungerne un altro sopra
+  // con la formattazione di default.
+  var selezionato = canvas.getActiveObject();
+  if (selezionato && selezionato.customBlockType === type) {
+    selezionato.set('text', text);
+    canvas.renderAll();
+    return;
+  }
+
   obj = new fabric.Textbox(text, {
     left: 50,
     top: 100 + canvas.getObjects().length * 30,
@@ -991,10 +1002,10 @@ function addBlock(type) {
 /**
  * Come addBlock('funerale'), ma il testo lo compone GeneratoreTestoFunerale
  * lato server (formato editoriale a 4 righe, oggi/domani calcolati in PHP,
- * l'AI solo per la resa linguistica se è configurata una chiave). Arriva
- * come un blocco normale, modificabile e rigenerabile quante volte serve:
- * ogni click aggiunge un nuovo blocco, quello vecchio va tolto a mano se
- * non serve più — stesso comportamento di tutti gli altri blocchi qui sopra.
+ * l'AI solo per la resa linguistica se è configurata una chiave). Se il
+ * blocco "Info funerale" è già selezionato sul canvas, rigenerando si
+ * aggiorna solo il testo mantenendo posizione e formattazione — altrimenti
+ * se ne aggiunge uno nuovo, stesso comportamento di addBlock().
  */
 async function generaTestoFuneraleAI() {
   var btn = document.getElementById('btn-testo-funerale-ai');
@@ -1002,10 +1013,22 @@ async function generaTestoFuneraleAI() {
   btn.disabled = true;
   btn.innerHTML = '<span class="block-icon">⏳</span>Generazione...';
 
+  // Catturato prima della fetch, non dopo: durante l'attesa la selezione sul
+  // canvas potrebbe cambiare, ma l'intenzione dell'operatore era quella al
+  // momento del click.
+  var selezionato = canvas.getActiveObject();
+
   try {
     var res = await fetch('/admin/api/manifesti/{{ $manifesto->id }}/testo-funerale', { method: 'POST' });
     if (!res.ok) throw new Error('risposta ' + res.status);
     var dati = await res.json();
+
+    if (selezionato && selezionato.customBlockType === 'funerale') {
+      selezionato.set('text', dati.testo);
+      canvas.renderAll();
+      toastMsg('✓ Testo aggiornato');
+      return;
+    }
 
     var obj = new fabric.Textbox(dati.testo, {
       left: 50,

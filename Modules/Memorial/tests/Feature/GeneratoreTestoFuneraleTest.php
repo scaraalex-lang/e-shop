@@ -46,7 +46,10 @@ class GeneratoreTestoFuneraleTest extends TestCase
             'cerimonia_at' => Carbon::now()->addWeeks(2)->setTime(15, 0),
             'indirizzo_cerimonia' => 'Via Garibaldi nr. 3',
             'chiesa' => 'Immacolata Concezione',
-            'cimitero' => 'Cimitero di Boscoreale, Via Cimitero 5',
+            'indirizzo_chiesa' => 'Via Chiesa 2',
+            // Con "Italia" in coda apposta: è quello che Google Places
+            // restituisce davvero (formatted_address), va tolto nel testo.
+            'cimitero' => 'Cimitero di Boscoreale, Via Cimitero 5, Boscoreale, Italia',
             'citta' => 'Boscoreale',
             'provincia' => 'na',
         ], $sovrascrivi));
@@ -64,8 +67,9 @@ class GeneratoreTestoFuneraleTest extends TestCase
         $this->assertCount(4, $righe);
         $this->assertStringContainsString('alle ore 15:00', $righe[0]);
         $this->assertSame('Partenza da Via Garibaldi nr. 3, Boscoreale, NA', $righe[1]);
-        $this->assertSame('Immacolata Concezione, Boscoreale, NA', $righe[2]);
-        $this->assertSame('Cimitero, Boscoreale, NA', $righe[3]);
+        $this->assertSame('Immacolata Concezione, Via Chiesa 2, Boscoreale, NA', $righe[2]);
+        $this->assertSame('Cimitero di Boscoreale, Via Cimitero 5, Boscoreale', $righe[3]);
+        $this->assertStringNotContainsString('Italia', $testo);
     }
 
     public function test_oggi_e_domani_si_calcolano_dalla_data_non_dalla_formattazione_generica(): void
@@ -81,9 +85,12 @@ class GeneratoreTestoFuneraleTest extends TestCase
         $this->assertStringStartsWith('I funerali si svolgeranno il '.Carbon::now()->addWeek()->day, $servizio->generaPerDefunto($lontano));
     }
 
-    public function test_senza_chiesa_ne_citta_il_template_resta_a_4_righe_senza_virgole_vuote(): void
+    public function test_senza_chiesa_ne_cimitero_ne_citta_il_template_resta_a_4_righe_senza_virgole_vuote(): void
     {
-        $defunto = $this->defuntoConCerimonia(['chiesa' => null, 'citta' => null, 'provincia' => null]);
+        $defunto = $this->defuntoConCerimonia([
+            'chiesa' => null, 'indirizzo_chiesa' => null, 'cimitero' => null,
+            'citta' => null, 'provincia' => null,
+        ]);
 
         $testo = app(GeneratoreTestoFunerale::class)->generaPerDefunto($defunto);
         $righe = explode("\n", $testo);
@@ -92,6 +99,32 @@ class GeneratoreTestoFuneraleTest extends TestCase
         $this->assertSame('Parrocchia', $righe[2]);
         $this->assertSame('Cimitero', $righe[3]);
         $this->assertStringNotContainsString(',,', $testo);
+    }
+
+    public function test_indirizzo_chiesa_compare_solo_se_presente(): void
+    {
+        $defunto = $this->defuntoConCerimonia(['indirizzo_chiesa' => null]);
+
+        $righe = explode("\n", app(GeneratoreTestoFunerale::class)->generaPerDefunto($defunto));
+
+        $this->assertSame('Immacolata Concezione, Boscoreale, NA', $righe[2]);
+    }
+
+    /**
+     * Un indirizzo salvato per intero (prima del fix su Google Places) può
+     * già contenere la città al suo interno: la riga non deve ripeterla una
+     * seconda volta in fondo, altrimenti si legge "Boscoreale, Via X,
+     * Boscoreale, NA" invece di una frase compiuta.
+     */
+    public function test_non_ripete_la_citta_se_e_gia_dentro_l_indirizzo(): void
+    {
+        $defunto = $this->defuntoConCerimonia([
+            'indirizzo_cerimonia' => 'Via Roma 1, 80041 Boscoreale',
+        ]);
+
+        $righe = explode("\n", app(GeneratoreTestoFunerale::class)->generaPerDefunto($defunto));
+
+        $this->assertSame('Partenza da Via Roma 1, 80041 Boscoreale', $righe[1]);
     }
 
     // ---- con OpenAI configurata -----------------------------------------------
@@ -129,7 +162,8 @@ class GeneratoreTestoFuneraleTest extends TestCase
 
         $testo = app(GeneratoreTestoFunerale::class)->generaPerDefunto($this->defuntoConCerimonia());
 
-        $this->assertSame('Cimitero, Boscoreale, NA', explode("\n", $testo)[3]);
+        $this->assertSame('Cimitero di Boscoreale, Via Cimitero 5, Boscoreale', explode("\n", $testo)[3]);
+        $this->assertStringNotContainsString('Italia', $testo);
     }
 
     // ---- endpoint nel designer -------------------------------------------------
@@ -175,7 +209,8 @@ class GeneratoreTestoFuneraleTest extends TestCase
             ->postJson("/admin/api/manifesti/{$manifesto->id}/testo-funerale");
 
         $risposta->assertOk();
-        $this->assertStringContainsString('Cimitero, Boscoreale, NA', $risposta->json('testo'));
+        $this->assertStringContainsString('Cimitero di Boscoreale', $risposta->json('testo'));
+        $this->assertStringNotContainsString('Italia', $risposta->json('testo'));
     }
 
     public function test_il_manifesto_di_un_altro_non_si_tocca(): void

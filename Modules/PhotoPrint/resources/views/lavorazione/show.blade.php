@@ -262,46 +262,56 @@
                         return via ? (civico ? via + ', ' + civico : via) : null;
                     }
 
-                    // Indirizzo della partenza: qui la via breve conta, è quella che
-                    // finisce nel testo del manifesto ("Partenza da Via Roma 1,
-                    // Boscoreale, NA").
-                    var elIndirizzoCerimonia = document.getElementById('indirizzo_cerimonia');
-                    if (elIndirizzoCerimonia) {
-                        var autocompletePartenza = new google.maps.places.Autocomplete(elIndirizzoCerimonia, opzioni);
-                        autocompletePartenza.addListener('place_changed', function () {
-                            var luogo = autocompletePartenza.getPlace();
-                            var breve = indirizzoBreve(luogo.address_components);
-                            if (breve) elIndirizzoCerimonia.value = breve;
-                            riempiCittaProvincia(luogo.address_components);
-                        });
-                    }
-
-                    // "Indirizzo chiesa" e "Cimitero" restano con l'indirizzo completo:
-                    // non finiscono nel testo generato (la chiesa ci va solo col nome,
-                    // il cimitero resta generico — vedi GeneratoreTestoFunerale), e per
-                    // il cimitero molti luoghi su Google Places non hanno comunque una
-                    // via propria, solo la città: lo split lascerebbe il campo vuoto.
-                    ['indirizzo_chiesa', 'cimitero'].forEach(function (id) {
+                    // Indirizzo di partenza e indirizzo chiesa: qui conta la via breve,
+                    // sono entrambi nel testo del manifesto ("Partenza da Via Roma 1,
+                    // Boscoreale, NA" / "Parrocchia X, Via Chiesa 2, Boscoreale, NA") —
+                    // vedi GeneratoreTestoFunerale.
+                    ['indirizzo_cerimonia', 'indirizzo_chiesa'].forEach(function (id) {
                         var el = document.getElementById(id);
                         if (el) {
                             var autocomplete = new google.maps.places.Autocomplete(el, opzioni);
                             autocomplete.addListener('place_changed', function () {
-                                riempiCittaProvincia(autocomplete.getPlace().address_components);
+                                var luogo = autocomplete.getPlace();
+                                var breve = indirizzoBreve(luogo.address_components);
+                                if (breve) el.value = breve;
+                                riempiCittaProvincia(luogo.address_components);
                             });
                         }
                     });
 
+                    // "Cimitero": molti luoghi su Google Places non hanno una via
+                    // propria, solo la città — qui si preferisce il nome del posto
+                    // (es. "Cimitero di Boscoreale"), con via e civico aggiunti se ci
+                    // sono; solo se manca anche il nome si tiene l'indirizzo completo
+                    // (ripulito da "Italia" comunque, sia qui che lato server).
+                    var elCimitero = document.getElementById('cimitero');
+                    if (elCimitero) {
+                        var autocompleteCimitero = new google.maps.places.Autocomplete(elCimitero, opzioni);
+                        autocompleteCimitero.addListener('place_changed', function () {
+                            var luogo = autocompleteCimitero.getPlace();
+                            var breve = indirizzoBreve(luogo.address_components);
+                            if (luogo.name) {
+                                elCimitero.value = breve ? luogo.name + ', ' + breve : luogo.name;
+                            } else if (breve) {
+                                elCimitero.value = breve;
+                            }
+                            riempiCittaProvincia(luogo.address_components);
+                        });
+                    }
+
                     // "Chiesa": si cerca il nome del luogo, non il suo indirizzo — che
-                    // si scrive da solo nel campo accanto, così non si ridigita lo
-                    // stesso posto due volte.
+                    // si scrive da solo nel campo accanto (via breve, non l'indirizzo
+                    // completo — vedi indirizzoBreve), così non si ridigita lo stesso
+                    // posto due volte.
                     var elChiesa = document.getElementById('chiesa');
-                    var elIndirizzoChiesa = document.getElementById('indirizzo_chiesa');
-                    if (elChiesa && elIndirizzoChiesa) {
+                    var elIndirizzoChiesa2 = document.getElementById('indirizzo_chiesa');
+                    if (elChiesa && elIndirizzoChiesa2) {
                         var autocompleteChiesa = new google.maps.places.Autocomplete(elChiesa, opzioni);
                         autocompleteChiesa.addListener('place_changed', function () {
                             var luogo = autocompleteChiesa.getPlace();
                             if (luogo.name) elChiesa.value = luogo.name;
-                            if (luogo.formatted_address) elIndirizzoChiesa.value = luogo.formatted_address;
+                            var breve = indirizzoBreve(luogo.address_components);
+                            if (breve) elIndirizzoChiesa2.value = breve;
                             riempiCittaProvincia(luogo.address_components);
                         });
                     }
