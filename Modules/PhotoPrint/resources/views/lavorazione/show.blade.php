@@ -238,6 +238,9 @@
     </section>
 
     {{-- ============ 2. la foto ============ --}}
+    {{-- Solo B2C: per le agenzie questa sezione duplica il riquadro "1. Foto"
+         della Scheda del defunto, che per loro è il percorso canalizzato. --}}
+    @if (! $ordine->agenzia_id)
     <section class="bg-bianco px-7 py-8 {{ $defunto ? '' : 'opacity-45 pointer-events-none' }}">
         <header class="flex flex-wrap items-baseline justify-between gap-3">
             <h2 class="font-serif text-2xl font-medium">La fotografia</h2>
@@ -269,9 +272,12 @@
             </x-button>
         </div>
     </section>
+    @endif
 
     {{-- ============ 3. il ricordino ============ --}}
-    @if ($ordine->designerAbilitato('ricordini'))
+    {{-- Solo B2C: per le agenzie questa scorciatoia scavalcherebbe la
+         canalizzazione, che per loro passa dalla Scheda del defunto qui sotto. --}}
+    @if ($ordine->designerAbilitato('ricordini') && ! $ordine->agenzia_id)
     <section class="bg-bianco px-7 py-8 {{ $foto->isNotEmpty() ? '' : 'opacity-45 pointer-events-none' }}">
         <header class="flex flex-wrap items-baseline justify-between gap-3">
             <h2 class="font-serif text-2xl font-medium">Il ricordino</h2>
@@ -326,27 +332,16 @@
     </section>
     @endif
 
-    {{-- ============ necrologio e manifesto (solo agenzie) ============ --}}
-    @if ($ordine->agenzia_id && ($ordine->designerAbilitato('necrologi') || $ordine->designerAbilitato('manifesti')))
-        <section class="bg-bianco px-7 py-8 {{ $foto->isNotEmpty() ? '' : 'opacity-45 pointer-events-none' }}">
-            <h2 class="font-serif text-2xl font-medium">Necrologio e manifesto</h2>
+    {{-- ============ scheda defunto (solo agenzie) ============ --}}
+    @if ($ordine->agenzia_id && $defunto)
+        <section class="bg-bianco px-7 py-8">
+            <h2 class="font-serif text-2xl font-medium">Scheda del defunto</h2>
             <p class="mt-2 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
-                Strumenti dell'agenzia: la card social e il manifesto funebre, dalla stessa fotografia.
+                Il percorso canalizzato: foto, manifesto, necrologio e ricordino da un solo posto.
             </p>
 
-            <div class="mt-6 flex flex-wrap gap-4">
-                @if ($ordine->designerAbilitato('necrologi'))
-                    <form method="POST" action="{{ route('lavorazione.necrologio', $ordine) }}">
-                        @csrf
-                        <x-button type="submit">Apri il Necrologio</x-button>
-                    </form>
-                @endif
-                @if ($ordine->designerAbilitato('manifesti'))
-                    <form method="POST" action="{{ route('lavorazione.manifesto', $ordine) }}">
-                        @csrf
-                        <x-button type="submit">Apri il Manifesto</x-button>
-                    </form>
-                @endif
+            <div class="mt-6">
+                <x-button :href="route('defunti.show', $defunto)">Vai alla scheda del defunto</x-button>
             </div>
         </section>
     @endif

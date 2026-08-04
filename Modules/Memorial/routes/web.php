@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Memorial\Http\Controllers\DefuntiController;
+use Modules\Memorial\Http\Controllers\ManifestiController;
 use Modules\Memorial\Http\Controllers\MemorialController;
 use Modules\Memorial\Http\Controllers\NecrologiController;
 use Modules\Memorial\Http\Controllers\NecrologioPubblicoController;
@@ -31,14 +33,35 @@ Route::middleware('auth')->prefix('account/necrologi')->name('necrologi.')->grou
     Route::post('{necrologio}/embed', [NecrologiController::class, 'acquistaEmbed'])->name('embed');
 
     Route::get('{necrologio}/designer', [NecrologiController::class, 'designer'])->name('designer');
-    Route::get('{necrologio}/manifesto', [NecrologiController::class, 'manifestoDesigner'])->name('manifesto');
 
     Route::delete('{necrologio}/messaggi/{messaggio}', [NecrologiController::class, 'eliminaMessaggio'])->name('messaggi.elimina');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Chiamate JS del card designer
+| Scheda Defunto: Foto → Manifesto → Necrologio, canalizzati
+|--------------------------------------------------------------------------
+| I manifesti sono collegati al defunto, non a un necrologio: un defunto può
+| averne più di uno (funerale, partecipazioni, trigesimo...). Il necrologio
+| ne mostra solo la miniatura del principale (vedi form.blade.php), il resto
+| si gestisce da qui.
+*/
+Route::middleware('auth')->prefix('account/defunti')->name('defunti.')->group(function () {
+    Route::get('{defunto}', [DefuntiController::class, 'show'])->name('show');
+    Route::post('{defunto}/manifesti', [ManifestiController::class, 'store'])->name('manifesti.store');
+    Route::post('{defunto}/manifesti/carica', [ManifestiController::class, 'carica'])->name('manifesti.carica');
+});
+
+Route::middleware('auth')->prefix('account/manifesti')->name('manifesti.')->group(function () {
+    Route::get('{manifesto}/designer', [ManifestiController::class, 'designer'])->name('designer');
+    Route::post('{manifesto}/duplica', [ManifestiController::class, 'duplica'])->name('duplica');
+    Route::post('{manifesto}/principale', [ManifestiController::class, 'impostaPrincipale'])->name('principale');
+    Route::delete('{manifesto}', [ManifestiController::class, 'destroy'])->name('destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Chiamate JS del card designer e del designer manifesti
 |--------------------------------------------------------------------------
 | Sotto /admin/api/ per la stessa ragione degli editor di PhotoPrint: è il
 | prefisso che le pagine JSON del sistema (401 in JSON, CSRF verificato)
@@ -59,7 +82,7 @@ Route::middleware('auth')->prefix('admin/api')->group(function () {
     Route::post('manifesto-templates', [NecrologiController::class, 'manifestoTemplatesStore']);
     Route::put('manifesto-templates/{template}', [NecrologiController::class, 'manifestoTemplatesUpdate']);
     Route::delete('manifesto-templates/{template}', [NecrologiController::class, 'manifestoTemplatesDestroy']);
-    Route::post('necrologi/{necrologio}/salva-manifesto', [NecrologiController::class, 'salvaManifesto']);
+    Route::post('manifesti/{manifesto}/salva', [ManifestiController::class, 'salva']);
 
     // Chiamati anche dal Ricordino Designer (Modules/PhotoPrint): lì "pratica"
     // è il defunto (PhotoPrintController::ricordinoDesigner passa

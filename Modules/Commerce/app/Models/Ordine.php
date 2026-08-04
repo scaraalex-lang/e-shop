@@ -41,6 +41,7 @@ class Ordine extends Model
         'spedizione' => 'integer',
         'totale' => 'integer',
         'richiede_lavorazione' => 'boolean',
+        'foto_bloccata' => 'boolean',
         'numero_anniversario' => 'integer',
     ];
 
@@ -214,6 +215,15 @@ class Ordine extends Model
         return $this->richiede_lavorazione
             && $this->aperto()
             && $this->stato !== StatoOrdine::Nuovo;
+    }
+
+    /**
+     * Una volta confermata la foto principale della pratica, il Foto Manager
+     * si blocca (sola visualizzazione): vedi WizardApiController.
+     */
+    public function fotoBloccata(): bool
+    {
+        return (bool) $this->foto_bloccata;
     }
 
     public function registraPagamento(string $riferimento): void

@@ -53,8 +53,6 @@ Route::middleware('auth')->prefix('account/ordini/{ordine}')->group(function () 
     Route::get('lavorazione', [LavorazioneController::class, 'show'])->name('lavorazione');
     Route::post('lavorazione/defunto', [LavorazioneController::class, 'salvaDefunto'])->name('lavorazione.defunto');
     Route::post('lavorazione/approva', [LavorazioneController::class, 'approva'])->name('lavorazione.approva');
-    Route::post('lavorazione/necrologio', [LavorazioneController::class, 'apriNecrologio'])->name('lavorazione.necrologio');
-    Route::post('lavorazione/manifesto', [LavorazioneController::class, 'apriManifesto'])->name('lavorazione.manifesto');
 });
 
 /*

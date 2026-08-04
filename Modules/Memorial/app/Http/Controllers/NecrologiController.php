@@ -17,6 +17,7 @@ use Modules\Commerce\Models\Agenzia;
 use Modules\Commerce\Models\MovimentoCredito;
 use Modules\Commerce\Models\ServizioEditor;
 use Modules\Memorial\Models\Defunto;
+use Modules\Memorial\Models\Manifesto;
 use Modules\Memorial\Models\ManifestoTemplate;
 use Modules\Memorial\Models\MessaggioCordoglio;
 use Modules\Memorial\Models\Necrologio;
@@ -63,6 +64,15 @@ class NecrologiController extends Controller
 
         $defunto = Defunto::findOrFail($dati['defunto_id']);
 
+        // Terzo passo della catena canalizzata (Foto → Manifesto → Necrologio):
+        // il necrologio del funerale non si crea senza almeno un manifesto già
+        // composto. Trigesimo/anniversario restano extra, non bloccanti.
+        if ($dati['occasione'] === 'funerale' && ! Manifesto::where('defunto_id', $defunto->id)->exists()) {
+            return redirect()
+                ->route('defunti.show', $defunto)
+                ->with('stato', 'Prima crea il manifesto dalla scheda del defunto.');
+        }
+
         $necrologio = Necrologio::create([
             'defunto_id' => $defunto->id,
             'agenzia_id' => $agenzia->id,
@@ -76,8 +86,6 @@ class NecrologiController extends Controller
             'og_image' => $this->immaginePredefinita($defunto),
         ]);
 
-        $this->allegaManifesto($request, $necrologio);
-
         return redirect()
             ->route('necrologi.modifica', $necrologio)
             ->with('stato', 'Necrologio creato. Prima di pubblicarlo serve il consenso della famiglia.');
@@ -88,6 +96,11 @@ class NecrologiController extends Controller
         $this->soloSuo($request, $necrologio);
 
         $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
+        // select() ristretta: stesso motivo di DefuntiController::show(),
+        // vedi bug-select-star-sort-memory (colonna 'canvas' JSON grande).
+        $manifesti = Manifesto::where('defunto_id', $necrologio->defunto_id)
+            ->select(['id', 'defunto_id', 'principale', 'web'])
+            ->orderByDesc('principale')->get();
 
         return view('memorial::necrologi.form', [
             'necrologio' => $necrologio->load(['defunto', 'messaggiCordoglio']),
@@ -96,12 +109,36 @@ class NecrologiController extends Controller
             'servizioEmbed' => ServizioEditor::where('codice', 'embed')->first(),
             'creditiSaldo' => $agenzia->creditiSaldo(),
             'embedTermineMax' => Carbon::now()->addMonths(Necrologio::EMBED_TERMINE_MESI_MASSIMI)->format('Y-m-d'),
+            'manifestoPrincipale' => $manifesti->firstWhere('principale', true),
+            'manifestiCount' => $manifesti->count(),
         ]);
     }
 
+    /**
+     * Una volta pubblicato, il necrologio del funerale si blocca nella
+     * struttura: i programmi della cerimonia cambiano spesso e la pagina
+     * pubblica deve poterli riflettere in tempo reale, ma testo/card/manifesto
+     * non si toccano più — evita che un annuncio già condiviso su WhatsApp
+     * cambi sotto agli occhi di chi lo ha già ricevuto.
+     */
     public function update(Request $request, Necrologio $necrologio): RedirectResponse
     {
         $this->soloSuo($request, $necrologio);
+
+        if ($necrologio->pubblicato) {
+            $dati = $request->validate([
+                'trigesimo_at' => ['nullable', 'date'],
+                'trigesimo_luogo' => ['nullable', 'string', 'max:150'],
+                'trigesimo_indirizzo' => ['nullable', 'string', 'max:255'],
+            ]);
+
+            $necrologio->update($dati);
+
+            return redirect()
+                ->route('necrologi.modifica', $necrologio)
+                ->with('stato', 'Orario e luogo aggiornati.');
+        }
+
         $dati = $this->valida($request, $necrologio);
 
         $necrologio->update([
@@ -112,8 +149,6 @@ class NecrologiController extends Controller
             'trigesimo_indirizzo' => $dati['trigesimo_indirizzo'] ?? null,
             'testo' => $dati['testo'] ?? null,
         ]);
-
-        $this->allegaManifesto($request, $necrologio);
 
         return redirect()
             ->route('necrologi.modifica', $necrologio)
@@ -275,6 +310,7 @@ class NecrologiController extends Controller
     public function designer(Request $request, Necrologio $necrologio): View
     {
         $this->soloSuo($request, $necrologio);
+        abort_if($necrologio->pubblicato, 403, 'Il necrologio è pubblicato: la card non si modifica più.');
         $necrologio->load('defunto');
 
         $fotoPrincipale = $this->immaginePredefinita($necrologio->defunto);
@@ -342,6 +378,7 @@ class NecrologiController extends Controller
     public function salvaCard(Request $request, Necrologio $necrologio): JsonResponse
     {
         $this->soloSuo($request, $necrologio);
+        abort_if($necrologio->pubblicato, 403, 'Il necrologio è pubblicato: la card non si modifica più.');
 
         $dati = $request->validate([
             'image_data' => ['required', 'string'],
@@ -375,39 +412,6 @@ class NecrologiController extends Controller
         }
 
         return response()->json(['success' => true, 'url' => '/storage/'.$path]);
-    }
-
-    /**
-     * Il designer manifesti: canvas Fabric per comporre il manifesto
-     * funebre. Il QR punta al necrologio ed è generato in locale — mai un
-     * servizio esterno a cui mandare l'indirizzo di un defunto a ogni
-     * apertura (era la terza violazione GDPR della sorgente originale).
-     *
-     * Riparte dallo stato salvato (`manifesto_canvas`) se c'è già uno,
-     * altrimenti da un canvas vuoto: qui, a differenza del Ricordino
-     * Designer, non c'è un banner di consenso — comporre il manifesto non
-     * tocca il consenso sull'uso dei dati per la pubblicazione, quello
-     * resta il gate separato di `consenso()`/`pubblica()`.
-     */
-    public function manifestoDesigner(Request $request, Necrologio $necrologio): View
-    {
-        $this->soloSuo($request, $necrologio);
-        $necrologio->load('defunto');
-        $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
-        $foto = $this->immaginePredefinita($necrologio->defunto);
-
-        return view('memorial::necrologi.manifesto-designer', [
-            'necrologio' => $necrologio,
-            'defunto' => $necrologio->defunto,
-            'praticaData' => array_merge(
-                $necrologio->defunto->toPraticaData(),
-                ['necrologio_url' => $necrologio->url($agenzia->slug)],
-            ),
-            'agenziaData' => ['name' => $agenzia->ragione_sociale],
-            'savedCanvas' => $necrologio->manifesto_canvas,
-            'savedFormato' => $necrologio->manifesto_formato ?? 'a3l',
-            'fotoPrincipale' => $foto ? '/storage/'.ltrim($foto, '/') : null,
-        ]);
     }
 
     public function manifestoTemplatesIndex(Request $request): JsonResponse
@@ -498,62 +502,6 @@ class NecrologiController extends Controller
     }
 
     /**
-     * Salva lo stato del canvas (per riaprirlo) e il PDF pronto da
-     * scaricare — lo stesso file che oggi si caricava a mano in `manifesto`.
-     */
-    public function salvaManifesto(Request $request, Necrologio $necrologio): JsonResponse
-    {
-        $this->soloSuo($request, $necrologio);
-
-        $dati = $request->validate([
-            'canvas' => ['required', 'string'],
-            'formato' => ['required', 'string'],
-            'pdf' => ['nullable', 'string'],
-            'anteprima' => ['nullable', 'string'],
-        ]);
-
-        $canvas = json_decode($dati['canvas'], true);
-        abort_if(! is_array($canvas), 422, 'Il manifesto non è valido.');
-
-        $vecchio = $necrologio->manifesto;
-        $path = $vecchio;
-        $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
-
-        if ($dati['pdf'] ?? null) {
-            // jsPDF .output('datauristring') inserisce sempre un "filename=...;"
-            // (es. generated.pdf) prima di "base64,": va tollerato, non è un formato malformato.
-            if (! preg_match('/^data:application\/pdf;(?:filename=[^;]*;)?base64,(.+)$/', $dati['pdf'], $m)) {
-                abort(422, 'Il PDF non è valido.');
-            }
-            $binario = base64_decode($m[1], true);
-            abort_if($binario === false, 422, 'Il PDF non è valido.');
-
-            $path = $agenzia->cartellaAssetSociali().'/manifesti/'.$necrologio->id.'-'.Str::lower(Str::random(8)).'.pdf';
-            Storage::disk('public')->put($path, $binario);
-        }
-
-        $vecchiaAnteprima = $necrologio->manifesto_anteprima;
-        $anteprima = $this->salvaAnteprimaDataUrl($dati['anteprima'] ?? null, $agenzia->cartellaAssetSociali().'/manifesti-anteprima')
-            ?? $vecchiaAnteprima;
-
-        $necrologio->update([
-            'manifesto_canvas' => $canvas,
-            'manifesto_formato' => $dati['formato'],
-            'manifesto' => $path,
-            'manifesto_anteprima' => $anteprima,
-        ]);
-
-        if ($path !== $vecchio && $vecchio) {
-            Storage::disk('public')->delete($vecchio);
-        }
-        if ($anteprima !== $vecchiaAnteprima && $vecchiaAnteprima) {
-            Storage::disk('public')->delete($vecchiaAnteprima);
-        }
-
-        return response()->json(['success' => true, 'url' => $path ? '/storage/'.$path : null]);
-    }
-
-    /**
      * Il Ricordino Designer chiede questo prima di offrire "aggiorna la
      * preghiera nel necrologio": dice solo se QUESTA agenzia ne ha già uno
      * per questo defunto, così il designer sa se aggiornarlo o mandare a
@@ -618,23 +566,9 @@ class NecrologiController extends Controller
             'trigesimo_luogo' => ['nullable', 'string', 'max:150'],
             'trigesimo_indirizzo' => ['nullable', 'string', 'max:255'],
             'testo' => ['nullable', 'string', 'max:1500'],
-            'manifesto' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:12288'],
         ], [
-            'manifesto.mimes' => 'Il manifesto dev\'essere un PDF o un\'immagine.',
-            'manifesto.max' => 'Il manifesto supera i 12 MB.',
             'numero_anniversario.required_if' => 'Indica di quale anniversario si tratta.',
         ]);
-    }
-
-    private function allegaManifesto(Request $request, Necrologio $necrologio): void
-    {
-        if ($request->hasFile('manifesto')) {
-            $agenzia = Agenzia::findOrFail($necrologio->agenzia_id);
-
-            $necrologio->update([
-                'manifesto' => $request->file('manifesto')->store($agenzia->cartellaAssetSociali().'/manifesti', 'public'),
-            ]);
-        }
     }
 
     /** I template manifesto globali (staff) restano in una cartella condivisa; quelli di un'agenzia vanno nella sua. */

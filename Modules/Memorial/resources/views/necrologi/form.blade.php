@@ -37,32 +37,41 @@
                 </div>
             @endif
 
-            <div>
-                <x-input-label value="Occasione" />
-                @php $occasioneAttuale = old('occasione', $necrologio->occasione?->value ?? 'trigesimo'); @endphp
-                <div class="mt-1 flex flex-wrap gap-4">
-                    @foreach (['funerale' => 'Funerale', 'trigesimo' => 'Trigesimo', 'anniversario' => 'Anniversario'] as $valore => $etichetta)
-                        <label class="inline-flex items-center gap-2 font-sans font-light text-[14px]">
-                            <input type="radio" name="occasione" value="{{ $valore }}"
-                                onchange="document.getElementById('campo-numero-anniversario').style.display = this.value === 'anniversario' ? 'block' : 'none'"
-                                @checked($occasioneAttuale === $valore)>
-                            {{ $etichetta }}
-                        </label>
-                    @endforeach
-                </div>
-                <x-input-error :messages="$errors->get('occasione')" />
+            @php
+                $occasioneAttuale = old('occasione', $necrologio->occasione?->value ?? 'trigesimo');
+                $etichettaQuando = ['funerale' => 'Quando è il funerale', 'trigesimo' => 'Quando è il trigesimo', 'anniversario' => 'Quando è la cerimonia'];
+            @endphp
+            @if ($necrologio->pubblicato)
+                <p class="font-sans font-light text-[13px] text-testo-soft">
+                    Occasione: <strong class="font-normal text-testo">{{ $necrologio->occasione?->etichetta() }}</strong>
+                </p>
+            @else
+                <div>
+                    <x-input-label value="Occasione" />
+                    <div class="mt-1 flex flex-wrap gap-4">
+                        @foreach (['funerale' => 'Funerale', 'trigesimo' => 'Trigesimo', 'anniversario' => 'Anniversario'] as $valore => $etichetta)
+                            <label class="inline-flex items-center gap-2 font-sans font-light text-[14px]">
+                                <input type="radio" name="occasione" value="{{ $valore }}"
+                                    onchange="document.getElementById('campo-numero-anniversario').style.display = this.value === 'anniversario' ? 'block' : 'none'; document.getElementById('label-trigesimo-at').textContent = {{ Illuminate\Support\Js::from($etichettaQuando) }}[this.value];"
+                                    @checked($occasioneAttuale === $valore)>
+                                {{ $etichetta }}
+                            </label>
+                        @endforeach
+                    </div>
+                    <x-input-error :messages="$errors->get('occasione')" />
 
-                <div id="campo-numero-anniversario" class="mt-3 max-w-[10rem]" style="display: {{ $occasioneAttuale === 'anniversario' ? 'block' : 'none' }}">
-                    <x-input-label for="numero_anniversario" value="Quale anniversario" />
-                    <x-text-input id="numero_anniversario" name="numero_anniversario" type="number" min="1" max="99"
-                        :value="old('numero_anniversario', $necrologio->numero_anniversario)" />
-                    <x-input-error :messages="$errors->get('numero_anniversario')" />
+                    <div id="campo-numero-anniversario" class="mt-3 max-w-[10rem]" style="display: {{ $occasioneAttuale === 'anniversario' ? 'block' : 'none' }}">
+                        <x-input-label for="numero_anniversario" value="Quale anniversario" />
+                        <x-text-input id="numero_anniversario" name="numero_anniversario" type="number" min="1" max="99"
+                            :value="old('numero_anniversario', $necrologio->numero_anniversario)" />
+                        <x-input-error :messages="$errors->get('numero_anniversario')" />
+                    </div>
                 </div>
-            </div>
+            @endif
 
             <div class="grid gap-6 sm:grid-cols-2">
                 <div>
-                    <x-input-label for="trigesimo_at" value="Quando è il trigesimo" />
+                    <x-input-label for="trigesimo_at" id="label-trigesimo-at" :value="$etichettaQuando[$occasioneAttuale] ?? $etichettaQuando['trigesimo']" />
                     <x-text-input id="trigesimo_at" name="trigesimo_at" type="datetime-local"
                         :value="old('trigesimo_at', $necrologio->trigesimo_at?->format('Y-m-d\TH:i'))" />
                     <x-input-error :messages="$errors->get('trigesimo_at')" />
@@ -81,39 +90,57 @@
                     :value="old('trigesimo_indirizzo', $necrologio->trigesimo_indirizzo)" />
             </div>
 
-            <div>
-                <x-input-label for="testo" value="Poche righe di annuncio" />
-                <textarea id="testo" name="testo" rows="4"
-                          class="block w-full bg-bianco border border-caffe/25 px-4 py-3 font-sans font-light
-                                 text-[15px] leading-relaxed focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40"
-                >{{ old('testo', $necrologio->testo) }}</textarea>
-            </div>
-
-            <div>
-                <x-input-label for="manifesto" value="Il manifesto (PDF o immagine)" />
-                <input id="manifesto" name="manifesto" type="file" accept=".pdf,image/*"
-                       class="block w-full font-sans font-light text-[14px] text-testo-soft
-                              file:mr-4 file:border-0 file:bg-caffe file:px-5 file:py-2.5
-                              file:font-sans file:text-[11px] file:uppercase file:tracking-[0.2em] file:text-bianco">
-                <x-input-error :messages="$errors->get('manifesto')" />
-                @if ($necrologio->manifesto)
-                    <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">
-                        Allegato:
-                        <a href="{{ asset('storage/'.$necrologio->manifesto) }}" target="_blank" rel="noopener"
-                           class="text-oro-scuro underline underline-offset-4 decoration-oro/40">guarda quello attuale</a>
-                    </p>
+            @if ($necrologio->pubblicato)
+                @if ($necrologio->testo)
+                    <p class="font-sans font-light text-[14px] leading-relaxed text-testo-soft whitespace-pre-line">{{ $necrologio->testo }}</p>
                 @endif
-                @unless ($nuovo)
-                    <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">
-                        Oppure
-                        <a href="{{ route('necrologi.manifesto', $necrologio) }}"
-                           class="text-oro-scuro underline underline-offset-4 decoration-oro/40">disegnalo qui</a>,
-                        formati A3/A4 e manifesto, con il QR del necrologio già pronto.
-                    </p>
-                @endunless
-            </div>
+            @else
+                <div>
+                    <x-input-label for="testo" value="Poche righe di annuncio" />
+                    <textarea id="testo" name="testo" rows="4"
+                              class="block w-full bg-bianco border border-caffe/25 px-4 py-3 font-sans font-light
+                                     text-[15px] leading-relaxed focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40"
+                    >{{ old('testo', $necrologio->testo) }}</textarea>
+                </div>
+            @endif
 
-            <x-primary-button>{{ $nuovo ? 'Crea il necrologio' : 'Salva le modifiche' }}</x-primary-button>
+            @unless ($nuovo)
+                <div>
+                    <x-input-label value="Il manifesto" />
+                    <a href="{{ route('defunti.show', $necrologio->defunto) }}" class="relative mt-1 inline-block">
+                        @if ($manifestoPrincipale?->webUrl())
+                            <img src="{{ $manifestoPrincipale->webUrl() }}" alt="Manifesto"
+                                 class="h-28 w-auto border border-caffe/15">
+                        @else
+                            <span class="flex h-28 w-44 items-center justify-center border border-dashed border-caffe/25
+                                         bg-panna/40 font-sans text-[11px] text-testo-soft text-center px-3">
+                                Nessun manifesto ancora
+                            </span>
+                        @endif
+                        @if ($manifestiCount > 1)
+                            <span class="absolute -top-2 -right-2 flex h-6 min-w-[1.5rem] items-center justify-center
+                                         rounded-full bg-oro-scuro px-1.5 font-sans text-[11px] font-medium text-bianco">
+                                {{ $manifestiCount }}
+                            </span>
+                        @endif
+                    </a>
+                    <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">
+                        <a href="{{ route('defunti.show', $necrologio->defunto) }}"
+                           class="text-oro-scuro underline underline-offset-4 decoration-oro/40">Vai alla scheda del defunto</a>
+                        per {{ $manifestoPrincipale ? 'gestirli' : 'crearlo' }}.
+                    </p>
+                </div>
+            @endunless
+
+            @if ($necrologio->pubblicato)
+                <p class="border-l-2 border-oro bg-panna/60 px-5 py-4 font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+                    🔒 Pubblicato: occasione, testo, manifesto e card non si modificano più. Potete sempre
+                    aggiornare data, ora e luogo qui sopra — i programmi cambiano spesso e la pagina pubblica
+                    riflette subito la modifica.
+                </p>
+            @endif
+
+            <x-primary-button>{{ $nuovo ? 'Crea il necrologio' : ($necrologio->pubblicato ? 'Aggiorna orario e luogo' : 'Salva le modifiche') }}</x-primary-button>
         </form>
     </section>
 
@@ -136,12 +163,14 @@
                     </div>
                 @endif
 
-                <a href="{{ route('necrologi.designer', $necrologio) }}"
-                   class="inline-flex items-center justify-center font-sans uppercase text-[11px]
-                          tracking-[0.2em] px-6 py-3 bg-caffe text-bianco
-                          hover:bg-oro-scuro transition-colors duration-300">
-                    {{ $necrologio->og_image ? 'Modifica la card' : 'Disegna la card' }}
-                </a>
+                @unless ($necrologio->pubblicato)
+                    <a href="{{ route('necrologi.designer', $necrologio) }}"
+                       class="inline-flex items-center justify-center font-sans uppercase text-[11px]
+                              tracking-[0.2em] px-6 py-3 bg-caffe text-bianco
+                              hover:bg-oro-scuro transition-colors duration-300">
+                        {{ $necrologio->og_image ? 'Modifica la card' : 'Disegna la card' }}
+                    </a>
+                @endunless
             </div>
         </section>
 

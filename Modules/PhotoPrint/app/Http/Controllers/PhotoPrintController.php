@@ -42,6 +42,7 @@ class PhotoPrintController extends Controller
                 'photos' => $foto,
                 'limiteFotoMb' => $this->limiteFotoMb(),
                 'ritorno' => $this->ritorno($ordine),
+                'bloccato' => $ordine->fotoBloccata(),
             ]);
         }
 

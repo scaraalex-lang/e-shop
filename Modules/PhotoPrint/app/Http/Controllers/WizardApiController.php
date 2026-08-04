@@ -47,6 +47,8 @@ class WizardApiController extends Controller
 
     public function enhance(Request $request)
     {
+        $this->assicuraSbloccata();
+
         return $this->forward('/enhance', [
             'image_url' => $this->rewriteForProxy($request->input('image_url')),
         ]);
@@ -54,6 +56,8 @@ class WizardApiController extends Controller
 
     public function outpaint(Request $request)
     {
+        $this->assicuraSbloccata();
+
         return $this->forward('/outpaint', array_merge(
             $request->only(['top', 'bottom', 'left', 'right']),
             ['image_url' => $this->rewriteForProxy($request->input('image_url'))],
@@ -62,6 +66,8 @@ class WizardApiController extends Controller
 
     public function removeBg(Request $request)
     {
+        $this->assicuraSbloccata();
+
         return $this->forward('/remove-bg', array_merge(
             $request->only(['background_prompt']),
             ['image_url' => $this->rewriteForProxy($request->input('image_url'))],
@@ -124,6 +130,8 @@ class WizardApiController extends Controller
      */
     public function upload(Request $request)
     {
+        $this->assicuraSbloccata();
+
         $request->validate([
             'photo' => ['required', 'image', 'max:12288'],   // 12 MB
         ], [
@@ -133,9 +141,11 @@ class WizardApiController extends Controller
 
         $path = $request->file('photo')->store(self::DISK_DIR.'/originali', 'public');
 
-        // La prima foto della pratica diventa la principale: è quella che il
-        // Designer si aspetta di trovare sul canvas.
-        $foto = $this->registra($path, 'originale', principale: $this->primaDellaPratica());
+        // La foto grezza caricata non è ancora "la" principale: lo diventa
+        // solo quando l'operatore la conferma esplicitamente dal canvas
+        // (salva() con is_principale=1) — è quel gesto, non l'upload, a
+        // bloccare il Foto Manager.
+        $foto = $this->registra($path, 'originale', principale: false);
 
         return response()->json([
             'success' => true,
@@ -149,6 +159,8 @@ class WizardApiController extends Controller
      */
     public function salva(Request $request)
     {
+        $this->assicuraSbloccata();
+
         $binary = $this->decodeDataUrl((string) $request->input('image', ''));
 
         if ($binary === null) {
@@ -174,6 +186,8 @@ class WizardApiController extends Controller
      */
     public function elimina(Request $request, int $foto)
     {
+        $this->assicuraSbloccata();
+
         $ordine = app(LavorazioneCorrente::class)->ordine();
 
         // Si cancella solo dentro la propria lavorazione: gli id sono
@@ -198,6 +212,8 @@ class WizardApiController extends Controller
      */
     public function uploadTemp(Request $request)
     {
+        $this->assicuraSbloccata();
+
         $dataUrl = (string) $request->input('image_data', '');
         $binary = $this->decodeDataUrl($dataUrl);
         if ($binary === null) {
@@ -208,8 +224,9 @@ class WizardApiController extends Controller
         Storage::disk('public')->put($path, $binary);
 
         // Se si sta lavorando un ordine, la foto entra nel registro della
-        // pratica: prima finiva su disco e nessuno se ne ricordava più.
-        $this->registra($path, 'originale', principale: true);
+        // pratica: prima finiva su disco e nessuno se ne ricordava più. È un
+        // passaggio intermedio del wizard AI, non una conferma: non blocca.
+        $this->registra($path, 'originale', principale: false);
 
         return response()->json(['url' => $this->absoluteUrl($request, $path)]);
     }
@@ -220,6 +237,8 @@ class WizardApiController extends Controller
      */
     public function salvaUrl(Request $request)
     {
+        $this->assicuraSbloccata();
+
         $sourceUrl = (string) $request->input('image_url', '');
         if ($sourceUrl === '') {
             return response()->json(['error' => 'URL mancante'], 400);
@@ -238,26 +257,15 @@ class WizardApiController extends Controller
         $principale = (bool) $request->input('is_principale', false);
 
         // Il risultato dell'elaborazione è quello che andrà in stampa: va
-        // legato alla pratica, altrimenti si perde chiudendo il browser.
-        $foto = $this->registra($path, $tipo, principale: true);
+        // legato alla pratica, altrimenti si perde chiudendo il browser. Ma
+        // blocca solo se l'operatore l'ha davvero scelta come principale
+        // (stesso gesto di salva()), non ad ogni risultato del wizard AI.
+        $foto = $this->registra($path, $tipo, principale: $principale);
 
         return response()->json([
             'success' => true,
-            'photo'   => [
-                'id'            => $foto?->id ?? (int) (microtime(true) * 1000) % 1000000,
-                'url'           => $this->absoluteUrl($request, $path),
-                'tipo'          => $tipo,
-                'is_principale' => $foto ? true : $principale,
-            ],
+            'photo'   => $this->perFrontend($request, $path, $tipo, $foto, $principale),
         ]);
-    }
-
-    /** Vero se la pratica non ha ancora nessuna fotografia. */
-    private function primaDellaPratica(): bool
-    {
-        $ordine = app(LavorazioneCorrente::class)->ordine();
-
-        return $ordine && ! FotoPratica::where('ordine_id', $ordine->id)->exists();
     }
 
     /**
@@ -297,9 +305,24 @@ class WizardApiController extends Controller
 
         if ($principale) {
             $foto->rendiPrincipale();
+            $ordine->forceFill(['foto_bloccata' => true])->save();
         }
 
         return $foto;
+    }
+
+    /**
+     * Una volta confermata la principale, il Foto Manager è di sola
+     * visualizzazione: evita che l'operatore rielabori o sostituisca la foto
+     * dopo aver chiuso il primo passo della Scheda Defunto.
+     */
+    private function assicuraSbloccata(): void
+    {
+        abort_if(
+            app(LavorazioneCorrente::class)->ordine()?->fotoBloccata(),
+            403,
+            'La foto è già stata confermata: non è più modificabile.',
+        );
     }
 
     // ---- Helper ----------------------------------------------------------

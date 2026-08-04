@@ -79,7 +79,8 @@ class FotoPraticaTest extends TestCase
 
         $foto = FotoPratica::firstOrFail();
         $this->assertSame($ordine->id, $foto->ordine_id);
-        $this->assertTrue($foto->is_principale, 'la prima foto della pratica diventa la principale');
+        $this->assertFalse($foto->is_principale, 'la foto grezza caricata non è ancora la principale: lo diventa solo alla conferma esplicita dal canvas');
+        $this->assertFalse($ordine->fresh()->fotoBloccata());
         Storage::disk('public')->assertExists($foto->path);
     }
 
@@ -119,7 +120,11 @@ class FotoPraticaTest extends TestCase
         $this->assertTrue($foto->is_principale);
     }
 
-    public function test_salvare_una_nuova_principale_toglie_il_segno_alla_precedente(): void
+    /**
+     * Confermare una principale blocca subito la pratica (vedi FotoBloccataTest):
+     * un secondo tentativo di cambiarla è respinto, la prima resta quella buona.
+     */
+    public function test_confermare_una_seconda_principale_e_respinto_dal_blocco(): void
     {
         Storage::fake('public');
         $ordine = $this->ordineInLavorazione();
@@ -127,14 +132,15 @@ class FotoPraticaTest extends TestCase
 
         $dataUrl = 'data:image/jpeg;base64,'.base64_encode('finta');
 
-        foreach ([1, 2] as $volta) {
-            $this->actingAs($ordine->user)->postJson('/admin/api/foto-pratica/salva', [
-                'image' => $dataUrl, 'tipo' => 'ritagliata', 'is_principale' => 1,
-            ])->assertOk();
-        }
+        $this->actingAs($ordine->user)->postJson('/admin/api/foto-pratica/salva', [
+            'image' => $dataUrl, 'tipo' => 'ritagliata', 'is_principale' => 1,
+        ])->assertOk();
+
+        $this->actingAs($ordine->user)->postJson('/admin/api/foto-pratica/salva', [
+            'image' => $dataUrl, 'tipo' => 'ritagliata', 'is_principale' => 1,
+        ])->assertForbidden();
 
         $this->assertSame(1, FotoPratica::where('is_principale', true)->count());
-        $this->assertTrue(FotoPratica::latest('id')->first()->is_principale);
     }
 
     public function test_una_foto_si_elimina_con_il_suo_file(): void

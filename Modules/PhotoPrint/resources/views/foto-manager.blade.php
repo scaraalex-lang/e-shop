@@ -129,14 +129,16 @@ input[type=file]{display:none}
     <!-- GALLERIA SINISTRA -->
     <div class="gallery-panel">
         <div class="panel-title">Galleria foto ({{ count($photos) }})</div>
+        @unless ($bloccato ?? false)
         <div class="upload-zone" onclick="document.getElementById('upload-input').click()">
             <div class="upload-zone-icon">📷</div>
             <div class="upload-zone-text">Carica nuova foto</div>
         </div>
         <input type="file" id="upload-input" accept="image/*" onchange="uploadFoto(this)">
+        @endunless
         <div class="gallery-list" id="gallery-list">
             @foreach($photos as $photo)
-            <div class="gallery-item {{ $photo->is_principale ? 'active' : '' }}" 
+            <div class="gallery-item {{ $photo->is_principale ? 'active' : '' }}"
                  id="gallery-item-{{ $photo->id }}"
                  onclick="loadPhotoInCanvas('{{ $photo->url }}', {{ $photo->id }})">
                 <img src="{{ $photo->url }}" alt="">
@@ -144,7 +146,9 @@ input[type=file]{display:none}
                 <div class="badge-principale">★ Principale</div>
                 @endif
                 <div class="tipo-badge">{{ ucfirst($photo->tipo) }}</div>
+                @unless ($bloccato ?? false)
                 <button class="btn-delete" onclick="eliminaFoto(event, {{ $photo->id }})">✕</button>
+                @endunless
             </div>
             @endforeach
         </div>
@@ -168,6 +172,15 @@ input[type=file]{display:none}
     <!-- STRUMENTI DESTRA -->
     <div class="tools-panel">
 
+        @if ($bloccato ?? false)
+        <div class="tool-section">
+            <div class="tool-label">🔒 Foto confermata</div>
+            <div style="font-size:.78rem;color:rgba(255,255,255,.55);line-height:1.6">
+                La foto principale è stata confermata: non è più modificabile.
+                La galleria resta visibile in sola lettura.
+            </div>
+        </div>
+        @else
         <div class="tool-section">
             <div class="tool-label">Regolazioni</div>
             <div class="slider-row">
@@ -226,21 +239,19 @@ input[type=file]{display:none}
                 ★ Salva come principale
             </button>
         </div>
+        @endif
 
     </div>
 
 </div>
 
 <!-- BOTTOM BAR -->
-{{-- Due uscite esplicite: si torna alla pratica, oppure si va avanti a
-     comporre il ricordino. Prima c'era solo "→ Ricordino" e il link in alto
-     riportava in vetrina, lasciando il lavoro a metà. --}}
+{{-- Un solo pulsante di uscita, verso la pratica: dal Foto Manager non si
+     salta più direttamente al Ricordino, i passi successivi si scelgono
+     dalla Scheda Defunto, che li canalizza in sequenza. --}}
 <div class="bottom-bar">
     <a href="{{ $ritorno['url'] }}" class="btn-secondary" style="font-size:.75rem">← {{ $ritorno['etichetta'] }}</a>
     <span class="status-msg" id="status-msg">Seleziona una foto dalla galleria o caricane una nuova</span>
-    <a href="{{ url('/studio/ricordino') }}" class="btn-primary" style="font-size:.75rem;text-decoration:none">
-        Componi il ricordino →
-    </a>
 </div>
 
 <script>

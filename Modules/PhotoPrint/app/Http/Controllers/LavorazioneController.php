@@ -10,7 +10,6 @@ use Illuminate\View\View;
 use Modules\Commerce\Enums\StatoOrdine;
 use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
-use Modules\Memorial\Models\Necrologio;
 use Modules\PhotoPrint\Models\FotoPratica;
 use Modules\PhotoPrint\Servizi\LavorazioneCorrente;
 
@@ -103,6 +102,15 @@ class LavorazioneController extends Controller
 
         $ordine->forceFill(['defunto_id' => $defunto->id])->save();
 
+        // Le agenzie proseguono dalla Scheda Defunto (Foto → Manifesto →
+        // Necrologio, canalizzati); un privato B2C non ha manifesto/
+        // necrologio, resta sulla lavorazione come prima.
+        if ($ordine->agenzia_id) {
+            return redirect()
+                ->route('defunti.show', $defunto)
+                ->with('stato', 'Dati registrati. Ora puoi caricare la fotografia.');
+        }
+
         return redirect()
             ->route('lavorazione', $ordine)
             ->with('stato', 'Dati registrati. Ora puoi caricare la fotografia.');
@@ -131,58 +139,6 @@ class LavorazioneController extends Controller
         return redirect()
             ->route('ordine', $ordine)
             ->with('stato', 'Bozza approvata: il tuo ordine va in produzione.');
-    }
-
-    /**
-     * Apre (creandolo se manca) il Necrologio di questa pratica.
-     */
-    public function apriNecrologio(Request $request, Ordine $ordine): RedirectResponse
-    {
-        $necrologio = $this->necrologioDiPratica($request, $ordine);
-
-        return redirect()->route('necrologi.designer', $necrologio);
-    }
-
-    /**
-     * Apre (creandolo se manca) il Manifesto di questa pratica.
-     */
-    public function apriManifesto(Request $request, Ordine $ordine): RedirectResponse
-    {
-        $necrologio = $this->necrologioDiPratica($request, $ordine);
-
-        return redirect()->route('necrologi.manifesto', $necrologio);
-    }
-
-    /**
-     * Trova o crea il necrologio di questa pratica. L'agenzia è quella
-     * dell'ordine, non dell'utente che sta operando: è anche lo staff — che
-     * non ha un'agenzia propria — a poter lavorare l'ordine per suo conto.
-     *
-     * Il necrologio è uno strumento dell'agenzia (vedi NecrologiController):
-     * un ordine privato, senza agenzia, non ne ha uno.
-     */
-    private function necrologioDiPratica(Request $request, Ordine $ordine): Necrologio
-    {
-        $this->soloSuo($request, $ordine);
-        abort_unless($ordine->agenzia_id !== null, 404, 'Il necrologio è uno strumento per le agenzie.');
-
-        $defunto = $ordine->defunto_id ? Defunto::find($ordine->defunto_id) : null;
-        abort_unless($defunto !== null, 404, 'Prima compila i dati della persona.');
-        abort_unless(FotoPratica::principaleDi($ordine->id), 403, 'Carica prima la fotografia.');
-
-        // occasione/numero_anniversario si copiano dall'ordine solo alla
-        // creazione (firstOrCreate non tocca un necrologio già esistente):
-        // è una fotografia del momento, non un legame permanente — coerente
-        // con l'assenza voluta di una FK Necrologio→Ordine. Un ordine vecchio
-        // senza il campo lascia il default 'trigesimo' della migration.
-        return Necrologio::firstOrCreate(
-            ['defunto_id' => $defunto->id, 'agenzia_id' => $ordine->agenzia_id],
-            array_filter([
-                'percorso' => Necrologio::componiPercorso($defunto),
-                'occasione' => $ordine->occasione?->value,
-                'numero_anniversario' => $ordine->numero_anniversario,
-            ], fn ($v) => $v !== null)
-        );
     }
 
     /**

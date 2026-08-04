@@ -158,7 +158,7 @@ function flipOggetto(asse) {
     <button class="nav-btn" style="background:#0f3460;color:#fff" onclick="exportPDF()">📄 Esporta PDF</button>
     <button class="nav-btn" style="background:rgba(255,255,255,.15);color:#fff" onclick="stampaManifesto()">🖨 Stampa</button>
     <button class="nav-btn btn-green" onclick="salvaManifesto()">💾 Salva</button>
-    <a href="{{ route('necrologi.modifica', $necrologio) }}" class="nav-btn btn-ghost">← Necrologio</a>
+    <a href="{{ route('defunti.show', $defunto) }}" class="nav-btn btn-ghost">← Scheda defunto</a>
   </div>
 </nav>
 
@@ -1524,19 +1524,21 @@ async function salvaManifesto() {
   const dataUrlCanvas = canvas.toDataURL({ format: 'jpeg', quality: 0.92, multiplier: 3 });
   doc.addImage(dataUrlCanvas, 'JPEG', 0, 0, fmt.wmm, fmt.hmm);
   const pdfDataUrl = doc.output('datauristring');
-  // Miniatura leggera per la pagina pubblica: lì non deve arrivare né il PDF
-  // né l'export a piena risoluzione, solo un'anteprima cliccabile.
-  const anteprima = canvas.toDataURL({ format: 'jpeg', quality: 0.6, multiplier: 0.5 });
+  // JPEG qualità web, generato automaticamente ad ogni salvataggio: serve sia
+  // da miniatura cliccabile (sul necrologio, scalata via CSS) sia da immagine
+  // mostrata sulla pagina pubblica — niente più export a piena risoluzione
+  // del PDF né una mini-anteprima separata.
+  const web = canvas.toDataURL({ format: 'jpeg', quality: 0.85, multiplier: 1 });
 
   try {
-    const res = await fetch('/admin/api/necrologi/{{ $necrologio->id }}/salva-manifesto', {
+    const res = await fetch('/admin/api/manifesti/{{ $manifesto->id }}/salva', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         canvas: JSON.stringify(canvas.toJSON(['customType', 'customBlockType'])),
         formato: currentFormat,
         pdf: pdfDataUrl,
-        anteprima: anteprima,
+        web: web,
       }),
     });
     const data = await res.json();
