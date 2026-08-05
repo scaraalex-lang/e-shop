@@ -5,6 +5,10 @@
 @section('sottotitolo', 'Ogni ordine con il suo stato, dalla conferma alla consegna.')
 
 @section('account')
+@php
+    use Modules\Commerce\Enums\MetodoPagamento;
+    use Modules\Commerce\Enums\StatoPagamento;
+@endphp
 @if ($ordini->isEmpty())
     <div class="border border-caffe/15 bg-panna/50 px-8 py-14 text-center">
         <p class="font-serif text-2xl">Non hai ancora ordinato nulla</p>
@@ -21,6 +25,8 @@
             @php
                 $defunto = $ordine->defunto_id ? ($defuntiPerOrdine[$ordine->defunto_id] ?? null) : null;
                 $fotoDefunto = $defunto ? ($fotoPerDefunto[$defunto->id] ?? null) : null;
+                $daPagare = $ordine->metodo_pagamento === MetodoPagamento::Carta
+                    && in_array($ordine->stato_pagamento, [StatoPagamento::InAttesa, StatoPagamento::Fallito], true);
             @endphp
             <article class="flex flex-wrap items-center gap-x-8 gap-y-3 px-6 py-5
                             border-b border-caffe/10 last:border-b-0
@@ -60,8 +66,19 @@
                     @endif
                 </p>
 
-                <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-oro-scuro min-w-[8rem]">
-                    {{ $ordine->stato->etichetta() }}
+                <span class="min-w-[8rem]">
+                    <span class="block font-sans text-[10px] tracking-[0.2em] uppercase text-oro-scuro">
+                        {{ $ordine->stato->etichetta() }}
+                    </span>
+                    @if ($daPagare)
+                        <span @class([
+                            'mt-1 block font-sans text-[10px] tracking-[0.15em] uppercase',
+                            'text-errore' => $ordine->stato_pagamento === StatoPagamento::Fallito,
+                            'text-oro-scuro' => $ordine->stato_pagamento === StatoPagamento::InAttesa,
+                        ])>
+                            {{ $ordine->stato_pagamento === StatoPagamento::Fallito ? 'Pagamento non riuscito' : 'Da pagare' }}
+                        </span>
+                    @endif
                 </span>
 
                 @if ($ordine->righe->isEmpty() && $ordine->servizi->isNotEmpty())

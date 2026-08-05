@@ -82,7 +82,15 @@ class CheckoutController extends Controller
         // Solo la carta passa da un incasso: contrassegno e fattura si saldano
         // dopo, l'ordine parte lo stesso.
         if ($metodo->incassaSubito()) {
-            $esito = $this->pagamento->incassa($ordine, ['carta' => $request->validated('carta')]);
+            $avvio = $this->pagamento->avvia($ordine, ['carta' => $request->validated('carta')]);
+
+            // Driver a redirect (Stripe): l'ordine resta "nuovo, non pagato"
+            // finché non arriva la conferma sul webhook — non si avvia qui.
+            if ($avvio->richiedeRedirect()) {
+                return redirect()->away($avvio->redirectUrl);
+            }
+
+            $esito = $avvio->esito;
 
             if (! $esito->riuscito) {
                 $ordine->segnaPagamentoFallito();

@@ -114,17 +114,25 @@
                 {{-- Compare solo scegliendo la carta: senza JS resta visibile,
                      ed è comunque facoltativo per gli altri metodi. --}}
                 <div id="riquadro-carta" class="mt-6 border-l-2 border-oro bg-panna/50 px-5 py-5">
-                    <x-input-label for="carta" value="Numero della carta" />
-                    <x-text-input id="carta" name="carta" type="text" inputmode="numeric"
-                                  autocomplete="cc-number" placeholder="4242 4242 4242 4242"
-                                  :value="old('carta')" />
-                    <x-input-error :messages="$errors->get('carta')" />
-                    <p class="mt-3 font-sans font-light text-[12px] leading-relaxed text-testo-soft">
-                        <strong class="font-normal text-testo">Incasso simulato.</strong>
-                        Nessun addebito reale: una carta qualsiasi va bene, e quelle che finiscono
-                        per <strong class="font-normal text-testo">0</strong> vengono rifiutate, per
-                        poter provare anche l'errore.
-                    </p>
+                    @if (config('commerce.pagamento') === 'simulato')
+                        <x-input-label for="carta" value="Numero della carta" />
+                        <x-text-input id="carta" name="carta" type="text" inputmode="numeric"
+                                      autocomplete="cc-number" placeholder="4242 4242 4242 4242"
+                                      :value="old('carta')" />
+                        <x-input-error :messages="$errors->get('carta')" />
+                        <p class="mt-3 font-sans font-light text-[12px] leading-relaxed text-testo-soft">
+                            <strong class="font-normal text-testo">Incasso simulato.</strong>
+                            Nessun addebito reale: una carta qualsiasi va bene, e quelle che finiscono
+                            per <strong class="font-normal text-testo">0</strong> vengono rifiutate, per
+                            poter provare anche l'errore.
+                        </p>
+                    @else
+                        <p class="font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+                            Sarai reindirizzato alla pagina sicura di Stripe per inserire i dati della
+                            carta (credito, debito o prepagata): il numero non passa mai dai nostri
+                            server.
+                        </p>
+                    @endif
                 </div>
             </section>
         </div>

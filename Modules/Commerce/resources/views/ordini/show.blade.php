@@ -6,7 +6,11 @@
 
 @section('account')
 @php
+    use Modules\Commerce\Enums\MetodoPagamento;
     use Modules\Commerce\Enums\StatoPagamento;
+
+    $daPagare = $ordine->metodo_pagamento === MetodoPagamento::Carta
+        && in_array($ordine->stato_pagamento, [StatoPagamento::InAttesa, StatoPagamento::Fallito], true);
 @endphp
 
 @if (session('appena_confermato'))
@@ -298,6 +302,22 @@
             <p class="mt-1 font-sans font-light text-[12px] text-testo-soft/70 tabular-nums">
                 Riferimento {{ $ordine->riferimento_pagamento }}
             </p>
+        @endif
+
+        @if ($daPagare)
+            <form method="POST" action="{{ route('ordini.paga', $ordine) }}" class="mt-4 flex flex-wrap items-end gap-3">
+                @csrf
+                @if (config('commerce.pagamento') === 'simulato')
+                    {{-- Solo in sviluppo: con Stripe il bottone porta dritto al redirect,
+                         nessun campo carta nel nostro form. --}}
+                    <div>
+                        <x-input-label for="carta-riprova" value="Numero della carta" />
+                        <x-text-input id="carta-riprova" name="carta" type="text" inputmode="numeric"
+                                      autocomplete="cc-number" placeholder="4242 4242 4242 4242" />
+                    </div>
+                @endif
+                <x-button type="submit">Paga ora</x-button>
+            </form>
         @endif
         @endif
     </section>

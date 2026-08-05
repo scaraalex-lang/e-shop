@@ -16,6 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'staff' => \Modules\Commerce\Http\Middleware\SoloStaff::class,
             'agenzia.approvata' => \Modules\Commerce\Http\Middleware\AgenziaApprovata::class,
         ]);
+
+        // Stripe chiama il webhook senza il nostro token CSRF: si autentica
+        // da sé con la firma verificata in StripeWebhookController.
+        $middleware->validateCsrfTokens(except: [
+            'webhook/stripe',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Anche gli endpoint degli editor (/admin/api/*) sono chiamati solo via

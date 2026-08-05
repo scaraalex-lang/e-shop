@@ -7,12 +7,16 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Modules\Catalog\Models\Category;
 use Modules\Catalog\Models\Product;
+use Modules\Commerce\Enums\MetodoPagamento;
+use Modules\Commerce\Enums\StatoPagamento;
 use Modules\Commerce\Http\Requests\AttivaServiziOrdineRequest;
 use Modules\Commerce\Models\Ordine;
 use Modules\Commerce\Models\ServizioEditor;
+use Modules\Commerce\Pagamenti\Pagamento;
 use Modules\Commerce\Servizi\AttivaServiziOrdine;
 use Modules\Commerce\Servizi\GestoreCarrello;
 use Modules\Memorial\Models\Defunto;
@@ -236,6 +240,47 @@ class OrdiniController extends Controller
         return redirect()
             ->route('ordine', $ordine)
             ->with('stato', "{$prodotto->name}: aggiunto al carrello.");
+    }
+
+    /**
+     * Riprende il pagamento di un ordine a carta non riuscito o abbandonato
+     * a metà (redirect Stripe mai completato): stesso `Pagamento` del
+     * checkout, ma sull'ordine già esistente — niente carrello, niente
+     * nuovo ordine, si riusano `totale` e `metodo_pagamento` già salvati.
+     */
+    public function paga(Request $request, Ordine $ordine, Pagamento $pagamento): RedirectResponse
+    {
+        abort_unless($ordine->diChi($request->user()), 404);
+        abort_unless(
+            $ordine->metodo_pagamento === MetodoPagamento::Carta
+                && in_array($ordine->stato_pagamento, [StatoPagamento::InAttesa, StatoPagamento::Fallito], true),
+            404,
+        );
+
+        // 'carta' serve solo al driver simulato (sviluppo): con Stripe il
+        // form "Paga ora" non ha alcun campo carta, avvia() lo ignora.
+        $avvio = $pagamento->avvia($ordine, ['carta' => $request->input('carta')]);
+
+        if ($avvio->richiedeRedirect()) {
+            return redirect()->away($avvio->redirectUrl);
+        }
+
+        $esito = $avvio->esito;
+
+        if (! $esito->riuscito) {
+            $ordine->segnaPagamentoFallito();
+
+            throw ValidationException::withMessages([
+                'carta' => $esito->messaggio,
+            ])->redirectTo(route('ordine', $ordine));
+        }
+
+        $ordine->registraPagamento($esito->riferimento);
+        $ordine->avvia();
+
+        return redirect()
+            ->route('ordine', $ordine)
+            ->with('stato', 'Pagamento registrato: il tuo ordine va in produzione.');
     }
 
     /**

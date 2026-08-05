@@ -9,6 +9,7 @@ use Modules\Commerce\Http\Controllers\GestioneOrdiniController;
 use Modules\Commerce\Http\Controllers\GestioneServiziController;
 use Modules\Commerce\Http\Controllers\OrdiniController;
 use Modules\Commerce\Http\Controllers\RegistrazioneAgenziaController;
+use Modules\Commerce\Http\Controllers\StripeWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,7 +45,20 @@ Route::middleware('auth')->group(function () {
     // Composizione dell'ordine di stampa dalla pagina ordine, dopo
     // l'approvazione della bozza — vedi OrdiniController::aggiungiStampa.
     Route::post('account/ordini/{ordine}/stampa', [OrdiniController::class, 'aggiungiStampa'])->name('ordini.stampa');
+    // Riprende il pagamento di un ordine a carta non riuscito o abbandonato
+    // a metà (redirect Stripe mai completato) — vedi OrdiniController::paga.
+    Route::post('account/ordini/{ordine}/paga', [OrdiniController::class, 'paga'])->name('ordini.paga');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Webhook Stripe
+|--------------------------------------------------------------------------
+| Pubblica e senza CSRF (vedi bootstrap/app.php): è Stripe che chiama qui,
+| non un browser. L'autenticità la garantisce solo la firma verificata dentro
+| StripeWebhookController — non aggiungere middleware auth/agenzia qui.
+*/
+Route::post('webhook/stripe', [StripeWebhookController::class, 'handle']);
 
 /*
 |--------------------------------------------------------------------------
