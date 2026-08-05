@@ -60,7 +60,14 @@
                 {{ $etichetta }}
             </p>
 
-            <x-prezzo :centesimi="$ordine->totale" class="font-serif text-lg text-right min-w-[6rem]" />
+            <div class="text-right min-w-[6rem]">
+                <x-prezzo :centesimi="$ordine->valoreInDenaro()" class="font-serif text-lg" />
+                @if ($ordine->crediti_usati > 0)
+                    <p class="mt-0.5 font-sans font-light text-[11px] text-testo-soft">
+                        +{{ $ordine->crediti_usati }} crediti
+                    </p>
+                @endif
+            </div>
         </a>
     @empty
         <p class="px-6 py-10 text-center font-sans font-light text-[14px] text-testo-soft">

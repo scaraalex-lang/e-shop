@@ -281,10 +281,24 @@
                 </dd>
             </div>
 
+            @if ($ordine->crediti_usati > 0)
+                <div class="flex justify-between py-1 text-oro-scuro">
+                    <dt class="font-light">Pagato con crediti</dt>
+                    <dd>{{ $ordine->crediti_usati }} crediti</dd>
+                </div>
+            @endif
+
             <div class="mt-3 pt-3 border-t border-caffe/15 flex justify-between items-baseline">
                 <dt class="font-sans text-[11px] tracking-[0.2em] uppercase text-testo-soft">Totale</dt>
                 <dd><x-prezzo :centesimi="$ordine->totale" class="font-serif text-2xl" /></dd>
             </div>
+
+            @if ($ordine->crediti_usati > 0 && $ordine->valoreInDenaro() > 0)
+                <div class="flex justify-between py-1 text-testo-soft">
+                    <dt class="font-light">Di cui in denaro</dt>
+                    <dd><x-prezzo :centesimi="$ordine->valoreInDenaro()" /></dd>
+                </div>
+            @endif
         </dl>
 
         <p class="mt-4 font-sans font-light text-[13px] text-testo-soft">

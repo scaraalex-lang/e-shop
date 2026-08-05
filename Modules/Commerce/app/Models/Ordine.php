@@ -24,7 +24,7 @@ class Ordine extends Model
     protected $fillable = [
         'numero', 'user_id', 'agenzia_id',
         'metodo_pagamento',
-        'totale_pieno', 'totale_merce', 'spedizione', 'totale',
+        'totale_pieno', 'totale_merce', 'spedizione', 'totale', 'crediti_usati',
         'consegna_nome', 'consegna_telefono', 'consegna_indirizzo',
         'consegna_cap', 'consegna_citta', 'consegna_provincia', 'note',
         'richiede_lavorazione', 'occasione', 'numero_anniversario',
@@ -41,6 +41,7 @@ class Ordine extends Model
         'totale_merce' => 'integer',
         'spedizione' => 'integer',
         'totale' => 'integer',
+        'crediti_usati' => 'integer',
         'richiede_lavorazione' => 'boolean',
         'foto_bloccata' => 'boolean',
         'numero_anniversario' => 'integer',
@@ -176,6 +177,20 @@ class Ordine extends Model
     public function risparmio(): int
     {
         return $this->totale_pieno - $this->totale_merce;
+    }
+
+    /**
+     * Quanto di questo ordine è in denaro, dopo aver scalato i crediti
+     * già applicati (vedi CreaOrdine, cambio fisso 1 credito = 100
+     * centesimi): la base sia per l'incasso (quanto addebita Stripe, vedi
+     * PagamentoStripe) sia per la contabilità (vedi
+     * GestioneAgenzieController::movimenti) — prima e dopo il saldo è la
+     * stessa cifra, cambia solo se leggerla come "da incassare" o
+     * "incassato".
+     */
+    public function valoreInDenaro(): int
+    {
+        return max(0, $this->totale - ($this->crediti_usati * 100));
     }
 
     public function haSconti(): bool

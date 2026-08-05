@@ -87,6 +87,24 @@
                 </div>
             </section>
 
+            {{-- ============ crediti ============ --}}
+            @if ($agenzia && $creditiSaldo > 0)
+                <section class="border border-caffe/15 px-7 py-7">
+                    <h2 class="font-serif text-2xl font-medium">Usa i tuoi crediti</h2>
+                    <p class="mt-2 font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+                        Saldo disponibile: <strong class="font-normal text-testo">{{ $creditiSaldo }} crediti</strong>
+                        (1 credito = 1 €). Quanti vuoi usare su questo ordine? Il resto — se ne resta — si paga
+                        col metodo scelto qui sotto.
+                    </p>
+                    <div class="mt-4 max-w-[10rem]">
+                        <x-input-label for="crediti_usati" value="Crediti da usare" />
+                        <x-text-input id="crediti_usati" name="crediti_usati" type="number" min="0"
+                                      max="{{ $creditiMassimoUsabile }}" :value="$vecchio('crediti_usati', 0)" />
+                        <x-input-error :messages="$errors->get('crediti_usati')" />
+                    </div>
+                </section>
+            @endif
+
             {{-- ============ pagamento ============ --}}
             <section class="border border-caffe/15 px-7 py-7">
                 <h2 class="font-serif text-2xl font-medium">Come paghi</h2>

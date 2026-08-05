@@ -172,6 +172,17 @@
                         </div>
                     @endforeach
                 </div>
+
+                <div class="mt-4 pt-4 border-t border-caffe/15 flex justify-between items-baseline">
+                    <dt class="font-sans text-[11px] tracking-[0.2em] uppercase text-testo-soft">Totale</dt>
+                    <dd><x-prezzo :centesimi="$ordine->totale" class="font-serif text-xl" /></dd>
+                </div>
+                @if ($ordine->crediti_usati > 0)
+                    <p class="mt-1 font-sans font-light text-[12px] text-oro-scuro text-right">
+                        di cui {{ $ordine->crediti_usati }} crediti — resta in denaro
+                        <x-prezzo :centesimi="$ordine->valoreInDenaro()" class="tabular-nums" />
+                    </p>
+                @endif
             </section>
         </div>
 

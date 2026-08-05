@@ -48,11 +48,17 @@ class CheckoutController extends Controller
             );
         }
 
+        $conto = $carrello->conto($this->listino, $utente);
+
         return view('commerce::checkout.create', [
-            'conto' => $carrello->conto($this->listino, $utente),
+            'conto' => $conto,
             'carrello' => $carrello,
             'agenzia' => $agenzia,
             'metodi' => MetodoPagamento::disponibiliPer($agenzia !== null),
+            'creditiSaldo' => $agenzia?->creditiSaldo() ?? 0,
+            // Solo un tetto suggerito in UI: la spedizione non è ancora nota
+            // qui (si calcola alla conferma), il cap vero è dentro CreaOrdine.
+            'creditiMassimoUsabile' => $agenzia ? min($agenzia->creditiSaldo(), intdiv($conto->totale(), 100)) : 0,
         ]);
     }
 
@@ -76,12 +82,19 @@ class CheckoutController extends Controller
         }
 
         $metodo = $request->metodo();
+        $creditiRichiesti = (int) ($request->validated('crediti_usati') ?? 0);
 
-        $ordine = $this->creaOrdine->da($carrello, $utente, $request->datiConsegna(), $metodo);
+        $ordine = $this->creaOrdine->da($carrello, $utente, $request->datiConsegna(), $metodo, $creditiRichiesti);
 
-        // Solo la carta passa da un incasso: contrassegno e fattura si saldano
-        // dopo, l'ordine parte lo stesso.
-        if ($metodo->incassaSubito()) {
+        if ($ordine->valoreInDenaro() === 0) {
+            // I crediti dell'agenzia coprono tutto: niente da incassare,
+            // indipendentemente dal metodo scelto (che restava lì solo per
+            // l'eventuale resto).
+            $ordine->registraPagamento("Pagato con {$ordine->crediti_usati} crediti");
+        } elseif ($metodo->incassaSubito()) {
+            // Solo la carta passa da un incasso: contrassegno e fattura si
+            // saldano dopo, l'ordine parte lo stesso. L'importo è quello che
+            // resta dopo i crediti (vedi PagamentoStripe).
             $avvio = $this->pagamento->avvia($ordine, ['carta' => $request->validated('carta')]);
 
             // Driver a redirect (Stripe): l'ordine resta "nuovo, non pagato"

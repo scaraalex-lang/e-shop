@@ -34,6 +34,12 @@ class CheckoutRequest extends FormRequest
             // Serve solo se si paga con carta: la regola sta nel controller,
             // che sa quale metodo è stato scelto.
             'carta' => ['nullable', 'string', 'max:25'],
+
+            // Solo un formato valido: il tetto vero (saldo disponibile,
+            // totale dell'ordine) si verifica sotto lock in CreaOrdine, non
+            // qui — un privato che lo inviasse non ha comunque un'agenzia da
+            // cui attingere.
+            'crediti_usati' => ['nullable', 'integer', 'min:0'],
         ];
     }
 

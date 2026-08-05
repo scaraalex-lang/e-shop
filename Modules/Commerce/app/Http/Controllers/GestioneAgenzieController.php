@@ -96,19 +96,25 @@ class GestioneAgenzieController extends Controller
         return view('commerce::gestione.agenzie.movimenti', [
             'agenzia' => $agenzia,
             'ordini' => $ordini,
+            // In denaro, non a listino: un ordine coperto in parte da
+            // crediti non deve gonfiare quanto resta davvero da fatturare o
+            // incassare — vedi Ordine::valoreInDenaro().
             'daFatturare' => $agenzia->ordini()
                 ->where('metodo_pagamento', MetodoPagamento::Fattura)
                 ->whereNull('fattura_emessa_at')
-                ->sum('totale'),
+                ->get(['totale', 'crediti_usati'])
+                ->sum(fn ($o) => $o->valoreInDenaro()),
             'daSaldare' => $agenzia->ordini()
                 ->where('metodo_pagamento', MetodoPagamento::Fattura)
                 ->whereNotNull('fattura_emessa_at')
                 ->where('stato_pagamento', '!=', StatoPagamento::Pagato)
-                ->sum('totale'),
+                ->get(['totale', 'crediti_usati'])
+                ->sum(fn ($o) => $o->valoreInDenaro()),
             'incassatoCarta' => $agenzia->ordini()
                 ->where('metodo_pagamento', MetodoPagamento::Carta)
                 ->where('stato_pagamento', StatoPagamento::Pagato)
-                ->sum('totale'),
+                ->get(['totale', 'crediti_usati'])
+                ->sum(fn ($o) => $o->valoreInDenaro()),
         ]);
     }
 

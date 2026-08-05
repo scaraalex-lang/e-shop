@@ -27,8 +27,14 @@ class CreaOrdine
 
     /**
      * @param  array<string, mixed>  $consegna
+     * @param  int  $creditiRichiesti  Quanti crediti l'agenzia vuole usare su
+     *                                 questo ordine (0 = paga tutto in denaro).
+     *                                 Capato qui sotto lock al saldo davvero
+     *                                 disponibile e al totale dell'ordine:
+     *                                 chi chiama non deve fidarsi del numero
+     *                                 che arriva dal form.
      */
-    public function da(Carrello $carrello, User $utente, array $consegna, MetodoPagamento $metodo): Ordine
+    public function da(Carrello $carrello, User $utente, array $consegna, MetodoPagamento $metodo, int $creditiRichiesti = 0): Ordine
     {
         $conto = $carrello->conto($this->listino, $utente);
         $agenzia = $utente->eAgenziaApprovata() ? $utente->agenzia : null;
@@ -42,8 +48,20 @@ class CreaOrdine
         $defuntoId = $carrello->righe->pluck('defunto_id')->filter()->unique();
         $defuntoId = $defuntoId->count() === 1 ? $defuntoId->first() : null;
 
-        return DB::transaction(function () use ($carrello, $utente, $consegna, $metodo, $conto, $agenzia, $defuntoId) {
+        return DB::transaction(function () use ($carrello, $utente, $consegna, $metodo, $conto, $agenzia, $defuntoId, $creditiRichiesti) {
             $spedizione = $this->spedizione($conto->totale(), $agenzia !== null);
+            $totale = $conto->totale() + $spedizione;
+
+            // Lock sui movimenti dell'agenzia: due checkout quasi simultanei
+            // non devono poter spendere insieme più di quanto c'è in saldo
+            // (stesso principio di AttivaServiziOrdine). Nessun fallimento:
+            // capiamo silenziosamente a quanto c'è davvero, il resto lo paga
+            // in denaro col metodo scelto — l'ordine parte comunque.
+            $creditiUsati = 0;
+            if ($agenzia && $creditiRichiesti > 0) {
+                $saldo = (int) $agenzia->movimentiCredito()->lockForUpdate()->sum('quantita');
+                $creditiUsati = min($creditiRichiesti, $saldo, intdiv($totale, 100));
+            }
 
             $ordine = new Ordine([
                 'numero' => Ordine::prossimoNumero(),
@@ -53,7 +71,8 @@ class CreaOrdine
                 'totale_pieno' => $conto->totalePieno(),
                 'totale_merce' => $conto->totale(),
                 'spedizione' => $spedizione,
-                'totale' => $conto->totale() + $spedizione,
+                'totale' => $totale,
+                'crediti_usati' => $creditiUsati,
                 'consegna_nome' => $consegna['nome'],
                 'consegna_telefono' => $consegna['telefono'],
                 'consegna_indirizzo' => $consegna['indirizzo'],
@@ -67,6 +86,15 @@ class CreaOrdine
             ]);
             $ordine->defunto_id = $defuntoId;
             $ordine->save();
+
+            if ($creditiUsati > 0) {
+                MovimentoCredito::create([
+                    'agenzia_id' => $agenzia->id,
+                    'ordine_id' => $ordine->id,
+                    'quantita' => -$creditiUsati,
+                    'causale' => "Ordine {$ordine->numero}: pagamento in crediti",
+                ]);
+            }
 
             foreach ($conto->voci as $voce) {
                 $prodotto = $voce->riga->product;

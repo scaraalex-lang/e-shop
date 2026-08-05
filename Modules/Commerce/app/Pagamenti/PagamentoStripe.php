@@ -25,9 +25,12 @@ use Stripe\StripeClient;
  * niente `payment_method_types` esplicito, non serve e in alcuni casi Stripe
  * lo rifiuta comunque.
  *
- * Un solo articolo nella Sessione, pari al totale dell'ordine: le righe, gli
- * sconti e la spedizione sono già calcolati e cristallizzati sull'Ordine
- * (vedi CreaOrdine), non serve ricostruirli lato Stripe.
+ * Un solo articolo nella Sessione, pari a `valoreInDenaro()`, non a
+ * `totale`: le righe, gli sconti e la spedizione sono già calcolati e
+ * cristallizzati sull'Ordine (vedi CreaOrdine), non serve ricostruirli lato
+ * Stripe — ma se l'agenzia ha coperto una parte in crediti, è solo il resto
+ * che Stripe deve incassare (chiamata solo quando il resto è > 0, vedi
+ * CheckoutController).
  */
 class PagamentoStripe implements Pagamento
 {
@@ -44,7 +47,7 @@ class PagamentoStripe implements Pagamento
                     'product_data' => [
                         'name' => "Ordine {$ordine->numero}",
                     ],
-                    'unit_amount' => $ordine->totale,
+                    'unit_amount' => $ordine->valoreInDenaro(),
                 ],
                 'quantity' => 1,
             ]],
