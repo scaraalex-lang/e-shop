@@ -148,6 +148,8 @@ class ContabilitaAgenziaTest extends TestCase
     {
         $referente = $this->referenteAgenzia();
 
+        // Mai toccato: non genera nessun evento nell'estratto conto (vedi
+        // EstrattoContoTest), ma pesa comunque sulla cifra "da fatturare".
         $daFatturare = $this->ordineAFattura($referente);
 
         $daSaldare = $this->ordineAFattura($referente);
@@ -161,9 +163,11 @@ class ContabilitaAgenziaTest extends TestCase
             ->get('/gestione/agenzie/'.$referente->agenzia->id.'/movimenti')
             ->assertOk();
 
-        $risposta->assertSee($daFatturare->numero);
+        // Chi ha un evento nel mese corrente compare nell'estratto conto.
         $risposta->assertSee($daSaldare->numero);
         $risposta->assertSee($pagata->numero);
+        $risposta->assertSee('FT-2026-0070');
+        $risposta->assertSee('FT-2026-0071');
 
         $risposta->assertViewHas('daFatturare', $daFatturare->totale);
         $risposta->assertViewHas('daSaldare', $daSaldare->totale);

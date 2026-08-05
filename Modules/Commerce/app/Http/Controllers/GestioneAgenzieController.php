@@ -8,10 +8,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use Modules\Commerce\Enums\MetodoPagamento;
+use Modules\Commerce\Contabilita\EstrattoConto;
 use Modules\Commerce\Enums\RuoloUtente;
 use Modules\Commerce\Enums\StatoAgenzia;
-use Modules\Commerce\Enums\StatoPagamento;
 use Modules\Commerce\Http\Requests\RegistrazioneAgenziaRequest;
 use Modules\Commerce\Models\Agenzia;
 use Modules\Commerce\Models\AgenteVendita;
@@ -84,38 +83,29 @@ class GestioneAgenzieController extends Controller
     }
 
     /**
-     * La contabilità dell'agenzia: ogni ordine con il suo metodo, l'importo
-     * e a che punto è (pagato, da fatturare, fatturato ma non ancora
-     * saldato...). Solo lettura: le azioni (emettere una fattura, segnarla
-     * saldata) stanno sul singolo ordine — vedi GestioneOrdiniController.
+     * La contabilità dell'agenzia. Due letture diverse dello stesso dato:
+     * tre cifre "a oggi" (quanto resta da fatturare/saldare/incassare in
+     * assoluto, non solo questo mese) e sotto l'estratto conto vero e
+     * proprio — un evento per riga, filtrabile per mese (vedi
+     * EstrattoConto). Solo lettura: le azioni (emettere una fattura,
+     * segnarla saldata) stanno sul singolo ordine — vedi
+     * GestioneOrdiniController.
      */
-    public function movimenti(Agenzia $agenzia): View
+    public function movimenti(Request $request, Agenzia $agenzia, EstrattoConto $estrattoConto): View
     {
-        $ordini = $agenzia->ordini()->latest()->paginate(30);
+        [$inizio, $fine] = EstrattoConto::periodo($request);
+        $eventi = $estrattoConto->perPeriodo($agenzia, $inizio, $fine);
 
-        return view('commerce::gestione.agenzie.movimenti', [
+        return view('commerce::gestione.agenzie.movimenti', array_merge([
             'agenzia' => $agenzia,
-            'ordini' => $ordini,
-            // In denaro, non a listino: un ordine coperto in parte da
-            // crediti non deve gonfiare quanto resta davvero da fatturare o
-            // incassare — vedi Ordine::valoreInDenaro().
-            'daFatturare' => $agenzia->ordini()
-                ->where('metodo_pagamento', MetodoPagamento::Fattura)
-                ->whereNull('fattura_emessa_at')
-                ->get(['totale', 'crediti_usati'])
-                ->sum(fn ($o) => $o->valoreInDenaro()),
-            'daSaldare' => $agenzia->ordini()
-                ->where('metodo_pagamento', MetodoPagamento::Fattura)
-                ->whereNotNull('fattura_emessa_at')
-                ->where('stato_pagamento', '!=', StatoPagamento::Pagato)
-                ->get(['totale', 'crediti_usati'])
-                ->sum(fn ($o) => $o->valoreInDenaro()),
-            'incassatoCarta' => $agenzia->ordini()
-                ->where('metodo_pagamento', MetodoPagamento::Carta)
-                ->where('stato_pagamento', StatoPagamento::Pagato)
-                ->get(['totale', 'crediti_usati'])
-                ->sum(fn ($o) => $o->valoreInDenaro()),
-        ]);
+            'eventi' => $eventi,
+            'periodo' => $inizio,
+            'periodoPrecedente' => $inizio->copy()->subMonth(),
+            'periodoSuccessivo' => $inizio->copy()->addMonth(),
+            'totalePagatoPeriodo' => $eventi->where('tipo', 'pagamento')->sum('importoDenaro'),
+            'totaleFatturatoPeriodo' => $eventi->where('tipo', 'fattura_emessa')->sum('importoDenaro'),
+            'totaleCreditiUsatiPeriodo' => $eventi->where('tipo', 'crediti_usati')->sum('importoCrediti'),
+        ], $estrattoConto->riepilogoOggi($agenzia)));
     }
 
     public function assegnaAgente(Request $request, Agenzia $agenzia): RedirectResponse

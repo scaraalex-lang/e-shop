@@ -11,6 +11,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Modules\Catalog\Models\Category;
 use Modules\Catalog\Models\Product;
+use Modules\Commerce\Contabilita\EstrattoConto;
 use Modules\Commerce\Enums\MetodoPagamento;
 use Modules\Commerce\Enums\StatoPagamento;
 use Modules\Commerce\Http\Requests\AttivaServiziOrdineRequest;
@@ -119,20 +120,30 @@ class OrdiniController extends Controller
     }
 
     /**
-     * La contabilità che l'agenzia vede di sé: ogni ordine con l'importo e a
-     * che punto è (pagato a carta, da fatturare, fatturato ma non ancora
-     * saldato...). Solo lettura — lo specchio di
+     * La contabilità che l'agenzia vede di sé: l'estratto conto del mese
+     * (un evento per riga — fattura emessa, pagamento ricevuto, crediti
+     * usati), filtrabile per periodo. Solo lettura — lo specchio di
      * GestioneAgenzieController::movimenti, senza le azioni dello staff.
      * Dietro il middleware `agenzia.approvata`: chi non è un'agenzia
      * approvata non ha nulla da vedere qui.
      */
-    public function fatture(Request $request): View
+    public function fatture(Request $request, EstrattoConto $estrattoConto): View
     {
         $agenzia = $request->user()->agenzia;
+        [$inizio, $fine] = EstrattoConto::periodo($request);
+        $eventi = $estrattoConto->perPeriodo($agenzia, $inizio, $fine);
 
-        return view('commerce::ordini.fatture', [
-            'ordini' => $agenzia->ordini()->latest()->paginate(20),
-        ]);
+        return view('commerce::ordini.fatture', array_merge([
+            'eventi' => $eventi,
+            'periodo' => $inizio,
+            'periodoPrecedente' => $inizio->copy()->subMonth(),
+            'periodoSuccessivo' => $inizio->copy()->addMonth(),
+            'totalePagatoPeriodo' => $eventi->where('tipo', 'pagamento')->sum('importoDenaro'),
+            'totaleFatturatoPeriodo' => $eventi->where('tipo', 'fattura_emessa')->sum('importoDenaro'),
+            'totaleCreditiUsatiPeriodo' => $eventi->where('tipo', 'crediti_usati')->sum('importoCrediti'),
+            // "A oggi", non solo nel mese scelto sopra — stessa lettura che
+            // vede lo staff in GestioneAgenzieController::movimenti.
+        ], $estrattoConto->riepilogoOggi($agenzia)));
     }
 
     /**

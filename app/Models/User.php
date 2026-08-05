@@ -81,7 +81,7 @@ class User extends Authenticatable
         if ($this->eAgenziaApprovata()) {
             $voci[] = ['Acquisto Servizi', route('servizi'), 'servizi'];
             $voci[] = ['Nuovo ordine', route('ordini.nuovo'), 'ordini.nuovo'];
-            $voci[] = ['Fatture', route('fatture'), 'fatture'];
+            $voci[] = ['Pagamenti', route('fatture'), 'fatture'];
         }
 
         if (! $this->eStaff()) {
