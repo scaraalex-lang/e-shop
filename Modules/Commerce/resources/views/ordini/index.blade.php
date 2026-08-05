@@ -18,9 +18,23 @@
 @else
     <div class="border border-caffe/15">
         @foreach ($ordini as $ordine)
+            @php
+                $defunto = $ordine->defunto_id ? ($defuntiPerOrdine[$ordine->defunto_id] ?? null) : null;
+                $fotoDefunto = $defunto ? ($fotoPerDefunto[$defunto->id] ?? null) : null;
+            @endphp
             <article class="flex flex-wrap items-center gap-x-8 gap-y-3 px-6 py-5
                             border-b border-caffe/10 last:border-b-0
                             hover:bg-panna/40 transition-colors duration-200">
+                @if ($defunto)
+                    <div class="flex items-center gap-3 min-w-[3rem]">
+                        <div class="h-12 w-12 shrink-0 border border-oro/40 bg-panna overflow-hidden">
+                            @if ($fotoDefunto)
+                                <img src="{{ $fotoDefunto }}" alt="" class="h-full w-full object-cover">
+                            @endif
+                        </div>
+                    </div>
+                @endif
+
                 <div class="min-w-[9rem]">
                     <a href="{{ route('ordine', $ordine) }}"
                        class="font-serif text-lg text-testo hover:text-oro-scuro transition-colors duration-300 tabular-nums">
@@ -29,6 +43,9 @@
                     <p class="mt-0.5 font-sans font-light text-[12px] text-testo-soft tabular-nums">
                         {{ $ordine->created_at->format('d/m/Y') }}
                     </p>
+                    @if ($defunto)
+                        <p class="mt-0.5 font-sans font-light text-[12px] text-testo-soft">{{ $defunto->nomeCompleto() }}</p>
+                    @endif
                 </div>
 
                 <p class="flex-1 min-w-[10rem] font-sans font-light text-[13px] text-testo-soft">

@@ -23,11 +23,29 @@ class OrdiniController extends Controller
 {
     public function index(Request $request): View
     {
+        $ordini = Ordine::di($request->user())
+            ->with('righe', 'servizi.servizioEditor')
+            ->latest()
+            ->paginate(10);
+
+        // Anteprima del defunto negli ordini di servizi digitali (Manifesti/
+        // Necrologi/Ricordini): stesso dato già mostrato nel dettaglio
+        // dell'ordine, qui solo nome+miniatura per riconoscere a colpo
+        // d'occhio di chi si tratta senza aprire ogni riga.
+        $defunti = Defunto::whereIn('id', $ordini->pluck('defunto_id')->filter()->unique())
+            ->get()
+            ->keyBy('id');
+
+        $fotoPerDefunto = $defunti->mapWithKeys(function (Defunto $defunto) {
+            $path = $defunto->fotoPrincipalePath();
+
+            return [$defunto->id => $path ? '/storage/'.ltrim($path, '/') : null];
+        });
+
         return view('commerce::ordini.index', [
-            'ordini' => Ordine::di($request->user())
-                ->with('righe', 'servizi.servizioEditor')
-                ->latest()
-                ->paginate(10),
+            'ordini' => $ordini,
+            'defuntiPerOrdine' => $defunti,
+            'fotoPerDefunto' => $fotoPerDefunto,
         ]);
     }
 
