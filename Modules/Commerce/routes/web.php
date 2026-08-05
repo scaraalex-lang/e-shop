@@ -41,6 +41,9 @@ Route::middleware('auth')->group(function () {
     Route::get('account/servizi', [OrdiniController::class, 'servizi'])->name('servizi');
     Route::post('account/ordini/servizio', [OrdiniController::class, 'attivaServizi'])->name('ordini.servizio');
     Route::get('account/ordini/{ordine}', [OrdiniController::class, 'show'])->name('ordine');
+    // Composizione dell'ordine di stampa dalla pagina ordine, dopo
+    // l'approvazione della bozza — vedi OrdiniController::aggiungiStampa.
+    Route::post('account/ordini/{ordine}/stampa', [OrdiniController::class, 'aggiungiStampa'])->name('ordini.stampa');
 });
 
 /*

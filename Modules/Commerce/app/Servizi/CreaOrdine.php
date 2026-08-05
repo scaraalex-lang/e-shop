@@ -33,7 +33,16 @@ class CreaOrdine
         $conto = $carrello->conto($this->listino, $utente);
         $agenzia = $utente->eAgenziaApprovata() ? $utente->agenzia : null;
 
-        return DB::transaction(function () use ($carrello, $utente, $consegna, $metodo, $conto, $agenzia) {
+        // Se tutte le righe arrivano dalla composizione dell'ordine di
+        // stampa di UNA pratica (vedi OrdiniController::aggiungiStampa), il
+        // nuovo ordine fisico resta agganciato allo stesso defunto: così
+        // compare con foto e nome in "I miei ordini" invece di sembrare un
+        // acquisto slegato. Un carrello misto (o senza righe taggate) non
+        // aggancia nulla, come oggi.
+        $defuntoId = $carrello->righe->pluck('defunto_id')->filter()->unique();
+        $defuntoId = $defuntoId->count() === 1 ? $defuntoId->first() : null;
+
+        return DB::transaction(function () use ($carrello, $utente, $consegna, $metodo, $conto, $agenzia, $defuntoId) {
             $spedizione = $this->spedizione($conto->totale(), $agenzia !== null);
 
             $ordine = new Ordine([
@@ -56,6 +65,7 @@ class CreaOrdine
                     fn (VoceConto $v) => (bool) $v->riga->product?->is_photo_printable
                 ),
             ]);
+            $ordine->defunto_id = $defuntoId;
             $ordine->save();
 
             foreach ($conto->voci as $voce) {

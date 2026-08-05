@@ -29,6 +29,7 @@ class CategoriaRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'sort_order' => ['required', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
+            'in_ordine_stampa' => ['nullable', 'boolean'],
             // 12288 KB: una foto da telefono raramente supera i 10MB, e
             // nginx/php-fpm sono allineati a 32M lato upload.
             'immagine' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:12288'],
@@ -56,6 +57,7 @@ class CategoriaRequest extends FormRequest
             'description' => $this->input('description'),
             'sort_order' => $this->integer('sort_order'),
             'is_active' => $this->boolean('is_active'),
+            'in_ordine_stampa' => $this->boolean('in_ordine_stampa'),
         ];
     }
 }

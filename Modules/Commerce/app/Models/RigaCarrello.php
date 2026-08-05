@@ -14,9 +14,9 @@ class RigaCarrello extends Model
 {
     protected $table = 'righe_carrello';
 
-    protected $fillable = ['carrello_id', 'product_id', 'quantita', 'numero_anniversario'];
+    protected $fillable = ['carrello_id', 'product_id', 'quantita', 'numero_anniversario', 'defunto_id'];
 
-    protected $casts = ['quantita' => 'integer', 'numero_anniversario' => 'integer'];
+    protected $casts = ['quantita' => 'integer', 'numero_anniversario' => 'integer', 'defunto_id' => 'integer'];
 
     public function carrello(): BelongsTo
     {

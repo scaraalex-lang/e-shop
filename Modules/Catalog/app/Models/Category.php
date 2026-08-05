@@ -11,12 +11,13 @@ class Category extends Model
 {
     protected $fillable = [
         'parent_id', 'slug', 'name', 'description',
-        'image', 'sort_order', 'is_active',
+        'image', 'sort_order', 'is_active', 'in_ordine_stampa',
     ];
 
     protected $casts = [
-        'is_active'  => 'boolean',
-        'sort_order' => 'integer',
+        'is_active'        => 'boolean',
+        'sort_order'       => 'integer',
+        'in_ordine_stampa' => 'boolean',
     ];
 
     public function parent(): BelongsTo

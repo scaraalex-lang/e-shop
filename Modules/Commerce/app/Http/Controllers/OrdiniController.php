@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Modules\Catalog\Models\Category;
 use Modules\Catalog\Models\Product;
@@ -13,6 +14,7 @@ use Modules\Commerce\Http\Requests\AttivaServiziOrdineRequest;
 use Modules\Commerce\Models\Ordine;
 use Modules\Commerce\Models\ServizioEditor;
 use Modules\Commerce\Servizi\AttivaServiziOrdine;
+use Modules\Commerce\Servizi\GestoreCarrello;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\Ricordino;
 
@@ -157,19 +159,83 @@ class OrdiniController extends Controller
 
     public function show(Request $request, Ordine $ordine): View
     {
-        // Un ordine si vede solo se è il proprio. 404 e non 403: l'esistenza
-        // dell'ordine di un altro non è un'informazione da dare.
-        abort_unless($ordine->user_id === $request->user()->id, 404);
+        // Un ordine si vede se è il proprio, o si è staff, o si è un altro
+        // referente della stessa agenzia — vedi Ordine::diChi(). 404 e non
+        // 403: l'esistenza dell'ordine di un altro non è un'informazione da
+        // dare.
+        abort_unless($ordine->diChi($request->user()), 404);
 
         $defunto = $ordine->defunto_id ? Defunto::find($ordine->defunto_id) : null;
         $fotoPath = $defunto?->fotoPrincipalePath();
+        $ricordino = $this->bozzaDi($ordine);
 
         return view('commerce::ordini.show', [
             'ordine' => $ordine->load('righe.product.primaryImage', 'righe.product.category', 'servizi.servizioEditor'),
-            'ricordino' => $this->bozzaDi($ordine),
+            'ricordino' => $ricordino,
             'defunto' => $defunto,
             'fotoUrl' => $fotoPath ? '/storage/'.ltrim($fotoPath, '/') : null,
+            'categorieStampa' => $ricordino?->approvato() ? $this->categorieStampa() : collect(),
         ]);
+    }
+
+    /**
+     * Le categorie che lo staff ha marcato come componibili nell'ordine di
+     * stampa (Category::in_ordine_stampa), coi loro prodotti attivi — stesso
+     * criterio di composizione di nuovo() ma filtrato alle categorie
+     * flaggate invece che a tutte.
+     */
+    private function categorieStampa(): Collection
+    {
+        return Category::query()
+            ->where('in_ordine_stampa', true)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function (Category $categoria) {
+                $categoria->setRelation('prodotti', Product::active()
+                    ->where('category_id', $categoria->id)
+                    ->orderBy('sort_order')
+                    ->get());
+
+                return $categoria;
+            })
+            ->filter(fn (Category $categoria) => $categoria->prodotti->isNotEmpty())
+            ->values();
+    }
+
+    /**
+     * Aggiunge al carrello un articolo scelto dalla composizione dell'ordine
+     * di stampa, nella pagina di questo ordine — vedi GestoreCarrello::aggiungi().
+     *
+     * La riga si marca col defunto della pratica: se il carrello ha già
+     * articoli di stampa per un defunto diverso, si rifiuta invece di
+     * mischiare in spedizione la stampa di due pratiche per errore.
+     */
+    public function aggiungiStampa(Request $request, Ordine $ordine, GestoreCarrello $carrelli): RedirectResponse
+    {
+        abort_unless($ordine->diChi($request->user()), 404);
+
+        $dati = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'quantita' => ['required', 'integer', 'min:1', 'max:100000'],
+        ]);
+
+        $prodotto = Product::active()->findOrFail($dati['product_id']);
+
+        $carrelloAttuale = $carrelli->corrente();
+        $defuntoInCarrello = $carrelloAttuale?->righe->pluck('defunto_id')->filter()->unique()->first();
+
+        if ($defuntoInCarrello && $ordine->defunto_id && $defuntoInCarrello !== $ordine->defunto_id) {
+            return redirect()
+                ->route('ordine', $ordine)
+                ->with('stato', 'Nel carrello ci sono già articoli di stampa per un\'altra pratica: completa o svuota quell\'ordine prima di aggiungerne un altro.');
+        }
+
+        $carrelli->aggiungi($prodotto, $dati['quantita'], $ordine->defunto_id);
+
+        return redirect()
+            ->route('ordine', $ordine)
+            ->with('stato', "{$prodotto->name}: aggiunto al carrello.");
     }
 
     /**
