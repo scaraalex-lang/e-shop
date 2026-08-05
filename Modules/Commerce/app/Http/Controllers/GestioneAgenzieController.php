@@ -8,8 +8,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Modules\Commerce\Enums\MetodoPagamento;
 use Modules\Commerce\Enums\RuoloUtente;
 use Modules\Commerce\Enums\StatoAgenzia;
+use Modules\Commerce\Enums\StatoPagamento;
 use Modules\Commerce\Http\Requests\RegistrazioneAgenziaRequest;
 use Modules\Commerce\Models\Agenzia;
 use Modules\Commerce\Models\AgenteVendita;
@@ -78,6 +80,35 @@ class GestioneAgenzieController extends Controller
         return view('commerce::gestione.agenzie.show', [
             'agenzia' => $agenzia->load('user', 'agenteVendita'),
             'agenti' => AgenteVendita::orderBy('nome')->get(),
+        ]);
+    }
+
+    /**
+     * La contabilità dell'agenzia: ogni ordine con il suo metodo, l'importo
+     * e a che punto è (pagato, da fatturare, fatturato ma non ancora
+     * saldato...). Solo lettura: le azioni (emettere una fattura, segnarla
+     * saldata) stanno sul singolo ordine — vedi GestioneOrdiniController.
+     */
+    public function movimenti(Agenzia $agenzia): View
+    {
+        $ordini = $agenzia->ordini()->latest()->paginate(30);
+
+        return view('commerce::gestione.agenzie.movimenti', [
+            'agenzia' => $agenzia,
+            'ordini' => $ordini,
+            'daFatturare' => $agenzia->ordini()
+                ->where('metodo_pagamento', MetodoPagamento::Fattura)
+                ->whereNull('fattura_emessa_at')
+                ->sum('totale'),
+            'daSaldare' => $agenzia->ordini()
+                ->where('metodo_pagamento', MetodoPagamento::Fattura)
+                ->whereNotNull('fattura_emessa_at')
+                ->where('stato_pagamento', '!=', StatoPagamento::Pagato)
+                ->sum('totale'),
+            'incassatoCarta' => $agenzia->ordini()
+                ->where('metodo_pagamento', MetodoPagamento::Carta)
+                ->where('stato_pagamento', StatoPagamento::Pagato)
+                ->sum('totale'),
         ]);
     }
 

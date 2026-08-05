@@ -40,6 +40,11 @@ Route::middleware('auth')->group(function () {
     // Prima di {ordine}: altrimenti "nuovo" verrebbe letto come un numero d'ordine.
     Route::get('account/ordini/nuovo', [OrdiniController::class, 'nuovo'])->name('ordini.nuovo');
     Route::get('account/servizi', [OrdiniController::class, 'servizi'])->name('servizi');
+    // La contabilità dell'agenzia: solo un'agenzia approvata ha qualcosa da
+    // vedere qui — vedi OrdiniController::fatture.
+    Route::get('account/fatture', [OrdiniController::class, 'fatture'])
+        ->middleware('agenzia.approvata')
+        ->name('fatture');
     Route::post('account/ordini/servizio', [OrdiniController::class, 'attivaServizi'])->name('ordini.servizio');
     Route::get('account/ordini/{ordine}', [OrdiniController::class, 'show'])->name('ordine');
     // Composizione dell'ordine di stampa dalla pagina ordine, dopo
@@ -89,6 +94,9 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
     Route::post('agenzie/{agenzia}/sospendi', [GestioneAgenzieController::class, 'sospendi'])->name('agenzie.sospendi');
     Route::post('agenzie/{agenzia}/agente', [GestioneAgenzieController::class, 'assegnaAgente'])->name('agenzie.agente');
     Route::post('agenzie/{agenzia}/sconto', [GestioneAgenzieController::class, 'impostaSconto'])->name('agenzie.sconto');
+    // La contabilità dell'agenzia: pagamenti a carta e ordini a fattura,
+    // sola lettura — vedi GestioneAgenzieController::movimenti.
+    Route::get('agenzie/{agenzia}/movimenti', [GestioneAgenzieController::class, 'movimenti'])->name('agenzie.movimenti');
 
     Route::get('agenti', [GestioneAgentiController::class, 'index'])->name('agenti.index');
     Route::get('agenti/nuovo', [GestioneAgentiController::class, 'create'])->name('agenti.create');
@@ -101,6 +109,10 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
     Route::get('ordini/{ordine}', [GestioneOrdiniController::class, 'show'])->name('ordini.show');
     Route::post('ordini/{ordine}/spedisci', [GestioneOrdiniController::class, 'spedisci'])->name('ordini.spedisci');
     Route::post('ordini/{ordine}/consegnato', [GestioneOrdiniController::class, 'segnaConsegnato'])->name('ordini.consegnato');
+    // Fatturazione di un ordine a termini: numero fattura, poi il saldo
+    // (bonifico...) — vedi GestioneOrdiniController::emettiFattura/segnaFatturaPagata.
+    Route::post('ordini/{ordine}/fattura', [GestioneOrdiniController::class, 'emettiFattura'])->name('ordini.fattura');
+    Route::post('ordini/{ordine}/fattura/pagata', [GestioneOrdiniController::class, 'segnaFatturaPagata'])->name('ordini.fattura.pagata');
 
     // Il catalogo servizi (ricordini/manifesti/necrologi): righe fisse, solo
     // costo e attivo/non attivo modificabili — niente create/delete.

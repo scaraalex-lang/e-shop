@@ -5,6 +5,7 @@
 
 @section('gestione')
     @php
+        use Modules\Commerce\Enums\MetodoPagamento;
         use Modules\Commerce\Enums\StatoOrdine;
     @endphp
 
@@ -52,6 +53,49 @@
                     </p>
                 @endif
             </section>
+
+            @if ($ordine->metodo_pagamento === MetodoPagamento::Fattura)
+                <section class="bg-bianco px-7 py-7">
+                    <h2 class="font-serif text-xl font-medium">Fatturazione</h2>
+
+                    @if ($ordine->fatturata())
+                        <p class="mt-2 font-sans font-light text-[14px] text-testo-soft">
+                            Fattura <strong class="text-testo font-normal">{{ $ordine->fattura_numero }}</strong>
+                            emessa il {{ $ordine->fattura_emessa_at->format('d/m/Y') }}.
+                        </p>
+                    @else
+                        <p class="mt-2 font-sans font-light text-[14px] text-testo-soft">
+                            Ordine a termini: non ancora fatturato.
+                        </p>
+                    @endif
+
+                    @if (! $ordine->fatturata())
+                        <form method="POST" action="{{ route('gestione.ordini.fattura', $ordine) }}" class="mt-4 flex flex-wrap items-end gap-4">
+                            @csrf
+                            <div>
+                                <x-input-label for="fattura_numero" value="Numero fattura" />
+                                <x-text-input id="fattura_numero" name="fattura_numero" value="{{ old('fattura_numero') }}" required />
+                                <x-input-error :messages="$errors->get('fattura_numero')" class="mt-2" />
+                            </div>
+                            <x-secondary-button type="submit">Segna fatturato</x-secondary-button>
+                        </form>
+                    @elseif ($ordine->stato_pagamento !== \Modules\Commerce\Enums\StatoPagamento::Pagato)
+                        <form method="POST" action="{{ route('gestione.ordini.fattura.pagata', $ordine) }}" class="mt-4 flex flex-wrap items-end gap-4">
+                            @csrf
+                            <div>
+                                <x-input-label for="riferimento_pagamento" value="Riferimento del saldo (facoltativo)" />
+                                <x-text-input id="riferimento_pagamento" name="riferimento_pagamento"
+                                              value="{{ old('riferimento_pagamento') }}" placeholder="es. bonifico del 10/08" />
+                            </div>
+                            <x-secondary-button type="submit">Segna saldata</x-secondary-button>
+                        </form>
+                    @else
+                        <p class="mt-3 font-sans font-light text-[13px] text-successo">
+                            Saldata {{ $ordine->pagato_at ? 'il '.$ordine->pagato_at->format('d/m/Y') : '' }}.
+                        </p>
+                    @endif
+                </section>
+            @endif
 
             @if ($ordine->richiede_lavorazione)
                 <section class="bg-bianco px-7 py-7">

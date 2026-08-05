@@ -36,6 +36,7 @@ class Ordine extends Model
         'stato_pagamento' => StatoPagamento::class,
         'occasione' => Occasione::class,
         'pagato_at' => 'datetime',
+        'fattura_emessa_at' => 'datetime',
         'totale_pieno' => 'integer',
         'totale_merce' => 'integer',
         'spedizione' => 'integer',
@@ -238,6 +239,29 @@ class Ordine extends Model
     public function segnaPagamentoFallito(): void
     {
         $this->forceFill(['stato_pagamento' => StatoPagamento::Fallito])->save();
+    }
+
+    /**
+     * Una fattura per ordine: lo staff la emette (fuori da qui, nel proprio
+     * gestionale) e registra qui solo il numero, per la contabilità che
+     * l'agenzia vede in `account/fatture`. Non tocca `stato_pagamento`: un
+     * ordine può essere fatturato e restare da saldare — il saldo si
+     * registra a parte con `registraPagamento()`, riusato anche qui perché
+     * "un ordine a fattura pagato" non è diverso concettualmente da uno
+     * pagato a carta, solo il riferimento cambia (un bonifico invece di un
+     * PaymentIntent Stripe).
+     */
+    public function emettiFattura(string $numero): void
+    {
+        $this->forceFill([
+            'fattura_numero' => $numero,
+            'fattura_emessa_at' => Carbon::now(),
+        ])->save();
+    }
+
+    public function fatturata(): bool
+    {
+        return $this->fattura_emessa_at !== null;
     }
 
     public function passaA(StatoOrdine $stato): void

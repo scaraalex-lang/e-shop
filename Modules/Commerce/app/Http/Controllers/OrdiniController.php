@@ -119,6 +119,23 @@ class OrdiniController extends Controller
     }
 
     /**
+     * La contabilità che l'agenzia vede di sé: ogni ordine con l'importo e a
+     * che punto è (pagato a carta, da fatturare, fatturato ma non ancora
+     * saldato...). Solo lettura — lo specchio di
+     * GestioneAgenzieController::movimenti, senza le azioni dello staff.
+     * Dietro il middleware `agenzia.approvata`: chi non è un'agenzia
+     * approvata non ha nulla da vedere qui.
+     */
+    public function fatture(Request $request): View
+    {
+        $agenzia = $request->user()->agenzia;
+
+        return view('commerce::ordini.fatture', [
+            'ordini' => $agenzia->ordini()->latest()->paginate(20),
+        ]);
+    }
+
+    /**
      * Attiva uno o più servizi editor (ricordini/manifesti/necrologi) su un
      * ordine nuovo, pagati in crediti — vedi AttivaServiziOrdine.
      *

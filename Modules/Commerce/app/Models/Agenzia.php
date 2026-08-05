@@ -53,6 +53,12 @@ class Agenzia extends Model
         return $this->hasMany(MovimentoCredito::class);
     }
 
+    /** Tutti gli ordini di quest'agenzia — la contabilità parte da qui, vedi [[Ordine]]. */
+    public function ordini(): HasMany
+    {
+        return $this->hasMany(Ordine::class);
+    }
+
     public function agenteVendita(): BelongsTo
     {
         return $this->belongsTo(AgenteVendita::class);

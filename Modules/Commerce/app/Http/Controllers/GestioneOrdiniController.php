@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Modules\Commerce\Enums\MetodoPagamento;
 use Modules\Commerce\Enums\StatoOrdine;
 use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
@@ -82,5 +83,50 @@ class GestioneOrdiniController extends Controller
         return redirect()
             ->route('gestione.ordini.show', $ordine)
             ->with('stato', "Ordine {$ordine->numero} segnato come consegnato.");
+    }
+
+    /**
+     * Lo staff registra il numero della fattura emessa fuori di qui (nel
+     * proprio gestionale contabile): qui si tiene solo traccia di quale
+     * fattura copre quale ordine, per farla vedere all'agenzia in
+     * account/fatture. Solo sugli ordini a termini — vedi MetodoPagamento.
+     */
+    public function emettiFattura(Request $request, Ordine $ordine): RedirectResponse
+    {
+        abort_unless($ordine->metodo_pagamento === MetodoPagamento::Fattura, 404);
+
+        $dati = $request->validate([
+            'fattura_numero' => ['required', 'string', 'max:60'],
+        ], [], ['fattura_numero' => 'il numero della fattura']);
+
+        $ordine->emettiFattura($dati['fattura_numero']);
+
+        return redirect()
+            ->route('gestione.ordini.show', $ordine)
+            ->with('stato', "Fattura {$dati['fattura_numero']} registrata sull'ordine {$ordine->numero}.");
+    }
+
+    /**
+     * Il saldo di una fattura arriva fuori dai nostri circuiti (bonifico,
+     * assegno...): niente da verificare qui come per Stripe, solo prendere
+     * nota — riusa registraPagamento(), stesso significato di un ordine
+     * pagato a carta, cambia solo il riferimento.
+     */
+    public function segnaFatturaPagata(Request $request, Ordine $ordine): RedirectResponse
+    {
+        abort_unless(
+            $ordine->metodo_pagamento === MetodoPagamento::Fattura && $ordine->fatturata(),
+            404,
+        );
+
+        $dati = $request->validate([
+            'riferimento_pagamento' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $ordine->registraPagamento($dati['riferimento_pagamento'] ?: "Fattura {$ordine->fattura_numero} saldata");
+
+        return redirect()
+            ->route('gestione.ordini.show', $ordine)
+            ->with('stato', "Ordine {$ordine->numero} segnato come saldato.");
     }
 }
