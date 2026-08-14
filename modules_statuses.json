@@ -2,5 +2,6 @@
     "Catalog": true,
     "PhotoPrint": true,
     "Memorial": true,
-    "Commerce": true
+    "Commerce": true,
+    "TributeVideo": true
 }

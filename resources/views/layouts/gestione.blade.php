@@ -24,6 +24,7 @@
             ['Ordini agenzie (B2B)', route('gestione.ordini.index', ['provenienza' => 'b2b']), fn () => request()->routeIs('gestione.ordini.*') && request()->query('provenienza') === 'b2b'],
             ['Studio ricordini', route('studio.ricordino'), 'studio.*'],
             ['Archivio preghiere', route('gestione.preghiere.index'), 'gestione.preghiere.*'],
+            ['Video memoriale (test)', route('gestione.video-memoriale.index'), 'gestione.video-memoriale.*'],
         ],
         'Catalogo' => [
             ['Prodotti', route('gestione.prodotti.index'), 'gestione.prodotti.*'],
