@@ -5,6 +5,7 @@ namespace Modules\Memorial\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\Manifesto;
@@ -54,6 +55,16 @@ class DefuntiController extends Controller
         $ricordinoAbilitato = $ordini->contains(fn (Ordine $o) => $o->designerAbilitato('ricordini'));
         $ricordino = $defunto->ricordini()->latest()->first();
 
+        // Query builder puro, non il model Eloquent di TributeVideo: Memorial
+        // non deve mai dipendere da TributeVideo, solo il contrario (stesso
+        // schema a senso unico di PhotoPrint→Memorial) — vedi memoria del modulo.
+        $videoAbilitato = $ordini->contains(fn (Ordine $o) => $o->designerAbilitato('video-memoriale'));
+        $video = DB::table('video_memoriali')
+            ->where('defunto_id', $defunto->id)
+            ->latest('id')
+            ->select(['id', 'token', 'stato', 'messaggio_errore'])
+            ->first();
+
         return view('memorial::defunti.show', [
             'defunto' => $defunto,
             'ordinePrincipale' => $ordinePrincipale,
@@ -71,6 +82,11 @@ class DefuntiController extends Controller
 
             'ricordinoAbilitato' => $fotoPronta && $ricordinoAbilitato,
             'ricordino' => $ricordino,
+
+            // Non richiede $fotoPronta: le foto del video sono un set dedicato,
+            // separato dal ritratto principale usato da manifesto/ricordino.
+            'videoAbilitato' => $videoAbilitato,
+            'video' => $video,
         ]);
     }
 

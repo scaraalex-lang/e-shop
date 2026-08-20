@@ -37,6 +37,14 @@ class TestController extends Controller
             'citazione' => ['nullable', 'string', 'max:1000'],
             'foto' => ['required', 'array', 'min:1'],
             'foto.*' => ['image', 'max:12288'],   // 12 MB, come il Foto Manager
+            'testo' => ['nullable', 'array'],
+            'testo.*' => ['nullable', 'string', 'max:180'],
+            'posizione' => ['nullable', 'array'],
+            'posizione.*' => ['nullable', 'in:alto,centro,basso'],
+            'durata' => ['nullable', 'array'],
+            'durata.*' => ['nullable', 'integer', 'min:1', 'max:15'],
+            'zoom' => ['nullable', 'array'],
+            'zoom.*' => ['nullable', 'boolean'],
             'audio' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg', 'max:20480'], // 20 MB
         ], [
             'foto.required' => 'Serve almeno una fotografia.',
@@ -68,7 +76,17 @@ class TestController extends Controller
 
             foreach ($request->file('foto') as $ordine => $file) {
                 $path = $file->store(self::DISK_DIR.'/'.$token.'/foto', 'public');
-                $video->foto()->create(['path' => $path, 'ordine' => $ordine]);
+                // Didascalia opzionale letta per indice: non ci si fida della
+                // lunghezza degli array paralleli mandati dal client.
+                $testo = trim((string) $request->input("testo.$ordine")) ?: null;
+                $video->foto()->create([
+                    'path' => $path,
+                    'ordine' => $ordine,
+                    'testo' => $testo,
+                    'testo_posizione' => $testo ? $request->input("posizione.$ordine") : null,
+                    'durata_secondi' => $request->input("durata.$ordine"),
+                    'zoom_attivo' => $request->boolean("zoom.$ordine", true),
+                ]);
             }
 
             return $video;

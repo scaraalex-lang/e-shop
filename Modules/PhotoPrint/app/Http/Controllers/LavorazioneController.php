@@ -5,9 +5,11 @@ namespace Modules\PhotoPrint\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Commerce\Enums\StatoOrdine;
+use Modules\Commerce\Enums\StatoPagamento;
 use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
 use Modules\PhotoPrint\Models\FotoPratica;
@@ -34,11 +36,29 @@ class LavorazioneController extends Controller
         $defunto = $ordine->defunto_id ? Defunto::find($ordine->defunto_id) : null;
         $ricordino = $defunto?->ricordini()->latest()->first();
 
+        // Video Memoriale B2C: sbloccato solo se l'ordine è DAVVERO pagato e
+        // contiene la photoceramica con QR — niente Ordine::designerAbilitato()
+        // qui, includerebbe gratis anche i kit senza QR (vedi
+        // DefuntoVideoController per il perché). Query builder puro, non il
+        // model Eloquent di TributeVideo: PhotoPrint non deve mai dipendere da
+        // TributeVideo, solo il contrario (stesso senso unico verso Memorial).
+        $ordine->load('righe.product');
+        $videoAbilitato = $defunto !== null
+            && $ordine->stato_pagamento === StatoPagamento::Pagato
+            && $ordine->righe->contains(fn ($riga) => $riga->product?->has_qr_memorial === true);
+        $video = $defunto ? DB::table('video_memoriali')
+            ->where('defunto_id', $defunto->id)
+            ->latest('id')
+            ->select(['id', 'token', 'stato'])
+            ->first() : null;
+
         return view('photoprint::lavorazione.show', [
             'ordine' => $ordine->load('servizi.servizioEditor'),
             'defunto' => $defunto,
             'ricordino' => $ricordino,
             'foto' => FotoPratica::where('ordine_id', $ordine->id)->latest()->get(),
+            'videoAbilitato' => $videoAbilitato,
+            'video' => $video,
         ]);
     }
 

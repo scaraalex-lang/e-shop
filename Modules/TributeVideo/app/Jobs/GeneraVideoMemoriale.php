@@ -42,8 +42,16 @@ class GeneraVideoMemoriale implements ShouldQueue
 
         $video->inElaborazione();
 
-        $foto = $video->foto()->pluck('path')
-            ->map(fn (string $path) => Storage::disk('public')->path($path))
+        // Ogni foto porta con sé la propria didascalia/durata/zoom, letti
+        // dalle colonne dell'editor timeline (Modules\TributeVideo\Enums\PosizioneDidascalia).
+        $foto = $video->foto()->orderBy('ordine')->get()
+            ->map(fn ($f) => [
+                'path' => Storage::disk('public')->path($f->path),
+                'testo' => $f->testo,
+                'posizione' => $f->testo_posizione?->value,
+                'durata' => $f->durata_secondi,
+                'zoom' => $f->zoom_attivo,
+            ])
             ->all();
 
         $outputPath = Storage::disk('public')->path('tributevideo/output/'.$video->token.'.mp4');

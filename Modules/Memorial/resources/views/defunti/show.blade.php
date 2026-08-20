@@ -191,6 +191,30 @@
             @endif
         @endif
     </section>
+
+    {{-- 5. video memoriale --}}
+    <section class="border border-caffe/15 bg-bianco px-6 py-8 sm:px-10 sm:py-10 {{ $videoAbilitato ? '' : 'opacity-45 pointer-events-none' }}">
+        <h2 class="font-serif text-2xl font-medium">5. Video Memoriale</h2>
+        @php
+            $etichetteStatoVideo = [
+                'in_coda' => 'In coda', 'in_elaborazione' => 'In elaborazione',
+                'pronto' => 'Pronto', 'errore' => 'Errore',
+            ];
+        @endphp
+        <p class="mt-2 font-sans text-[11px] tracking-[0.2em] uppercase {{ $video && $video->stato === 'pronto' ? 'text-successo' : 'text-testo-soft' }}">
+            {{ $video ? ($etichetteStatoVideo[$video->stato] ?? $video->stato) : 'Disponibile' }}
+        </p>
+        <p class="mt-3 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+            Un video con le fotografie, zoom lento e dissolvenze, raggiungibile dal QR
+            da incidere sulla fotoceramica: sempre acquistabile, non deve aspettare gli altri passi.
+        </p>
+
+        <div class="mt-6">
+            <x-button :href="route('defunti.video-memoriale.show', $defunto)">
+                {{ $video ? 'Vedi il video' : 'Genera il video' }}
+            </x-button>
+        </div>
+    </section>
 </div>
 
 {{-- ============ extra: altri necrologi ============ --}}

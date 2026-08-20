@@ -49,6 +49,20 @@ class VideoMemoriale extends Model
         return $this->stato === StatoVideoMemoriale::Pronto;
     }
 
+    /**
+     * Fotogramma di anteprima estratto automaticamente da Cloudinary
+     * (stesso public_id, formato immagine invece di video) — usato come
+     * `poster` del player e come `og:image` per le anteprime di condivisione.
+     */
+    public function posterUrl(): ?string
+    {
+        if (! $this->cloudinary_url) {
+            return null;
+        }
+
+        return preg_replace('/\.mp4$/', '.jpg', $this->cloudinary_url);
+    }
+
     public function inCoda(): void
     {
         $this->forceFill(['stato' => StatoVideoMemoriale::InCoda])->save();

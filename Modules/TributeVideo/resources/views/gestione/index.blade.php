@@ -36,14 +36,7 @@
             <x-input-error :messages="$errors->get('citazione')" class="mt-2" />
         </div>
 
-        <div>
-            <x-input-label for="foto" value="Fotografie (in ordine, almeno una)" />
-            <input id="foto" name="foto[]" type="file" accept="image/*" multiple required
-                   class="block w-full bg-bianco border border-caffe/25 px-4 py-3 font-sans font-light text-[14px]
-                          focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40">
-            <x-input-error :messages="$errors->get('foto')" class="mt-2" />
-            <x-input-error :messages="$errors->get('foto.*')" class="mt-1" />
-        </div>
+        @include('tributevideo::partials.editor-foto')
 
         <div>
             <x-input-label for="audio" value="Audio di sottofondo (facoltativo)" />

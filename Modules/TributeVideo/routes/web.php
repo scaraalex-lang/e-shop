@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\TributeVideo\Http\Controllers\DefuntoVideoController;
 use Modules\TributeVideo\Http\Controllers\TestController;
 use Modules\TributeVideo\Http\Controllers\VideoPubblicoController;
 
@@ -21,4 +22,15 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
     Route::get('video-memoriale', [TestController::class, 'index'])->name('video-memoriale.index');
     Route::post('video-memoriale', [TestController::class, 'store'])->name('video-memoriale.store');
     Route::get('video-memoriale/{videoMemoriale}', [TestController::class, 'show'])->name('video-memoriale.show');
+});
+
+/*
+ | Video Memoriale legato a un defunto reale (B2B, dalla Scheda Defunto):
+ | stesso gate a crediti (ServizioEditor) e stesso schema di rotta di
+ | Modules/Memorial account/defunti/{defunto}/manifesti — vedi
+ | DefuntoVideoController.
+ */
+Route::middleware('auth')->prefix('account/defunti')->name('defunti.')->group(function () {
+    Route::get('{defunto}/video-memoriale', [DefuntoVideoController::class, 'show'])->name('video-memoriale.show');
+    Route::post('{defunto}/video-memoriale', [DefuntoVideoController::class, 'store'])->name('video-memoriale.store');
 });
