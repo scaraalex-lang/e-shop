@@ -214,9 +214,11 @@
         @else
             <div class="flex gap-10">
 
-                {{-- accesso diretto alle categorie (sinistra, sticky) --}}
+                {{-- accesso diretto alle categorie (sinistra, sticky). Stesso
+                     caffè chiaro della sidebar di Gestione/Account, a
+                     staccare il blocco menu dal resto della pagina. --}}
                 <aside class="hidden lg:block w-56 shrink-0 py-12">
-                    <div class="sticky top-[4.5rem]">
+                    <div class="sticky top-[4.5rem] bg-caffe/8 border border-oro/30 px-6 py-7">
                         <x-category-sidebar />
                     </div>
                 </aside>

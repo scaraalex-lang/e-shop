@@ -186,38 +186,41 @@
             </section>
         </div>
 
-        <aside class="border border-caffe/15 bg-panna/50 px-6 py-7 self-start">
-            <span class="font-sans text-[10px] tracking-[0.22em] uppercase text-testo-soft">Stato</span>
-            <p class="mt-2 font-serif text-2xl">{{ $ordine->stato->etichetta() }}</p>
-            <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">{{ $ordine->stato->racconto() }}</p>
+        <aside class="border border-caffe/15 self-start">
+            {{-- Lo stato è l'informazione che conta di più in questa pagina:
+                 unico blocco "chiave" (Opzione B), il resto resta neutro. --}}
+            <x-blocco variant="chiave" etichetta="Stato" class="px-6 py-6">
+                <p class="mt-2 font-serif text-2xl">{{ $ordine->stato->etichetta() }}</p>
+                <p class="mt-2 font-sans font-light text-[13px] text-panna/75">{{ $ordine->stato->racconto() }}</p>
+            </x-blocco>
 
-            <hr class="my-6 h-px w-full border-0 bg-caffe/15">
-
-            @if ($ordine->stato === StatoOrdine::InProduzione)
-                <form method="POST" action="{{ route('gestione.ordini.spedisci', $ordine) }}" class="space-y-4">
-                    @csrf
-                    <div>
-                        <x-input-label for="corriere" value="Corriere" />
-                        <x-text-input id="corriere" name="corriere" value="{{ old('corriere') }}" required />
-                        <x-input-error :messages="$errors->get('corriere')" class="mt-2" />
-                    </div>
-                    <div>
-                        <x-input-label for="tracking_numero" value="Numero di tracking" />
-                        <x-text-input id="tracking_numero" name="tracking_numero" value="{{ old('tracking_numero') }}" required />
-                        <x-input-error :messages="$errors->get('tracking_numero')" class="mt-2" />
-                    </div>
-                    <x-primary-button class="w-full">Segna spedito</x-primary-button>
-                </form>
-            @elseif ($ordine->stato === StatoOrdine::Spedito)
-                <form method="POST" action="{{ route('gestione.ordini.consegnato', $ordine) }}">
-                    @csrf
-                    <x-primary-button class="w-full">Segna consegnato</x-primary-button>
-                </form>
-            @else
-                <p class="font-sans font-light text-[13px] text-testo-soft">
-                    Nessuna azione disponibile in questo stato.
-                </p>
-            @endif
+            <div class="bg-panna/50 px-6 py-6">
+                @if ($ordine->stato === StatoOrdine::InProduzione)
+                    <form method="POST" action="{{ route('gestione.ordini.spedisci', $ordine) }}" class="space-y-4">
+                        @csrf
+                        <div>
+                            <x-input-label for="corriere" value="Corriere" />
+                            <x-text-input id="corriere" name="corriere" value="{{ old('corriere') }}" required />
+                            <x-input-error :messages="$errors->get('corriere')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="tracking_numero" value="Numero di tracking" />
+                            <x-text-input id="tracking_numero" name="tracking_numero" value="{{ old('tracking_numero') }}" required />
+                            <x-input-error :messages="$errors->get('tracking_numero')" class="mt-2" />
+                        </div>
+                        <x-primary-button class="w-full">Segna spedito</x-primary-button>
+                    </form>
+                @elseif ($ordine->stato === StatoOrdine::Spedito)
+                    <form method="POST" action="{{ route('gestione.ordini.consegnato', $ordine) }}">
+                        @csrf
+                        <x-primary-button class="w-full">Segna consegnato</x-primary-button>
+                    </form>
+                @else
+                    <p class="font-sans font-light text-[13px] text-testo-soft">
+                        Nessuna azione disponibile in questo stato.
+                    </p>
+                @endif
+            </div>
         </aside>
     </div>
 @endsection

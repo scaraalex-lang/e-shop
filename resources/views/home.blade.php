@@ -24,7 +24,10 @@
 <div class="space-y-20">
 
     {{-- ============ COLLEZIONI (griglia categorie) ============ --}}
-    <section>
+    {{-- Bordino oro sottile su ogni sezione: le stacca dalla pagina senza
+         il peso di un bordo caffè, coerente con le greche dorate sottili
+         dell'identità visiva. --}}
+    <section class="border border-oro/30 px-8 py-10">
         <x-section-title :occhiello="ContenutoVetrina::valore('collezioni.occhiello')" :titolo="ContenutoVetrina::valore('collezioni.titolo')" allineamento="left" />
         <p class="mt-4 mb-10 max-w-xl font-sans font-light text-testo-soft leading-relaxed">
             {{ ContenutoVetrina::valore('collezioni.testo') }}
@@ -34,7 +37,7 @@
 
     {{-- ============ IN EVIDENZA (prodotti reali) ============ --}}
     @if ($evidenza->isNotEmpty())
-        <section>
+        <section class="border border-oro/30 px-8 py-10">
             <x-section-title :occhiello="ContenutoVetrina::valore('evidenza.occhiello')" :titolo="ContenutoVetrina::valore('evidenza.titolo')" allineamento="left" />
             <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
                 @foreach ($evidenza as $p)
@@ -58,25 +61,25 @@
         </section>
     @endif
 
-    {{-- ============ FASCIA VALORI (blocco panna che stacca) ============ --}}
-    <section class="bg-panna border-2 border-caffe">
-        <div class="px-8 py-14">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
-                @for ($i = 1; $i <= 3; $i++)
-                    <div class="flex flex-col items-center">
-                        <span class="block h-px w-10 bg-oro mb-6"></span>
-                        <h3 class="font-serif text-2xl text-caffe">{{ ContenutoVetrina::valore("valori.{$i}.titolo") }}</h3>
-                        <p class="mt-3 font-sans font-light text-[14px] text-testo-soft leading-relaxed max-w-xs">
-                            {{ ContenutoVetrina::valore("valori.{$i}.testo") }}
-                        </p>
-                    </div>
-                @endfor
-            </div>
+    {{-- ============ FASCIA VALORI (blocco caffè che stacca, Opzione B —
+         stesso trattamento della Gestione: un solo momento scuro, il resto
+         della home resta bianco/panna com'è) ============ --}}
+    <x-blocco variant="chiave" class="border border-oro/30 px-8 py-14">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+            @for ($i = 1; $i <= 3; $i++)
+                <div class="flex flex-col items-center">
+                    <span class="block h-px w-10 bg-oro mb-6"></span>
+                    <h3 class="font-serif text-2xl text-panna">{{ ContenutoVetrina::valore("valori.{$i}.titolo") }}</h3>
+                    <p class="mt-3 font-sans font-light text-[14px] text-panna/70 leading-relaxed max-w-xs">
+                        {{ ContenutoVetrina::valore("valori.{$i}.testo") }}
+                    </p>
+                </div>
+            @endfor
         </div>
-    </section>
+    </x-blocco>
 
     {{-- ============ CTA FINALE ============ --}}
-    <section class="text-center py-8">
+    <section class="text-center border border-oro/30 px-8 py-10">
         <h2 class="font-serif font-medium text-caffe text-4xl md:text-5xl leading-tight">
             {{ ContenutoVetrina::valore('cta.titolo_intro') }} <em class="italic text-oro">{{ ContenutoVetrina::valore('cta.titolo_enfasi') }}</em>
         </h2>

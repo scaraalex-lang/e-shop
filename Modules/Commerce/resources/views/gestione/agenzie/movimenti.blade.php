@@ -10,16 +10,17 @@
 </a>
 
 {{-- Le tre cifre "a oggi": quanto resta da fatturare/saldare/incassare in
-     assoluto, non solo nel mese scelto sotto — vedi GestioneAgenzieController::movimenti. --}}
+     assoluto, non solo nel mese scelto sotto — vedi GestioneAgenzieController::movimenti.
+     "Fatturato, da saldare" è la cifra che chiede davvero un'azione: risalta
+     in un blocco caffè pieno, le altre due restano nel trattamento neutro. --}}
 <div class="mt-8 grid gap-6 sm:grid-cols-3">
     <div class="border border-caffe/15 bg-panna/50 px-6 py-5">
         <p class="font-sans text-[10px] tracking-[0.2em] uppercase text-testo-soft">Da fatturare</p>
         <x-prezzo :centesimi="$daFatturare" class="mt-2 block font-serif text-2xl" />
     </div>
-    <div class="border border-caffe/15 bg-panna/50 px-6 py-5">
-        <p class="font-sans text-[10px] tracking-[0.2em] uppercase text-testo-soft">Fatturato, da saldare</p>
+    <x-blocco variant="chiave" etichetta="Fatturato, da saldare" class="px-6 py-5">
         <x-prezzo :centesimi="$daSaldare" class="mt-2 block font-serif text-2xl" />
-    </div>
+    </x-blocco>
     <div class="border border-caffe/15 bg-panna/50 px-6 py-5">
         <p class="font-sans text-[10px] tracking-[0.2em] uppercase text-testo-soft">Incassato a carta</p>
         <x-prezzo :centesimi="$incassatoCarta" class="mt-2 block font-serif text-2xl" />
