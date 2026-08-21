@@ -51,6 +51,12 @@
                 Reel
             </span>
             <h1 class="mt-4 font-serif text-3xl font-medium leading-tight">{{ $nome }}</h1>
+
+            <div class="mt-6">
+                <x-button :href="$reel->downloadUrl()" download variant="contornata">
+                    Scarica il reel
+                </x-button>
+            </div>
         </div>
     </article>
 

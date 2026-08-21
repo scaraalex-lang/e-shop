@@ -42,6 +42,22 @@ class Reel extends Model
         return $this->stato === StatoReel::Pronto;
     }
 
+    /**
+     * URL di download diretto: l'attributo HTML `download` da solo non
+     * basta per un file cross-origin come Cloudinary (i browser lo
+     * ignorano fuori dal proprio dominio) — serve il flag `fl_attachment`
+     * di Cloudinary, che fa rispondere con `Content-Disposition: attachment`
+     * indipendentemente dall'origine.
+     */
+    public function downloadUrl(): ?string
+    {
+        if (! $this->cloudinary_url) {
+            return null;
+        }
+
+        return str_replace('/upload/', '/upload/fl_attachment/', $this->cloudinary_url);
+    }
+
     /** Si può rigenerare solo a render concluso (bene o male) — stesso motivo di VideoMemoriale::modificabile(). */
     public function modificabile(): bool
     {
