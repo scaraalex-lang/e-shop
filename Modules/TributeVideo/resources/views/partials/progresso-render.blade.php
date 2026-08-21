@@ -15,7 +15,7 @@
     // Carbon 3 restituisce un float su diffInSeconds() (stesso comportamento
     // già noto per diffInYears altrove nel progetto): troncato esplicitamente,
     // non lasciato all'implicit cast di intdiv()/% (deprecation warning PHP 8.1+).
-    $secondiTrascorsi = (int) $video->created_at->diffInSeconds(now());
+    $secondiTrascorsi = (int) ($video->render_avviato_il ?? $video->created_at)->diffInSeconds(now());
     $minuti = intdiv($secondiTrascorsi, 60);
     $secondi = $secondiTrascorsi % 60;
 @endphp

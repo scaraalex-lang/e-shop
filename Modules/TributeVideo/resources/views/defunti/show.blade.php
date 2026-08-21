@@ -6,6 +6,7 @@
 
 @php
     $inCorso = $video && ! in_array($video->stato->value, ['pronto', 'errore'], true);
+    $modifica = $modifica ?? false;
 @endphp
 
 @if ($inCorso)
@@ -18,22 +19,40 @@
 @section('account')
 <div class="max-w-2xl">
 
-    @if (! $video)
+    @if (session('stato'))
+        <p class="mb-8 border-l-2 border-successo bg-panna px-5 py-4 font-sans text-[13px]">{{ session('stato') }}</p>
+    @endif
+
+    @if (! $video || $modifica)
         <p class="font-sans font-light text-[14px] leading-relaxed text-testo-soft">
-            Carica le fotografie (nell'ordine in cui vuoi che appaiano) e, se vuoi,
-            un audio di sottofondo e una citazione di chiusura. Il video nasce con
-            zoom lento (Ken Burns) e dissolvenze — richiede qualche minuto per
-            essere pronto.
+            @if ($modifica)
+                Le fotografie già caricate sono precompilate qui sotto: riordinale,
+                modificane la didascalia o aggiungine di nuove. Il video verrà
+                rigenerato con lo stesso link pubblico e lo stesso QR di prima.
+            @else
+                Carica le fotografie (nell'ordine in cui vuoi che appaiano) e, se vuoi,
+                un audio di sottofondo e una citazione di chiusura. Il video nasce con
+                zoom lento (Ken Burns) e dissolvenze — richiede qualche minuto per
+                essere pronto.
+            @endif
         </p>
 
-        <form method="POST" action="{{ route('defunti.video-memoriale.store', $defunto) }}"
+        <form method="POST"
+              action="{{ $modifica ? route('defunti.video-memoriale.update', $defunto) : route('defunti.video-memoriale.store', $defunto) }}"
               enctype="multipart/form-data" class="mt-8 space-y-6">
             @csrf
+            @if ($modifica) @method('PUT') @endif
 
-            @include('tributevideo::partials.editor-foto')
+            @include('tributevideo::partials.editor-foto', ['fotoEsistenti' => $video?->foto])
 
             <div>
                 <x-input-label for="audio" value="Audio di sottofondo (facoltativo)" />
+                @if ($video?->audio_path)
+                    <p class="mb-2 font-sans text-[12px] text-testo-soft">
+                        Audio attuale: <audio controls preload="none" src="{{ $video->audioUrl() }}" class="inline-block align-middle h-8"></audio>
+                        — carica un file per sostituirlo, lascia vuoto per mantenerlo.
+                    </p>
+                @endif
                 <input id="audio" name="audio" type="file" accept="audio/*"
                        class="block w-full bg-bianco border border-caffe/25 px-4 py-3 font-sans font-light text-[14px]
                               focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40">
@@ -44,11 +63,11 @@
                 <x-input-label for="citazione" value="Citazione di chiusura (facoltativa)" />
                 <textarea id="citazione" name="citazione" rows="3"
                           class="block w-full bg-bianco border border-caffe/25 px-4 py-3 font-sans font-light text-[15px]
-                                 focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40">{{ old('citazione') }}</textarea>
+                                 focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40">{{ old('citazione', $video->citazione ?? '') }}</textarea>
                 <x-input-error :messages="$errors->get('citazione')" class="mt-2" />
             </div>
 
-            <x-primary-button>Genera il video</x-primary-button>
+            <x-primary-button>{{ $modifica ? 'Salva le modifiche' : 'Genera il video' }}</x-primary-button>
         </form>
     @else
         <span class="font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro">
@@ -93,6 +112,14 @@
             <div class="mt-6 border-l-2 border-errore bg-panna px-5 py-4 font-sans text-[13px]">
                 {{ $video->messaggio_errore ?? 'Errore sconosciuto durante il render.' }}
             </div>
+        @endif
+
+        @if ($video->modificabile())
+            <p class="mt-6">
+                <a href="{{ route('defunti.video-memoriale.edit', $defunto) }}">
+                    <x-button variant="contornata">Modifica il video</x-button>
+                </a>
+            </p>
         @endif
     @endif
 

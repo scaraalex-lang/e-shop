@@ -4,10 +4,23 @@
 
     Vanilla JS, nessuna libreria: il brief da cui nasce questo editor lo dice
     esplicitamente ("non serve Fabric.js per questa parte"). L'input file
-    reale resta `name="foto[]"`, ricostruito ad ogni cambiamento via
-    DataTransfer nell'ordine scelto dall'utente; i campi hidden paralleli
-    (testo[]/posizione[]/durata[]/zoom[]) sono indicizzati come `foto[]`.
+    reale resta `name="foto[]"` e contiene SOLO le foto nuove (un browser non
+    può prevalorizzare un <input type=file> con file già sul server) — le
+    foto già esistenti (parametro opzionale $fotoEsistenti, passato in
+    modifica da DefuntoVideoController::edit) sono identificate per id.
+    L'ordine finale — che interleaves foto vecchie e nuove — viaggia in un
+    solo campo hidden JSON `sequenza`, decodificato lato server.
 --}}
+@php
+    $fotoEsistentiJson = ($fotoEsistenti ?? collect())->map(fn ($f) => [
+        'id' => $f->id,
+        'url' => $f->url(),
+        'testo' => $f->testo ?? '',
+        'posizione' => $f->testo_posizione?->value ?? 'basso',
+        'durata' => $f->durata_secondi,
+        'zoom' => $f->zoom_attivo,
+    ])->values();
+@endphp
 <div>
     <x-input-label value="Fotografie (in ordine, almeno una)" />
 
@@ -22,6 +35,7 @@
     <input id="tv-foto-input" name="foto[]" type="file" accept="image/*" multiple class="hidden">
     <x-input-error :messages="$errors->get('foto')" class="mt-2" />
     <x-input-error :messages="$errors->get('foto.*')" class="mt-1" />
+    <x-input-error :messages="$errors->get('sequenza')" class="mt-1" />
     <p id="tv-foto-errore-vuoto" class="hidden mt-2 font-sans text-[13px] text-errore">
         Carica almeno una fotografia.
     </p>
@@ -68,8 +82,9 @@
         </div>
     </div>
 
-    <div id="tv-foto-meta-fields"></div>
+    <input type="hidden" name="sequenza" id="tv-sequenza">
 </div>
+<script id="tv-foto-esistenti-data" type="application/json">{!! $fotoEsistentiJson->toJson() !!}</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -80,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const strip = document.getElementById('tv-foto-strip');
     const durataInfo = document.getElementById('tv-foto-durata-info');
     const erroreVuoto = document.getElementById('tv-foto-errore-vuoto');
-    const metaFields = document.getElementById('tv-foto-meta-fields');
+    const sequenzaField = document.getElementById('tv-sequenza');
     const pannello = document.getElementById('tv-foto-proprieta');
     const propTesto = document.getElementById('tv-prop-testo');
     const propPosizione = document.getElementById('tv-prop-posizione');
@@ -98,10 +113,27 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedId = null;
     let audioDurata = null;
 
+    // Foto già salvate (in modifica): precaricate come voci "esistente",
+    // riconoscibili dal server per id — nessun file JS da portarsi dietro.
+    JSON.parse(document.getElementById('tv-foto-esistenti-data').textContent || '[]').forEach((f) => {
+        foto.push({
+            id: nextId++,
+            kind: 'esistente',
+            existingId: f.id,
+            file: null,
+            url: f.url,
+            testo: f.testo || '',
+            posizione: f.posizione || 'basso',
+            durata: f.durata,
+            zoom: !!f.zoom,
+        });
+    });
+
     function addFiles(fileList) {
         Array.from(fileList).forEach((file) => {
             foto.push({
                 id: nextId++,
+                kind: 'nuova',
                 file: file,
                 url: URL.createObjectURL(file),
                 testo: '',
@@ -116,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function removeFoto(id) {
         const item = foto.find((f) => f.id === id);
-        if (item) URL.revokeObjectURL(item.url);
+        if (item && item.kind === 'nuova') URL.revokeObjectURL(item.url);
         foto = foto.filter((f) => f.id !== id);
         if (selectedId === id) selectedId = null;
         syncFileInput();
@@ -141,27 +173,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function syncFileInput() {
         const dt = new DataTransfer();
-        foto.forEach((f) => dt.items.add(f.file));
+        foto.filter((f) => f.kind === 'nuova').forEach((f) => dt.items.add(f.file));
         fileInput.files = dt.files;
-        syncMetaFields();
+        syncSequenza();
     }
 
-    function syncMetaFields() {
-        metaFields.innerHTML = '';
-        foto.forEach((f, i) => {
-            metaFields.appendChild(hidden(`testo[${i}]`, f.testo || ''));
-            metaFields.appendChild(hidden(`posizione[${i}]`, f.testo ? f.posizione : ''));
-            metaFields.appendChild(hidden(`durata[${i}]`, f.durata ?? ''));
-            metaFields.appendChild(hidden(`zoom[${i}]`, f.zoom ? '1' : '0'));
+    // Un'unica lista ordinata, foto vecchie e nuove interleaved: per le
+    // "nuova" l'indice deve coincidere con la posizione del file nell'array
+    // ricostruito sopra — stesso filtro, stesso ordine, quindi si allineano.
+    function syncSequenza() {
+        let indiceNuova = 0;
+        const sequenza = foto.map((f) => {
+            const voce = {
+                tipo: f.kind,
+                testo: f.testo || '',
+                posizione: f.testo ? f.posizione : '',
+                durata: f.durata ?? null,
+                zoom: !!f.zoom,
+            };
+            if (f.kind === 'esistente') {
+                voce.id = f.existingId;
+            } else {
+                voce.indice = indiceNuova++;
+            }
+            return voce;
         });
-    }
-
-    function hidden(name, value) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        return input;
+        sequenzaField.value = JSON.stringify(sequenza);
     }
 
     function renderStrip() {
@@ -259,21 +296,21 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!item) return;
         item.testo = propTesto.value;
         propPosizione.disabled = !item.testo;
-        syncMetaFields();
+        syncSequenza();
         renderStrip();
     });
     propPosizione.addEventListener('change', () => {
         const item = foto.find((f) => f.id === selectedId);
         if (!item) return;
         item.posizione = propPosizione.value;
-        syncMetaFields();
+        syncSequenza();
     });
     propDurata.addEventListener('input', () => {
         const item = foto.find((f) => f.id === selectedId);
         if (!item) return;
         const val = parseInt(propDurata.value, 10);
         item.durata = Number.isFinite(val) && val > 0 ? val : null;
-        syncMetaFields();
+        syncSequenza();
         renderDurataInfo();
         renderStrip();
     });
@@ -281,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const item = foto.find((f) => f.id === selectedId);
         if (!item) return;
         item.zoom = propZoom.checked;
-        syncMetaFields();
+        syncSequenza();
         renderStrip();
     });
 
@@ -310,6 +347,9 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    syncMetaFields();
+    // Popola subito la sequenza e disegna la strip per le foto già esistenti
+    // (in modifica) — in creazione `foto` è vuoto, non cambia nulla.
+    syncSequenza();
+    renderStrip();
 });
 </script>

@@ -33,4 +33,9 @@ Route::middleware(['auth', 'staff'])->prefix('gestione')->name('gestione.')->gro
 Route::middleware('auth')->prefix('account/defunti')->name('defunti.')->group(function () {
     Route::get('{defunto}/video-memoriale', [DefuntoVideoController::class, 'show'])->name('video-memoriale.show');
     Route::post('{defunto}/video-memoriale', [DefuntoVideoController::class, 'store'])->name('video-memoriale.store');
+    // Riprendere un video già pronto (o finito in errore) per cambiare foto,
+    // didascalie, ordine o audio e ri-lanciare il render — stesso token,
+    // stesso link pubblico/QR già eventualmente stampati.
+    Route::get('{defunto}/video-memoriale/modifica', [DefuntoVideoController::class, 'edit'])->name('video-memoriale.edit');
+    Route::put('{defunto}/video-memoriale', [DefuntoVideoController::class, 'update'])->name('video-memoriale.update');
 });

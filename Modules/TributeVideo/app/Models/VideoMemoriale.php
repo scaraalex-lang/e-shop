@@ -18,7 +18,7 @@ class VideoMemoriale extends Model
     protected $table = 'video_memoriali';
 
     protected $fillable = [
-        'token', 'defunto_id', 'ordine_id', 'stato',
+        'token', 'defunto_id', 'ordine_id', 'stato', 'render_avviato_il',
         'nome_completo', 'date', 'citazione', 'audio_path',
         'cloudinary_url', 'cloudinary_public_id', 'output_path',
         'messaggio_errore',
@@ -26,6 +26,7 @@ class VideoMemoriale extends Model
 
     protected $casts = [
         'stato' => StatoVideoMemoriale::class,
+        'render_avviato_il' => 'datetime',
     ];
 
     public function getRouteKeyName(): string
@@ -47,6 +48,22 @@ class VideoMemoriale extends Model
     public function pronto(): bool
     {
         return $this->stato === StatoVideoMemoriale::Pronto;
+    }
+
+    /**
+     * Si può riaprire l'editor solo a render concluso (bene o male): mentre è
+     * in coda o in elaborazione il Job sta già leggendo `foto()`, editare in
+     * quel momento significherebbe modificare righe che il render sta usando.
+     */
+    public function modificabile(): bool
+    {
+        return in_array($this->stato, [StatoVideoMemoriale::Pronto, StatoVideoMemoriale::Errore], true);
+    }
+
+    /** Path relativo sul disco public, mai un URL assoluto — stesso schema di FotoVideoMemoriale::url(). */
+    public function audioUrl(): ?string
+    {
+        return $this->audio_path ? '/storage/'.ltrim($this->audio_path, '/') : null;
     }
 
     /**

@@ -72,6 +72,7 @@ class TestController extends Controller
                 'citazione' => $request->input('citazione'),
                 'audio_path' => $audioPath,
                 'stato' => 'in_coda',
+                'render_avviato_il' => now(),
             ]);
 
             foreach ($request->file('foto') as $ordine => $file) {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Modules\Commerce\Enums\StatoPagamento;
 use Modules\Commerce\Models\Ordine;
@@ -49,6 +50,38 @@ class DefuntoVideoController extends Controller
         return view('tributevideo::defunti.show', [
             'defunto' => $defunto,
             'video' => $video,
+            'modifica' => false,
+        ]);
+    }
+
+    /**
+     * Riapre l'editor timeline precompilato sul video esistente.
+     *
+     * Se il video non esiste affatto è un vero 404 (link mai valido). Se
+     * invece esiste ma è "in_coda"/"in_elaborazione" — es. l'utente ha
+     * cliccato "Modifica" un istante prima che un altro giro di render
+     * partisse — non è un errore: rimandiamo alla pagina di stato con un
+     * messaggio, non un 404 secco che sembra un link rotto.
+     */
+    public function edit(Request $request, Defunto $defunto): View|RedirectResponse
+    {
+        $this->soloSuo($request, $defunto);
+        $this->assicuraAbilitato($defunto);
+
+        $video = VideoMemoriale::where('defunto_id', $defunto->id)->latest()->first();
+
+        abort_unless($video, 404);
+
+        if (! $video->modificabile()) {
+            return redirect()
+                ->route('defunti.video-memoriale.show', $defunto)
+                ->with('stato', 'Il video è di nuovo in lavorazione: si può modificare solo a render concluso.');
+        }
+
+        return view('tributevideo::defunti.show', [
+            'defunto' => $defunto,
+            'video' => $video,
+            'modifica' => true,
         ]);
     }
 
@@ -97,6 +130,7 @@ class DefuntoVideoController extends Controller
                 'citazione' => $request->input('citazione'),
                 'audio_path' => $audioPath,
                 'stato' => 'in_coda',
+                'render_avviato_il' => now(),
             ]);
 
             foreach ($request->file('foto') as $ordine => $file) {
@@ -113,6 +147,107 @@ class DefuntoVideoController extends Controller
             }
 
             return $video;
+        });
+
+        GeneraVideoMemoriale::dispatch($video->id);
+
+        return redirect()->route('defunti.video-memoriale.show', $defunto);
+    }
+
+    /**
+     * Aggiorna il video esistente (stesso record, stesso token → stesso link
+     * pubblico/QR) invece di crearne uno nuovo, e ri-lancia il render.
+     *
+     * L'editor manda un'unica sequenza ordinata (campo `sequenza`, JSON) che
+     * interleaves foto già salvate ("esistente", riferite per id) e foto
+     * appena caricate ("nuova", riferite per indice nell'array file `foto[]`)
+     * — è l'unico modo per esprimere un ordine unificato quando i file nuovi
+     * arrivano in un array multipart separato da quelli già su disco.
+     */
+    public function update(Request $request, Defunto $defunto): RedirectResponse
+    {
+        $this->soloSuo($request, $defunto);
+        $this->assicuraAbilitato($defunto);
+
+        $video = VideoMemoriale::where('defunto_id', $defunto->id)->latest()->first();
+        abort_unless($video && $video->modificabile(), 404);
+
+        $request->merge(['sequenza' => json_decode((string) $request->input('sequenza'), true) ?? []]);
+
+        $request->validate([
+            'citazione' => ['nullable', 'string', 'max:1000'],
+            'audio' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg', 'max:20480'],
+            'foto' => ['nullable', 'array'],
+            'foto.*' => ['image', 'max:12288'],
+            'sequenza' => ['required', 'array', 'min:1'],
+            'sequenza.*.tipo' => ['required', 'in:esistente,nuova'],
+            'sequenza.*.testo' => ['nullable', 'string', 'max:180'],
+            'sequenza.*.posizione' => ['nullable', 'in:alto,centro,basso'],
+            'sequenza.*.durata' => ['nullable', 'integer', 'min:1', 'max:15'],
+            'sequenza.*.zoom' => ['nullable', 'boolean'],
+            'sequenza.*.id' => ['nullable', 'integer'],
+            'sequenza.*.indice' => ['nullable', 'integer', 'min:0'],
+        ], [
+            'sequenza.required' => 'Serve almeno una fotografia.',
+            'foto.*.image' => 'Uno dei file non è un\'immagine.',
+            'foto.*.max' => 'Una foto supera i 12 MB: ridimensionala e riprova.',
+            'audio.mimes' => 'Formato audio non riconosciuto (mp3, wav, m4a, ogg).',
+            'audio.max' => 'L\'audio supera i 20 MB.',
+        ]);
+
+        $sequenza = collect($request->input('sequenza'));
+        $nuoviFile = $request->file('foto', []);
+
+        abort_if(
+            $sequenza->contains(fn ($voce) => ($voce['tipo'] ?? null) === 'esistente' && ! isset($voce['id']))
+                || $sequenza->contains(fn ($voce) => ($voce['tipo'] ?? null) === 'nuova' && ! isset($nuoviFile[$voce['indice'] ?? -1])),
+            422,
+            'Sequenza foto incoerente.'
+        );
+
+        $idEsistentiMantenuti = $sequenza->where('tipo', 'esistente')->pluck('id')->all();
+
+        $audioPath = $video->audio_path;
+        if ($request->hasFile('audio')) {
+            if ($audioPath) {
+                Storage::disk('public')->delete($audioPath);
+            }
+            $audioPath = $request->file('audio')->store(self::DISK_DIR.'/'.$video->token.'/audio', 'public');
+        }
+
+        DB::transaction(function () use ($video, $sequenza, $nuoviFile, $idEsistentiMantenuti, $audioPath, $request) {
+            // Le foto tolte dall'editor (drag alla × / mai ripresentate nella
+            // sequenza) vanno rimosse davvero, file su disco compreso.
+            $video->foto()->whereNotIn('id', $idEsistentiMantenuti)->get()->each(function ($foto) {
+                Storage::disk('public')->delete($foto->path);
+                $foto->delete();
+            });
+
+            foreach ($sequenza->values() as $ordine => $voce) {
+                $testo = trim((string) ($voce['testo'] ?? '')) ?: null;
+                $attributi = [
+                    'ordine' => $ordine,
+                    'testo' => $testo,
+                    'testo_posizione' => $testo ? ($voce['posizione'] ?? 'basso') : null,
+                    'durata_secondi' => $voce['durata'] ?? null,
+                    'zoom_attivo' => (bool) ($voce['zoom'] ?? true),
+                ];
+
+                if ($voce['tipo'] === 'esistente') {
+                    $video->foto()->whereKey($voce['id'])->update($attributi);
+                } else {
+                    $path = $nuoviFile[$voce['indice']]->store(self::DISK_DIR.'/'.$video->token.'/foto', 'public');
+                    $video->foto()->create($attributi + ['path' => $path]);
+                }
+            }
+
+            $video->forceFill([
+                'citazione' => $request->input('citazione'),
+                'audio_path' => $audioPath,
+                'stato' => 'in_coda',
+                'render_avviato_il' => now(),
+                'messaggio_errore' => null,
+            ])->save();
         });
 
         GeneraVideoMemoriale::dispatch($video->id);
