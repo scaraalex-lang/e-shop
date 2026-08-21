@@ -235,6 +235,30 @@
             </x-button>
         </div>
     </section>
+
+    {{-- 7. pubblicazione social (reel) --}}
+    <section class="border border-caffe/15 bg-bianco px-6 py-8 sm:px-10 sm:py-10 {{ $reelAbilitato ? '' : 'opacity-45 pointer-events-none' }}">
+        <h2 class="font-serif text-2xl font-medium">7. Pubblicazione Social</h2>
+        @php
+            $etichetteStatoReel = [
+                'in_coda' => 'In coda', 'in_elaborazione' => 'In elaborazione',
+                'pronto' => 'Pronto', 'errore' => 'Errore',
+            ];
+        @endphp
+        <p class="mt-2 font-sans text-[11px] tracking-[0.2em] uppercase {{ $reel && $reel->stato === 'pronto' ? 'text-successo' : 'text-testo-soft' }}">
+            {{ $reel ? ($etichetteStatoReel[$reel->stato] ?? $reel->stato) : 'Disponibile' }}
+        </p>
+        <p class="mt-3 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+            Storia e video uniti in un reel unico, o i due link separati da incollare a
+            mano come due slide — appena uno dei due passi sopra è pronto.
+        </p>
+
+        <div class="mt-6">
+            <x-button :href="route('defunti.pubblicazione-social.show', $defunto)">
+                {{ $reel ? 'Vedi la pubblicazione' : 'Vai alla pubblicazione' }}
+            </x-button>
+        </div>
+    </section>
 </div>
 
 {{-- ============ extra: altri necrologi ============ --}}

@@ -104,6 +104,17 @@ class DefuntiController extends Controller
             ->select(['id', 'token', 'canvas'])
             ->first();
 
+        // Il reel unisce cose già pagate separatamente (video+storia), non è
+        // un servizio a sé: abilitato appena uno dei due lo è, non serve un
+        // proprio designerAbilitato(). Stesso motivo per cui Memorial non
+        // deve mai dipendere da ReelSocial — query builder puro anche qui.
+        $reelAbilitato = $videoAbilitato || $storiaAbilitata;
+        $reel = DB::table('reels')
+            ->where('defunto_id', $defunto->id)
+            ->latest('id')
+            ->select(['id', 'token', 'stato'])
+            ->first();
+
         return view('memorial::defunti.show', [
             'defunto' => $defunto,
             'ordinePrincipale' => $ordinePrincipale,
@@ -129,6 +140,9 @@ class DefuntiController extends Controller
 
             'storiaAbilitata' => $storiaAbilitata,
             'storia' => $storia,
+
+            'reelAbilitato' => $reelAbilitato,
+            'reel' => $reel,
         ]);
     }
 

@@ -1,0 +1,11 @@
+{
+    "name": "ReelSocial",
+    "alias": "reelsocial",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\ReelSocial\\Providers\\ReelSocialServiceProvider"
+    ],
+    "files": []
+}

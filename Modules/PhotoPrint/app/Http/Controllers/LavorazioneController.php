@@ -64,6 +64,17 @@ class LavorazioneController extends Controller
             ->select(['id', 'token', 'canvas'])
             ->first() : null;
 
+        // Il reel unisce cose già pagate separatamente, non è un servizio a
+        // sé: abilitato appena uno dei due lo è. Query builder puro, stesso
+        // motivo di video/storia sopra — PhotoPrint non deve mai dipendere
+        // da ReelSocial.
+        $reelAbilitato = $videoAbilitato || $storiaAbilitata;
+        $reel = $defunto ? DB::table('reels')
+            ->where('defunto_id', $defunto->id)
+            ->latest('id')
+            ->select(['id', 'token', 'stato'])
+            ->first() : null;
+
         return view('photoprint::lavorazione.show', [
             'ordine' => $ordine->load('servizi.servizioEditor'),
             'defunto' => $defunto,
@@ -73,6 +84,8 @@ class LavorazioneController extends Controller
             'video' => $video,
             'storiaAbilitata' => $storiaAbilitata,
             'storia' => $storia,
+            'reelAbilitato' => $reelAbilitato,
+            'reel' => $reel,
         ]);
     }
 

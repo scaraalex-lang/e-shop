@@ -468,6 +468,31 @@
     </section>
     @endif
 
+    {{-- ============ 3quater. pubblicazione social / reel (solo B2C) ============ --}}
+    @if ($defunto && ! $ordine->agenzia_id)
+    <section class="bg-bianco px-7 py-8 {{ $reelAbilitato ? '' : 'opacity-45 pointer-events-none' }}">
+        <header class="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 class="font-serif text-2xl font-medium">Pubblicazione social</h2>
+            @if ($reel)
+                <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-successo">
+                    {{ $reel->stato === 'pronto' ? 'Pronto' : 'In lavorazione' }}
+                </span>
+            @endif
+        </header>
+
+        <p class="mt-2 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+            Storia e video uniti in un reel unico, o i due link separati da incollare a
+            mano come due slide — appena uno dei due qui sopra è pronto.
+        </p>
+
+        <div class="mt-6">
+            <x-button :href="route('defunti.pubblicazione-social.show', $defunto)">
+                {{ $reel ? 'Vedi la pubblicazione' : 'Vai alla pubblicazione' }}
+            </x-button>
+        </div>
+    </section>
+    @endif
+
     {{-- ============ scheda defunto (solo agenzie) ============ --}}
     @if ($ordine->agenzia_id && $defunto)
         <section class="bg-bianco px-7 py-8">
