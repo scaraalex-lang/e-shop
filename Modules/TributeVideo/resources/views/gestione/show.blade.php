@@ -26,10 +26,7 @@
         </span>
 
         @if ($inCorso)
-            <p class="mt-4 font-sans text-[13px] text-testo-soft">
-                Il render richiede qualche minuto (proxy Python + moviepy). Questa
-                pagina si aggiorna automaticamente ogni 4 secondi.
-            </p>
+            @include('tributevideo::partials.progresso-render')
         @elseif ($video->pronto())
             <div class="mt-6 space-y-6">
                 <video controls class="w-full border border-caffe/25" preload="metadata">
