@@ -24,7 +24,7 @@
             ['Ordini agenzie (B2B)', route('gestione.ordini.index', ['provenienza' => 'b2b']), fn () => request()->routeIs('gestione.ordini.*') && request()->query('provenienza') === 'b2b'],
             ['Studio ricordini', route('studio.ricordino'), 'studio.*'],
             ['Archivio preghiere', route('gestione.preghiere.index'), 'gestione.preghiere.*'],
-            ['Video memoriale (test)', route('gestione.video-memoriale.index'), 'gestione.video-memoriale.*'],
+            ['TributeVideo', route('gestione.video-memoriale.index'), 'gestione.video-memoriale.*', 'qr'],
         ],
         'Catalogo' => [
             ['Prodotti', route('gestione.prodotti.index'), 'gestione.prodotti.*'],
@@ -81,7 +81,7 @@
                     @foreach ($macroAree as $area => $voci)
                         @php
                             $vociValutate = collect($voci)->map(fn ($v) => [
-                                $v[0], $v[1], $v[2] instanceof \Closure ? $v[2]() : request()->routeIs($v[2]),
+                                $v[0], $v[1], $v[2] instanceof \Closure ? $v[2]() : request()->routeIs($v[2]), $v[3] ?? null,
                             ]);
                             $areaAttiva = $vociValutate->contains(fn ($v) => $v[2]);
                         @endphp
@@ -95,15 +95,18 @@
                                 <span class="text-oro-scuro text-[13px] leading-none hidden group-open:inline">&minus;</span>
                             </summary>
                             <ul class="mt-2 pb-3 font-sans text-[12px] tracking-[0.16em] uppercase space-y-1.5">
-                                @foreach ($vociValutate as [$voce, $href, $attiva])
+                                @foreach ($vociValutate as [$voce, $href, $attiva, $icona])
                                     <li>
                                         <a href="{{ $href }}"
                                            @class([
-                                               'inline-block py-0.5 transition-colors duration-300',
+                                               'inline-flex items-center gap-1.5 py-0.5 transition-colors duration-300',
                                                'text-oro-scuro' => $attiva,
                                                'text-testo hover:text-oro-scuro' => ! $attiva,
                                            ])
                                            @if ($attiva) aria-current="page" @endif>
+                                            @if ($icona)
+                                                <x-dynamic-component :component="'icon.'.$icona" class="w-3.5 h-3.5 shrink-0" />
+                                            @endif
                                             {{ $voce }}
                                         </a>
                                     </li>

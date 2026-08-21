@@ -3,10 +3,9 @@
 namespace Modules\TributeVideo\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Endroid\QrCode\Builder\Builder;
-use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Http\Response;
 use Modules\TributeVideo\Models\VideoMemoriale;
+use Modules\TributeVideo\Servizi\GeneratoreQrVideo;
 
 /**
  * Il video visto da chi scansiona il QR: nessun account, il link è la
@@ -30,16 +29,12 @@ class VideoPubblicoController extends Controller
     {
         abort_unless($video->pronto(), 404);
 
-        // 100% locale (GD via PngWriter): niente api.qrserver.com, già
-        // segnalato come violazione GDPR altrove nel progetto.
-        $result = (new Builder(
-            writer: new PngWriter(),
-            data: route('video.show', $video),
-            size: 480,
-            margin: 16,
-        ))->build();
+        // 100% locale (GD): niente api.qrserver.com, già segnalato come
+        // violazione GDPR altrove nel progetto. Stile editoriale oro-panna
+        // con logo MemorAI e punti tondi — vedi GeneratoreQrVideo per il
+        // perché dei tre occhi arrotondati ma mai circolari.
+        $png = (new GeneratoreQrVideo())->png(route('video.show', $video));
 
-        return response($result->getString(), 200)
-            ->header('Content-Type', $result->getMimeType());
+        return response($png, 200)->header('Content-Type', 'image/png');
     }
 }
