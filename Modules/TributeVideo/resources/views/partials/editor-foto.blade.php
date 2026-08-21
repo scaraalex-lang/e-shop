@@ -26,7 +26,7 @@
         Carica almeno una fotografia.
     </p>
 
-    <ul id="tv-foto-strip" class="mt-4 flex gap-3 overflow-x-auto pb-2"></ul>
+    <ul id="tv-foto-strip" class="mt-4 flex items-start gap-3 overflow-x-auto pb-2"></ul>
     <p id="tv-foto-durata-info" class="mt-2 font-sans text-[12px] text-testo-soft"></p>
 
     <div id="tv-foto-proprieta" class="hidden mt-4 border border-caffe/25 bg-panna/40 p-4 space-y-3">
@@ -170,24 +170,37 @@ document.addEventListener('DOMContentLoaded', function () {
             const li = document.createElement('li');
             li.draggable = true;
             li.dataset.id = f.id;
-            li.className = 'relative shrink-0 w-24 h-24 border-2 cursor-pointer transition-colors duration-200 '
+            // Non più un quadrato fisso: la card cresce in altezza per fare
+            // posto alla didascalia sotto la foto (prima si vedeva solo
+            // un'iconcina 📝, bisognava selezionare la foto per leggerla).
+            li.className = 'shrink-0 w-24 cursor-pointer';
+
+            const cornice = document.createElement('div');
+            cornice.className = 'relative w-24 h-24 border-2 transition-colors duration-200 '
                 + (f.id === selectedId ? 'border-oro' : 'border-caffe/20');
 
             const img = document.createElement('img');
             img.src = f.url;
             img.className = 'w-full h-full object-cover';
-            li.appendChild(img);
+            cornice.appendChild(img);
 
-            if (f.testo) li.appendChild(badge('📝', 'bottom-1 left-1'));
-            if (f.durata) li.appendChild(badge(f.durata + 's', 'top-1 left-1'));
-            if (!f.zoom) li.appendChild(badge('⏸', 'top-1 right-1'));
+            if (f.durata) cornice.appendChild(badge(f.durata + 's', 'top-1 left-1'));
+            if (!f.zoom) cornice.appendChild(badge('⏸', 'top-1 right-1'));
 
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.textContent = '×';
             remove.className = 'absolute -top-2 -right-2 w-5 h-5 rounded-full bg-testo text-bianco text-[12px] leading-5';
             remove.addEventListener('click', (e) => { e.stopPropagation(); removeFoto(f.id); });
-            li.appendChild(remove);
+            cornice.appendChild(remove);
+
+            li.appendChild(cornice);
+
+            const didascalia = document.createElement('p');
+            didascalia.className = 'mt-1 text-[10px] leading-snug line-clamp-2 '
+                + (f.testo ? 'text-testo' : 'italic text-testo-soft/50');
+            didascalia.textContent = f.testo || 'Nessuna didascalia';
+            li.appendChild(didascalia);
 
             li.addEventListener('click', () => selectFoto(f.id));
             li.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', String(f.id)));
