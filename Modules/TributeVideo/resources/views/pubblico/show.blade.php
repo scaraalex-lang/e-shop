@@ -19,15 +19,15 @@
     <meta property="og:locale" content="it_IT">
     @if ($poster)
         <meta property="og:image" content="{{ $poster }}">
-        <meta property="og:image:width" content="1920">
-        <meta property="og:image:height" content="1080">
+        <meta property="og:image:width" content="1080">
+        <meta property="og:image:height" content="1920">
         <meta property="og:image:alt" content="Fotogramma dal video di {{ $video->nome_completo }}">
     @endif
     <meta property="og:video" content="{{ $video->cloudinary_url }}">
     <meta property="og:video:secure_url" content="{{ $video->cloudinary_url }}">
     <meta property="og:video:type" content="video/mp4">
-    <meta property="og:video:width" content="1920">
-    <meta property="og:video:height" content="1080">
+    <meta property="og:video:width" content="1080">
+    <meta property="og:video:height" content="1920">
     <meta name="twitter:card" content="{{ $poster ? 'summary_large_image' : 'summary' }}">
 
     {{-- Il link è pensato per chi lo riceve o scansiona il QR, non per la
@@ -36,20 +36,17 @@
 @endpush
 
 @section('content')
-<div class="w-full max-w-2xl">
+<div class="w-full max-w-sm">
 
     {{-- ============ la finestra video ============ --}}
     <article class="bg-bianco border border-caffe/15 shadow-[0_24px_70px_rgba(58,46,34,0.14)]">
 
-        {{-- Il video è orizzontale (16:9): con `aspect-video` da solo, su
-             telefono (schermo verticale) diventava una striscia corta in
-             alto con tutta la pagina bianca sotto — "non si vede a pieno
-             schermo", segnalato confrontandolo con la Storia (verticale
-             9:16, che riempie lo schermo per natura). Su mobile diamo al
-             player un'altezza generosa fissa (letterbox scuro sopra/sotto,
-             stesso nero del video); da sm: in su torna al rapporto 16:9
-             puro, il riquadro in una pagina desktop era già giusto così. --}}
-        <div class="h-[75dvh] sm:h-auto sm:aspect-video w-full bg-[#0a0805]">
+        {{-- Video generato nativamente verticale (9:16, stesso formato del
+             reel e della Storia Social) da quando il proxy compone su
+             canvas 1080x1920 invece di 1920x1080: aspect-[9/16] riempie lo
+             schermo per natura su mobile, niente più bisogno dell'hack
+             h-[75dvh] che serviva quando il video era orizzontale. --}}
+        <div class="aspect-[9/16] w-full bg-[#0a0805]">
             <video
                 controls
                 playsinline

@@ -78,10 +78,17 @@
             @include('tributevideo::partials.progresso-render')
         @elseif ($video->pronto())
             <div class="mt-6 space-y-6">
-                <video controls class="w-full border border-caffe/25" preload="metadata"
-                       @if ($video->posterUrl()) poster="{{ $video->posterUrl() }}" @endif>
-                    <source src="{{ $video->cloudinary_url }}" type="video/mp4">
-                </video>
+                {{-- Video generato nativamente verticale (9:16): senza un vincolo
+                     di proporzioni, `w-full` dentro questa colonna larga (max-w-2xl)
+                     lo faceva diventare altissimo — qui basta un riquadro più stretto
+                     con aspect-ratio nativo, coerente con le altre pagine (Storia,
+                     Reel, il player pubblico). --}}
+                <div class="max-w-xs aspect-[9/16] bg-[#0a0805] border border-caffe/25">
+                    <video controls class="h-full w-full object-contain" preload="metadata"
+                           @if ($video->posterUrl()) poster="{{ $video->posterUrl() }}" @endif>
+                        <source src="{{ $video->cloudinary_url }}" type="video/mp4">
+                    </video>
+                </div>
 
                 <div>
                     <span class="font-sans text-[11px] tracking-[0.22em] uppercase text-testo-soft">
