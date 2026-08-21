@@ -79,7 +79,11 @@ class Defunto extends Model
     public function eta(): ?int
     {
         if ($this->data_nascita && $this->data_morte) {
-            return $this->data_nascita->diffInYears($this->data_morte);
+            // Carbon 3 restituisce un float (diffInYears è calcolato sui giorni
+            // esatti, non un conteggio intero) — troncato esplicitamente, non
+            // lasciato all'implicit cast del return type che dà un deprecation
+            // warning PHP 8.1+.
+            return (int) $this->data_nascita->diffInYears($this->data_morte);
         }
 
         return $this->anni;

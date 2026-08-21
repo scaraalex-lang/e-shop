@@ -20,6 +20,35 @@ use Modules\Memorial\Models\Necrologio;
  */
 class DefuntiController extends Controller
 {
+    /**
+     * "I miei defunti": unico punto d'ingresso cliccabile verso la Scheda
+     * Defunto — prima si arrivava solo per redirect da "Acquisto Servizi" →
+     * Lavorazione → form dati-defunto, mai da un elenco.
+     */
+    public function index(Request $request): View
+    {
+        $utente = $request->user();
+
+        $ordini = Ordine::whereNotNull('defunto_id')
+            ->when(! $utente->eStaff(), function ($query) use ($utente) {
+                $query->where(function ($query) use ($utente) {
+                    $query->where('user_id', $utente->id);
+
+                    if ($utente->agenzia_id) {
+                        $query->orWhere('agenzia_id', $utente->agenzia_id);
+                    }
+                });
+            })
+            ->get(['id', 'defunto_id']);
+
+        $defunti = Defunto::whereIn('id', $ordini->pluck('defunto_id')->unique())
+            ->select(['id', 'nome', 'cognome', 'data_nascita', 'data_morte', 'anni'])
+            ->latest('id')
+            ->paginate(20);
+
+        return view('memorial::defunti.index', ['defunti' => $defunti]);
+    }
+
     public function show(Request $request, Defunto $defunto): View
     {
         $ordini = $this->soloSuo($request, $defunto);
