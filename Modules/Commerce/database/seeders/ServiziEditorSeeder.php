@@ -30,6 +30,11 @@ class ServiziEditorSeeder extends Seeder
             ['codice' => 'manifesti', 'etichetta' => 'Manifesti', 'costo_crediti' => 20, 'costo_crediti_a_termine' => null],
             ['codice' => 'necrologi', 'etichetta' => 'Necrologi', 'costo_crediti' => 10, 'costo_crediti_a_termine' => null],
             ['codice' => 'embed', 'etichetta' => 'Necrologio integrabile nel vostro sito', 'costo_crediti' => 25, 'costo_crediti_a_termine' => 15],
+            // Costo più alto degli altri tre apposta: a differenza di un editor
+            // (solo frontend), ogni video consuma minuti reali di rendering sul
+            // proxy Python + storage/banda Cloudinary — un costo di infrastruttura
+            // che ricordini/manifesti/necrologi non hanno.
+            ['codice' => 'video-memoriale', 'etichetta' => 'Video Memoriale', 'costo_crediti' => 30, 'costo_crediti_a_termine' => null],
         ];
 
         foreach ($servizi as $s) {

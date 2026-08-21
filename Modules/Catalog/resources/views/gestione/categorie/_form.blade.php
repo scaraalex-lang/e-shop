@@ -49,6 +49,15 @@
 </div>
 
 <div>
+    <label class="flex items-center gap-3 font-sans text-[14px]">
+        <input type="hidden" name="in_ordine_stampa" value="0">
+        <input type="checkbox" name="in_ordine_stampa" value="1" @checked(old('in_ordine_stampa', $c?->in_ordine_stampa ?? false))
+               class="border-caffe/40 text-oro focus:ring-oro/40">
+        Mostra nella composizione dell'ordine di stampa (agenzia, dalla pagina ordine)
+    </label>
+</div>
+
+<div>
     <x-input-label for="immagine" value="Immagine di copertina" />
     @if ($c?->image)
         <img src="{{ asset('storage/'.$c->image) }}" alt="" class="mb-3 h-32 w-32 object-cover border border-caffe/15">

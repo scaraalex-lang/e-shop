@@ -24,7 +24,7 @@ class Ordine extends Model
     protected $fillable = [
         'numero', 'user_id', 'agenzia_id',
         'metodo_pagamento',
-        'totale_pieno', 'totale_merce', 'spedizione', 'totale',
+        'totale_pieno', 'totale_merce', 'spedizione', 'totale', 'crediti_usati',
         'consegna_nome', 'consegna_telefono', 'consegna_indirizzo',
         'consegna_cap', 'consegna_citta', 'consegna_provincia', 'note',
         'richiede_lavorazione', 'occasione', 'numero_anniversario',
@@ -36,10 +36,12 @@ class Ordine extends Model
         'stato_pagamento' => StatoPagamento::class,
         'occasione' => Occasione::class,
         'pagato_at' => 'datetime',
+        'fattura_emessa_at' => 'datetime',
         'totale_pieno' => 'integer',
         'totale_merce' => 'integer',
         'spedizione' => 'integer',
         'totale' => 'integer',
+        'crediti_usati' => 'integer',
         'richiede_lavorazione' => 'boolean',
         'foto_bloccata' => 'boolean',
         'numero_anniversario' => 'integer',
@@ -177,6 +179,20 @@ class Ordine extends Model
         return $this->totale_pieno - $this->totale_merce;
     }
 
+    /**
+     * Quanto di questo ordine è in denaro, dopo aver scalato i crediti
+     * già applicati (vedi CreaOrdine, cambio fisso 1 credito = 100
+     * centesimi): la base sia per l'incasso (quanto addebita Stripe, vedi
+     * PagamentoStripe) sia per la contabilità (vedi
+     * GestioneAgenzieController::movimenti) — prima e dopo il saldo è la
+     * stessa cifra, cambia solo se leggerla come "da incassare" o
+     * "incassato".
+     */
+    public function valoreInDenaro(): int
+    {
+        return max(0, $this->totale - ($this->crediti_usati * 100));
+    }
+
     public function haSconti(): bool
     {
         return $this->risparmio() > 0;
@@ -238,6 +254,29 @@ class Ordine extends Model
     public function segnaPagamentoFallito(): void
     {
         $this->forceFill(['stato_pagamento' => StatoPagamento::Fallito])->save();
+    }
+
+    /**
+     * Una fattura per ordine: lo staff la emette (fuori da qui, nel proprio
+     * gestionale) e registra qui solo il numero, per la contabilità che
+     * l'agenzia vede in `account/fatture`. Non tocca `stato_pagamento`: un
+     * ordine può essere fatturato e restare da saldare — il saldo si
+     * registra a parte con `registraPagamento()`, riusato anche qui perché
+     * "un ordine a fattura pagato" non è diverso concettualmente da uno
+     * pagato a carta, solo il riferimento cambia (un bonifico invece di un
+     * PaymentIntent Stripe).
+     */
+    public function emettiFattura(string $numero): void
+    {
+        $this->forceFill([
+            'fattura_numero' => $numero,
+            'fattura_emessa_at' => Carbon::now(),
+        ])->save();
+    }
+
+    public function fatturata(): bool
+    {
+        return $this->fattura_emessa_at !== null;
     }
 
     public function passaA(StatoOrdine $stato): void

@@ -19,6 +19,16 @@ class OrdineTest extends TestCase
 {
     use CreaSoggetti, RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Questi test esercitano il simulatore (carta che finisce per 0
+        // rifiutata, esito sincrono) indipendentemente da quale driver sia
+        // configurato nell'ambiente reale — vedi PagamentoSimulato.
+        config(['commerce.pagamento' => 'simulato']);
+    }
+
     private const CONSEGNA = [
         'nome' => 'Giulia Ferrari',
         'telefono' => '3391234567',
@@ -227,6 +237,57 @@ class OrdineTest extends TestCase
 
         $this->actingAs(User::factory()->create())
             ->get("/account/ordini/{$ordine->numero}")
+            ->assertNotFound();
+    }
+
+    public function test_paga_ora_riprende_un_ordine_a_carta_fallito(): void
+    {
+        $prodotto = $this->prodotto(['price' => 4900]);
+        $utente = $this->conCarrello([[$prodotto, 1]]);
+
+        // carta rifiutata al checkout: l'ordine resta fallito, senza partire
+        $this->actingAs($utente)->post('/ordine/conferma', array_merge(self::CONSEGNA, [
+            'metodo_pagamento' => 'carta',
+            'carta' => '4242424242424240',
+        ]));
+        $ordine = Ordine::firstOrFail();
+        $this->assertSame(StatoPagamento::Fallito, $ordine->stato_pagamento);
+
+        // "Paga ora" con una carta buona: stesso ordine, nessun nuovo numero
+        $this->actingAs($utente)->post("/account/ordini/{$ordine->numero}/paga", [
+            'carta' => '4242 4242 4242 4242',
+        ]);
+
+        $ordine->refresh();
+        $this->assertSame(StatoPagamento::Pagato, $ordine->stato_pagamento);
+        $this->assertSame(StatoOrdine::InProduzione, $ordine->stato);
+        $this->assertSame(1, Ordine::count(), 'stesso ordine, non se ne crea uno nuovo');
+    }
+
+    public function test_paga_ora_non_e_disponibile_su_un_ordine_gia_pagato(): void
+    {
+        $utente = $this->conCarrello([[$this->prodotto(['price' => 4900]), 1]]);
+        $this->actingAs($utente)->post('/ordine/conferma', array_merge(self::CONSEGNA, [
+            'metodo_pagamento' => 'contrassegno',
+        ]));
+        $ordine = Ordine::firstOrFail();
+
+        $this->actingAs($utente)
+            ->post("/account/ordini/{$ordine->numero}/paga")
+            ->assertNotFound();
+    }
+
+    public function test_paga_ora_di_un_altro_non_si_vede(): void
+    {
+        $utente = $this->conCarrello([[$this->prodotto(), 1]]);
+        $this->actingAs($utente)->post('/ordine/conferma', array_merge(self::CONSEGNA, [
+            'metodo_pagamento' => 'carta',
+            'carta' => '4242424242424240',
+        ]));
+        $ordine = Ordine::firstOrFail();
+
+        $this->actingAs(User::factory()->create())
+            ->post("/account/ordini/{$ordine->numero}/paga")
             ->assertNotFound();
     }
 

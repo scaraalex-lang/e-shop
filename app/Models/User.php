@@ -81,10 +81,14 @@ class User extends Authenticatable
         if ($this->eAgenziaApprovata()) {
             $voci[] = ['Acquisto Servizi', route('servizi'), 'servizi'];
             $voci[] = ['Nuovo ordine', route('ordini.nuovo'), 'ordini.nuovo'];
+            $voci[] = ['Pagamenti', route('fatture'), 'fatture'];
         }
 
         if (! $this->eStaff()) {
             $voci[] = ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']];
+            // Unico punto d'ingresso cliccabile verso la Scheda Defunto: prima
+            // ci si arrivava solo per redirect da Acquisto Servizi → Lavorazione.
+            $voci[] = ['I miei defunti', route('defunti.index'), ['defunti.index', 'defunti.show']];
         }
 
         // I necrologi sono uno strumento dell'agenzia, non un prodotto: non

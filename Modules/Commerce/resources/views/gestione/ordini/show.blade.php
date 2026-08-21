@@ -5,6 +5,7 @@
 
 @section('gestione')
     @php
+        use Modules\Commerce\Enums\MetodoPagamento;
         use Modules\Commerce\Enums\StatoOrdine;
     @endphp
 
@@ -52,6 +53,49 @@
                     </p>
                 @endif
             </section>
+
+            @if ($ordine->metodo_pagamento === MetodoPagamento::Fattura)
+                <section class="bg-bianco px-7 py-7">
+                    <h2 class="font-serif text-xl font-medium">Fatturazione</h2>
+
+                    @if ($ordine->fatturata())
+                        <p class="mt-2 font-sans font-light text-[14px] text-testo-soft">
+                            Fattura <strong class="text-testo font-normal">{{ $ordine->fattura_numero }}</strong>
+                            emessa il {{ $ordine->fattura_emessa_at->format('d/m/Y') }}.
+                        </p>
+                    @else
+                        <p class="mt-2 font-sans font-light text-[14px] text-testo-soft">
+                            Ordine a termini: non ancora fatturato.
+                        </p>
+                    @endif
+
+                    @if (! $ordine->fatturata())
+                        <form method="POST" action="{{ route('gestione.ordini.fattura', $ordine) }}" class="mt-4 flex flex-wrap items-end gap-4">
+                            @csrf
+                            <div>
+                                <x-input-label for="fattura_numero" value="Numero fattura" />
+                                <x-text-input id="fattura_numero" name="fattura_numero" value="{{ old('fattura_numero') }}" required />
+                                <x-input-error :messages="$errors->get('fattura_numero')" class="mt-2" />
+                            </div>
+                            <x-secondary-button type="submit">Segna fatturato</x-secondary-button>
+                        </form>
+                    @elseif ($ordine->stato_pagamento !== \Modules\Commerce\Enums\StatoPagamento::Pagato)
+                        <form method="POST" action="{{ route('gestione.ordini.fattura.pagata', $ordine) }}" class="mt-4 flex flex-wrap items-end gap-4">
+                            @csrf
+                            <div>
+                                <x-input-label for="riferimento_pagamento" value="Riferimento del saldo (facoltativo)" />
+                                <x-text-input id="riferimento_pagamento" name="riferimento_pagamento"
+                                              value="{{ old('riferimento_pagamento') }}" placeholder="es. bonifico del 10/08" />
+                            </div>
+                            <x-secondary-button type="submit">Segna saldata</x-secondary-button>
+                        </form>
+                    @else
+                        <p class="mt-3 font-sans font-light text-[13px] text-successo">
+                            Saldata {{ $ordine->pagato_at ? 'il '.$ordine->pagato_at->format('d/m/Y') : '' }}.
+                        </p>
+                    @endif
+                </section>
+            @endif
 
             @if ($ordine->richiede_lavorazione)
                 <section class="bg-bianco px-7 py-7">
@@ -128,41 +172,55 @@
                         </div>
                     @endforeach
                 </div>
+
+                <div class="mt-4 pt-4 border-t border-caffe/15 flex justify-between items-baseline">
+                    <dt class="font-sans text-[11px] tracking-[0.2em] uppercase text-testo-soft">Totale</dt>
+                    <dd><x-prezzo :centesimi="$ordine->totale" class="font-serif text-xl" /></dd>
+                </div>
+                @if ($ordine->crediti_usati > 0)
+                    <p class="mt-1 font-sans font-light text-[12px] text-oro-scuro text-right">
+                        di cui {{ $ordine->crediti_usati }} crediti — resta in denaro
+                        <x-prezzo :centesimi="$ordine->valoreInDenaro()" class="tabular-nums" />
+                    </p>
+                @endif
             </section>
         </div>
 
-        <aside class="border border-caffe/15 bg-panna/50 px-6 py-7 self-start">
-            <span class="font-sans text-[10px] tracking-[0.22em] uppercase text-testo-soft">Stato</span>
-            <p class="mt-2 font-serif text-2xl">{{ $ordine->stato->etichetta() }}</p>
-            <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">{{ $ordine->stato->racconto() }}</p>
+        <aside class="border border-caffe/15 self-start">
+            {{-- Lo stato è l'informazione che conta di più in questa pagina:
+                 unico blocco "chiave" (Opzione B), il resto resta neutro. --}}
+            <x-blocco variant="chiave" etichetta="Stato" class="px-6 py-6">
+                <p class="mt-2 font-serif text-2xl">{{ $ordine->stato->etichetta() }}</p>
+                <p class="mt-2 font-sans font-light text-[13px] text-panna/75">{{ $ordine->stato->racconto() }}</p>
+            </x-blocco>
 
-            <hr class="my-6 h-px w-full border-0 bg-caffe/15">
-
-            @if ($ordine->stato === StatoOrdine::InProduzione)
-                <form method="POST" action="{{ route('gestione.ordini.spedisci', $ordine) }}" class="space-y-4">
-                    @csrf
-                    <div>
-                        <x-input-label for="corriere" value="Corriere" />
-                        <x-text-input id="corriere" name="corriere" value="{{ old('corriere') }}" required />
-                        <x-input-error :messages="$errors->get('corriere')" class="mt-2" />
-                    </div>
-                    <div>
-                        <x-input-label for="tracking_numero" value="Numero di tracking" />
-                        <x-text-input id="tracking_numero" name="tracking_numero" value="{{ old('tracking_numero') }}" required />
-                        <x-input-error :messages="$errors->get('tracking_numero')" class="mt-2" />
-                    </div>
-                    <x-primary-button class="w-full">Segna spedito</x-primary-button>
-                </form>
-            @elseif ($ordine->stato === StatoOrdine::Spedito)
-                <form method="POST" action="{{ route('gestione.ordini.consegnato', $ordine) }}">
-                    @csrf
-                    <x-primary-button class="w-full">Segna consegnato</x-primary-button>
-                </form>
-            @else
-                <p class="font-sans font-light text-[13px] text-testo-soft">
-                    Nessuna azione disponibile in questo stato.
-                </p>
-            @endif
+            <div class="bg-panna/50 px-6 py-6">
+                @if ($ordine->stato === StatoOrdine::InProduzione)
+                    <form method="POST" action="{{ route('gestione.ordini.spedisci', $ordine) }}" class="space-y-4">
+                        @csrf
+                        <div>
+                            <x-input-label for="corriere" value="Corriere" />
+                            <x-text-input id="corriere" name="corriere" value="{{ old('corriere') }}" required />
+                            <x-input-error :messages="$errors->get('corriere')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="tracking_numero" value="Numero di tracking" />
+                            <x-text-input id="tracking_numero" name="tracking_numero" value="{{ old('tracking_numero') }}" required />
+                            <x-input-error :messages="$errors->get('tracking_numero')" class="mt-2" />
+                        </div>
+                        <x-primary-button class="w-full">Segna spedito</x-primary-button>
+                    </form>
+                @elseif ($ordine->stato === StatoOrdine::Spedito)
+                    <form method="POST" action="{{ route('gestione.ordini.consegnato', $ordine) }}">
+                        @csrf
+                        <x-primary-button class="w-full">Segna consegnato</x-primary-button>
+                    </form>
+                @else
+                    <p class="font-sans font-light text-[13px] text-testo-soft">
+                        Nessuna azione disponibile in questo stato.
+                    </p>
+                @endif
+            </div>
         </aside>
     </div>
 @endsection

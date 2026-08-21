@@ -32,7 +32,7 @@
             <form method="POST" action="{{ route('ordini.servizio') }}" class="mt-6 max-w-2xl space-y-6" data-form-attiva-servizi>
                 @csrf
 
-                <p class="hidden font-sans text-[13px] text-[#8a3b2c]" data-errore-attiva-servizi></p>
+                <p class="hidden border-l-2 border-errore bg-panna px-5 py-4 font-sans text-[13px] text-errore" data-errore-attiva-servizi></p>
 
                 <div>
                     <x-input-label value="Occasione" />
@@ -81,6 +81,10 @@
                     </p>
                 @endif
             </form>
+        @elseif ($agenziaInAttesa ?? false)
+            <p class="font-sans font-light text-[13px] text-testo-soft italic">
+                Il servizio a crediti si sblocca dopo l'approvazione della vostra agenzia.
+            </p>
         @else
             <p class="font-sans font-light text-[13px] text-testo-soft italic">
                 Il servizio a crediti è riservato alle agenzie.
@@ -112,8 +116,17 @@
                     const dati = await risposta.json();
 
                     if (! risposta.ok) {
-                        errore.textContent = dati.errore || 'Qualcosa non ha funzionato: riprova.';
+                        // dati.errore: formato custom (crediti insufficienti, riga
+                        // sopra nel controller). dati.errors: ValidationException
+                        // standard di Laravel (422). dati.message: qualunque altra
+                        // eccezione "attesa" (es. 403 non autorizzato) — prima si
+                        // leggeva solo dati.errore, quindi ogni altro fallimento
+                        // mostrava il messaggio generico sotto e sembrava che il
+                        // form non avesse fatto nulla.
+                        const primoErroreValidazione = dati.errors ? Object.values(dati.errors)[0]?.[0] : null;
+                        errore.textContent = dati.errore || primoErroreValidazione || dati.message || 'Qualcosa non ha funzionato: riprova.';
                         errore.classList.remove('hidden');
+                        errore.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         bottone.disabled = false;
                         return;
                     }

@@ -6,7 +6,11 @@
 
 @section('account')
 @php
+    use Modules\Commerce\Enums\MetodoPagamento;
     use Modules\Commerce\Enums\StatoPagamento;
+
+    $daPagare = $ordine->metodo_pagamento === MetodoPagamento::Carta
+        && in_array($ordine->stato_pagamento, [StatoPagamento::InAttesa, StatoPagamento::Fallito], true);
 @endphp
 
 @if (session('appena_confermato'))
@@ -17,6 +21,12 @@
             citalo se ci scrivi. Da questa pagina segui ogni passaggio.
         </p>
     </div>
+@endif
+
+@if (session('stato'))
+    <p class="mb-10 border-l-2 border-successo bg-panna px-5 py-4 font-sans text-[13px]">
+        {{ session('stato') }}
+    </p>
 @endif
 
 @if ($ordine->agenzia_id && ($scadenza = $ordine->prossimaScadenzaSuggerita()))
@@ -73,10 +83,21 @@
             @endif
 
             @if ($ordine->lavorazioneApribile())
-                <div class="mt-5 flex flex-wrap gap-4">
+                <div class="mt-5 flex flex-wrap items-center gap-4">
                     <x-button :href="route('lavorazione', $ordine)">
                         {{ $ordine->defunto_id ? 'Riprendi la lavorazione' : 'Comincia dalla fotografia' }}
                     </x-button>
+
+                    @if ($ricordino && ! $ricordino->approvato())
+                        <form method="POST" action="{{ route('lavorazione.approva', $ordine) }}">
+                            @csrf
+                            <x-button type="submit" variant="contornata">Approva la bozza</x-button>
+                        </form>
+                    @elseif ($ricordino?->approvato())
+                        <p class="font-sans text-[11px] tracking-[0.15em] uppercase text-successo">
+                            ✓ Bozza approvata
+                        </p>
+                    @endif
                 </div>
             @else
                 <p class="mt-4 font-sans text-[12px] tracking-[0.1em] text-testo-soft">
@@ -86,6 +107,64 @@
         </div>
     @endif
 </section>
+
+@if ($ricordino?->approvato() && $categorieStampa->isNotEmpty())
+    {{-- ============ composizione dell'ordine di stampa ============ --}}
+    <section class="mt-12">
+        <h2 class="font-sans text-[11px] tracking-[0.25em] uppercase text-oro-scuro">Componi l'ordine di stampa</h2>
+        <p class="mt-3 max-w-2xl font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+            La bozza è approvata: scegli formato e quantità di ricordini, coroncine o accessori.
+            Quello che aggiungi finisce nel carrello, insieme per questa pratica — poi si paga
+            con i crediti a disposizione o online, come per ogni altro ordine.
+        </p>
+
+        <div class="mt-6 space-y-8">
+            @foreach ($categorieStampa as $categoria)
+                <div>
+                    <h3 class="font-serif text-lg">{{ $categoria->name }}</h3>
+
+                    <div class="mt-3 border border-caffe/15">
+                        @foreach ($categoria->prodotti as $p)
+                            <form method="POST" action="{{ route('ordini.stampa', $ordine) }}"
+                                  class="flex flex-wrap items-center gap-4 px-6 py-4 border-b border-caffe/10 last:border-b-0">
+                                @csrf
+                                <input type="hidden" name="product_id" value="{{ $p->id }}">
+
+                                <div class="flex-1 min-w-[10rem]">
+                                    <p class="font-serif text-base leading-snug">{{ $p->name }}</p>
+                                    @if ($p->is_kit)
+                                        <p class="mt-0.5 font-sans font-light text-[12px] text-testo-soft">
+                                            {{ $p->included_units }} inclusi, poi <x-prezzo :centesimi="$p->extra_unit_price" class="text-[12px]" /> a pezzo
+                                        </p>
+                                    @endif
+                                </div>
+
+                                <x-prezzo :centesimi="$p->price" class="font-serif text-base" />
+
+                                {{-- min = step: sennò l'input HTML5 rifiuta il suo stesso valore di
+                                     default (es. min=1/step=50 accetta 1, 51, 101... mai 50). Resta
+                                     solo un suggerimento: il prezzo (Product::priceForQuantity) accetta
+                                     comunque qualunque quantità digitata a mano. --}}
+                                <input type="number" name="quantita"
+                                       min="{{ $p->is_kit ? $p->included_units : 1 }}"
+                                       value="{{ $p->is_kit ? $p->included_units : 1 }}"
+                                       step="{{ $p->is_kit ? $p->included_units : 1 }}"
+                                       class="w-24 bg-bianco border border-caffe/25 px-3 py-2 font-sans text-[14px]
+                                              focus:border-oro focus:outline-none focus:ring-1 focus:ring-oro/40">
+
+                                <x-button type="submit" variant="contornata" compatta>Aggiungi</x-button>
+                            </form>
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="mt-6">
+            <x-button :href="route('carrello')" variant="contornata">Vai al carrello per pagare</x-button>
+        </div>
+    </section>
+@endif
 
 @if ($ordine->servizi->isNotEmpty())
     {{-- ============ servizi attivati (ordine a crediti) ============ --}}
@@ -202,10 +281,24 @@
                 </dd>
             </div>
 
+            @if ($ordine->crediti_usati > 0)
+                <div class="flex justify-between py-1 text-oro-scuro">
+                    <dt class="font-light">Pagato con crediti</dt>
+                    <dd>{{ $ordine->crediti_usati }} crediti</dd>
+                </div>
+            @endif
+
             <div class="mt-3 pt-3 border-t border-caffe/15 flex justify-between items-baseline">
                 <dt class="font-sans text-[11px] tracking-[0.2em] uppercase text-testo-soft">Totale</dt>
                 <dd><x-prezzo :centesimi="$ordine->totale" class="font-serif text-2xl" /></dd>
             </div>
+
+            @if ($ordine->crediti_usati > 0 && $ordine->valoreInDenaro() > 0)
+                <div class="flex justify-between py-1 text-testo-soft">
+                    <dt class="font-light">Di cui in denaro</dt>
+                    <dd><x-prezzo :centesimi="$ordine->valoreInDenaro()" /></dd>
+                </div>
+            @endif
         </dl>
 
         <p class="mt-4 font-sans font-light text-[13px] text-testo-soft">
@@ -223,6 +316,22 @@
             <p class="mt-1 font-sans font-light text-[12px] text-testo-soft/70 tabular-nums">
                 Riferimento {{ $ordine->riferimento_pagamento }}
             </p>
+        @endif
+
+        @if ($daPagare)
+            <form method="POST" action="{{ route('ordini.paga', $ordine) }}" class="mt-4 flex flex-wrap items-end gap-3">
+                @csrf
+                @if (config('commerce.pagamento') === 'simulato')
+                    {{-- Solo in sviluppo: con Stripe il bottone porta dritto al redirect,
+                         nessun campo carta nel nostro form. --}}
+                    <div>
+                        <x-input-label for="carta-riprova" value="Numero della carta" />
+                        <x-text-input id="carta-riprova" name="carta" type="text" inputmode="numeric"
+                                      autocomplete="cc-number" placeholder="4242 4242 4242 4242" />
+                    </div>
+                @endif
+                <x-button type="submit">Paga ora</x-button>
+            </form>
         @endif
         @endif
     </section>

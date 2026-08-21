@@ -28,8 +28,9 @@
     @section('content')
         <div class="flex flex-col lg:flex-row gap-12">
 
-            {{-- menu dell'account --}}
-            <aside class="lg:w-60 shrink-0">
+            {{-- menu dell'account: caffè chiaro per staccarla dal pannello
+                 centrale, come nella sidebar di Gestione. --}}
+            <aside class="lg:w-60 shrink-0 bg-caffe/8 border border-oro/30 px-6 py-7">
                 <div class="lg:sticky lg:top-[4.5rem]">
                     <span class="font-sans text-[11px] tracking-[0.35em] uppercase text-oro-scuro">
                         Il mio account

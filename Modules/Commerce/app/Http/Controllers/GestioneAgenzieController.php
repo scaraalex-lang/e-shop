@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Modules\Commerce\Contabilita\EstrattoConto;
 use Modules\Commerce\Enums\RuoloUtente;
 use Modules\Commerce\Enums\StatoAgenzia;
 use Modules\Commerce\Http\Requests\RegistrazioneAgenziaRequest;
@@ -79,6 +80,32 @@ class GestioneAgenzieController extends Controller
             'agenzia' => $agenzia->load('user', 'agenteVendita'),
             'agenti' => AgenteVendita::orderBy('nome')->get(),
         ]);
+    }
+
+    /**
+     * La contabilità dell'agenzia. Due letture diverse dello stesso dato:
+     * tre cifre "a oggi" (quanto resta da fatturare/saldare/incassare in
+     * assoluto, non solo questo mese) e sotto l'estratto conto vero e
+     * proprio — un evento per riga, filtrabile per mese (vedi
+     * EstrattoConto). Solo lettura: le azioni (emettere una fattura,
+     * segnarla saldata) stanno sul singolo ordine — vedi
+     * GestioneOrdiniController.
+     */
+    public function movimenti(Request $request, Agenzia $agenzia, EstrattoConto $estrattoConto): View
+    {
+        [$inizio, $fine] = EstrattoConto::periodo($request);
+        $eventi = $estrattoConto->perPeriodo($agenzia, $inizio, $fine);
+
+        return view('commerce::gestione.agenzie.movimenti', array_merge([
+            'agenzia' => $agenzia,
+            'eventi' => $eventi,
+            'periodo' => $inizio,
+            'periodoPrecedente' => $inizio->copy()->subMonth(),
+            'periodoSuccessivo' => $inizio->copy()->addMonth(),
+            'totalePagatoPeriodo' => $eventi->where('tipo', 'pagamento')->sum('importoDenaro'),
+            'totaleFatturatoPeriodo' => $eventi->where('tipo', 'fattura_emessa')->sum('importoDenaro'),
+            'totaleCreditiUsatiPeriodo' => $eventi->where('tipo', 'crediti_usati')->sum('importoCrediti'),
+        ], $estrattoConto->riepilogoOggi($agenzia)));
     }
 
     public function assegnaAgente(Request $request, Agenzia $agenzia): RedirectResponse

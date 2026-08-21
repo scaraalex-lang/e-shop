@@ -5,6 +5,7 @@ namespace Modules\Memorial\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\Manifesto;
@@ -19,6 +20,35 @@ use Modules\Memorial\Models\Necrologio;
  */
 class DefuntiController extends Controller
 {
+    /**
+     * "I miei defunti": unico punto d'ingresso cliccabile verso la Scheda
+     * Defunto — prima si arrivava solo per redirect da "Acquisto Servizi" →
+     * Lavorazione → form dati-defunto, mai da un elenco.
+     */
+    public function index(Request $request): View
+    {
+        $utente = $request->user();
+
+        $ordini = Ordine::whereNotNull('defunto_id')
+            ->when(! $utente->eStaff(), function ($query) use ($utente) {
+                $query->where(function ($query) use ($utente) {
+                    $query->where('user_id', $utente->id);
+
+                    if ($utente->agenzia_id) {
+                        $query->orWhere('agenzia_id', $utente->agenzia_id);
+                    }
+                });
+            })
+            ->get(['id', 'defunto_id']);
+
+        $defunti = Defunto::whereIn('id', $ordini->pluck('defunto_id')->unique())
+            ->select(['id', 'nome', 'cognome', 'data_nascita', 'data_morte', 'anni'])
+            ->latest('id')
+            ->paginate(20);
+
+        return view('memorial::defunti.index', ['defunti' => $defunti]);
+    }
+
     public function show(Request $request, Defunto $defunto): View
     {
         $ordini = $this->soloSuo($request, $defunto);
@@ -54,6 +84,16 @@ class DefuntiController extends Controller
         $ricordinoAbilitato = $ordini->contains(fn (Ordine $o) => $o->designerAbilitato('ricordini'));
         $ricordino = $defunto->ricordini()->latest()->first();
 
+        // Query builder puro, non il model Eloquent di TributeVideo: Memorial
+        // non deve mai dipendere da TributeVideo, solo il contrario (stesso
+        // schema a senso unico di PhotoPrint→Memorial) — vedi memoria del modulo.
+        $videoAbilitato = $ordini->contains(fn (Ordine $o) => $o->designerAbilitato('video-memoriale'));
+        $video = DB::table('video_memoriali')
+            ->where('defunto_id', $defunto->id)
+            ->latest('id')
+            ->select(['id', 'token', 'stato', 'messaggio_errore'])
+            ->first();
+
         return view('memorial::defunti.show', [
             'defunto' => $defunto,
             'ordinePrincipale' => $ordinePrincipale,
@@ -71,6 +111,11 @@ class DefuntiController extends Controller
 
             'ricordinoAbilitato' => $fotoPronta && $ricordinoAbilitato,
             'ricordino' => $ricordino,
+
+            // Non richiede $fotoPronta: le foto del video sono un set dedicato,
+            // separato dal ritratto principale usato da manifesto/ricordino.
+            'videoAbilitato' => $videoAbilitato,
+            'video' => $video,
         ]);
     }
 

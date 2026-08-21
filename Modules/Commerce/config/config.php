@@ -18,9 +18,22 @@ return [
     | Incasso
     |--------------------------------------------------------------------------
     | "simulato" fa girare il flusso senza una banca (carte finte: quelle che
-    | finiscono per 0 vengono rifiutate). Quando arrivano le chiavi Stripe si
-    | aggiunge il driver e si cambia questo valore: checkout, ordine e
-    | tracciamento restano com'erano.
+    | finiscono per 0 vengono rifiutate). "stripe" usa Checkout ospitata
+    | (vedi PagamentoStripe) — checkout, ordine e tracciamento restano
+    | com'erano, cambia solo questo valore.
     */
     'pagamento' => env('COMMERCE_PAGAMENTO', 'simulato'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stripe
+    |--------------------------------------------------------------------------
+    | Letto solo quando 'pagamento' vale "stripe". Le chiavi non vanno mai
+    | committate: solo in .env, sia in test che (più avanti) in live.
+    */
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET'),
+        'publishable' => env('STRIPE_PUBLISHABLE'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
 ];

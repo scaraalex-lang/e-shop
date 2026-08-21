@@ -50,10 +50,11 @@
     @endif
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-caffe/15 border border-caffe/15">
+        {{-- Il primo box è quello che conta di più in questa pagina: tono
+             neutro (oro) per staccare dalle card testuali bg-bianco sotto (Opzione C). --}}
         @if ($agenzia)
             {{-- dati dell'agenzia, in evidenza per primo --}}
-            <article class="sm:col-span-2 bg-panna px-7 py-8 flex flex-col">
-                <span class="font-sans text-[11px] tracking-[0.3em] uppercase text-oro-scuro">Onoranze funebri</span>
+            <x-blocco variant="tono-neutro" etichetta="Onoranze funebri" class="sm:col-span-2 flex flex-col px-7 py-8">
                 <h2 class="mt-3 font-serif text-xl font-medium">{{ $agenzia->ragione_sociale }}</h2>
                 <dl class="mt-4 font-sans font-light text-[13px] leading-relaxed text-testo-soft space-y-1">
                     <div class="flex gap-2">
@@ -65,25 +66,25 @@
                         <dd>{{ $agenzia->indirizzoCompleto() }}</dd>
                     </div>
                 </dl>
-            </article>
+            </x-blocco>
         @elseif ($utente->eStaff())
-            {{-- scorciatoia alla gestione, non l'invito a diventare agenzia --}}
-            <article class="sm:col-span-2 bg-panna px-7 py-8 flex flex-col">
-                <span class="font-sans text-[11px] tracking-[0.3em] uppercase text-oro-scuro">Gestione</span>
+            {{-- scorciatoia alla gestione, non l'invito a diventare agenzia:
+                 qui dentro c'è la shell Gestione, quindi Opzione B (chiave)
+                 invece del tono-neutro usato per B2B/B2C sotto. --}}
+            <x-blocco variant="chiave" etichetta="Gestione" class="sm:col-span-2 flex flex-col px-7 py-8">
                 <h2 class="mt-3 font-serif text-xl font-medium">Prodotti, agenzie, vetrina</h2>
-                <p class="mt-3 font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+                <p class="mt-3 font-sans font-light text-[14px] leading-relaxed text-panna/75">
                     Catalogo, categorie, agenzie e agenti, contenuti del sito pubblico.
                 </p>
                 <a href="{{ route('gestione.agenzie.index') }}"
-                   class="mt-6 self-start font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro
-                          hover:text-caffe transition-colors duration-300">
+                   class="mt-6 self-start font-sans text-[11px] tracking-[0.22em] uppercase text-oro
+                          hover:text-bianco transition-colors duration-300">
                     Apri la gestione →
                 </a>
-            </article>
+            </x-blocco>
         @else
             {{-- invito alle onoranze funebri --}}
-            <article class="sm:col-span-2 bg-panna px-7 py-8 flex flex-col">
-                <span class="font-sans text-[11px] tracking-[0.3em] uppercase text-oro-scuro">Onoranze funebri</span>
+            <x-blocco variant="tono-neutro" etichetta="Onoranze funebri" class="sm:col-span-2 flex flex-col px-7 py-8">
                 <h2 class="mt-3 font-serif text-xl font-medium">Account agenzia</h2>
                 <p class="mt-3 font-sans font-light text-[14px] leading-relaxed text-testo-soft">
                     Listino riservato, ordini ricorrenti e bozze condivisibili con la famiglia.
@@ -93,7 +94,7 @@
                           hover:text-caffe transition-colors duration-300">
                     Richiedi l'accesso →
                 </a>
-            </article>
+            </x-blocco>
         @endif
 
         @foreach ($riquadri as $r)

@@ -87,6 +87,24 @@
                 </div>
             </section>
 
+            {{-- ============ crediti ============ --}}
+            @if ($agenzia && $creditiSaldo > 0)
+                <section class="border border-caffe/15 px-7 py-7">
+                    <h2 class="font-serif text-2xl font-medium">Usa i tuoi crediti</h2>
+                    <p class="mt-2 font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+                        Saldo disponibile: <strong class="font-normal text-testo">{{ $creditiSaldo }} crediti</strong>
+                        (1 credito = 1 €). Quanti vuoi usare su questo ordine? Il resto — se ne resta — si paga
+                        col metodo scelto qui sotto.
+                    </p>
+                    <div class="mt-4 max-w-[10rem]">
+                        <x-input-label for="crediti_usati" value="Crediti da usare" />
+                        <x-text-input id="crediti_usati" name="crediti_usati" type="number" min="0"
+                                      max="{{ $creditiMassimoUsabile }}" :value="$vecchio('crediti_usati', 0)" />
+                        <x-input-error :messages="$errors->get('crediti_usati')" />
+                    </div>
+                </section>
+            @endif
+
             {{-- ============ pagamento ============ --}}
             <section class="border border-caffe/15 px-7 py-7">
                 <h2 class="font-serif text-2xl font-medium">Come paghi</h2>
@@ -114,17 +132,25 @@
                 {{-- Compare solo scegliendo la carta: senza JS resta visibile,
                      ed è comunque facoltativo per gli altri metodi. --}}
                 <div id="riquadro-carta" class="mt-6 border-l-2 border-oro bg-panna/50 px-5 py-5">
-                    <x-input-label for="carta" value="Numero della carta" />
-                    <x-text-input id="carta" name="carta" type="text" inputmode="numeric"
-                                  autocomplete="cc-number" placeholder="4242 4242 4242 4242"
-                                  :value="old('carta')" />
-                    <x-input-error :messages="$errors->get('carta')" />
-                    <p class="mt-3 font-sans font-light text-[12px] leading-relaxed text-testo-soft">
-                        <strong class="font-normal text-testo">Incasso simulato.</strong>
-                        Nessun addebito reale: una carta qualsiasi va bene, e quelle che finiscono
-                        per <strong class="font-normal text-testo">0</strong> vengono rifiutate, per
-                        poter provare anche l'errore.
-                    </p>
+                    @if (config('commerce.pagamento') === 'simulato')
+                        <x-input-label for="carta" value="Numero della carta" />
+                        <x-text-input id="carta" name="carta" type="text" inputmode="numeric"
+                                      autocomplete="cc-number" placeholder="4242 4242 4242 4242"
+                                      :value="old('carta')" />
+                        <x-input-error :messages="$errors->get('carta')" />
+                        <p class="mt-3 font-sans font-light text-[12px] leading-relaxed text-testo-soft">
+                            <strong class="font-normal text-testo">Incasso simulato.</strong>
+                            Nessun addebito reale: una carta qualsiasi va bene, e quelle che finiscono
+                            per <strong class="font-normal text-testo">0</strong> vengono rifiutate, per
+                            poter provare anche l'errore.
+                        </p>
+                    @else
+                        <p class="font-sans font-light text-[13px] leading-relaxed text-testo-soft">
+                            Sarai reindirizzato alla pagina sicura di Stripe per inserire i dati della
+                            carta (credito, debito o prepagata): il numero non passa mai dai nostri
+                            server.
+                        </p>
+                    @endif
                 </div>
             </section>
         </div>

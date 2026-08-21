@@ -67,6 +67,7 @@
                         <th class="px-5 py-4 font-normal">Cliente</th>
                         <th class="px-5 py-4 font-normal">Contenuto</th>
                         <th class="px-5 py-4 font-normal">Stato</th>
+                        <th class="px-5 py-4 font-normal">Pagamento</th>
                         <th class="px-5 py-4 font-normal">Totale</th>
                     </tr>
                 </thead>
@@ -108,7 +109,20 @@
                                     {{ $ordine->stato->etichetta() }}
                                 </span>
                             </td>
-                            <td class="px-5 py-4"><x-prezzo :centesimi="$ordine->totale" /></td>
+                            <td class="px-5 py-4">
+                                <span class="font-sans font-light text-[13px] text-testo-soft">
+                                    {{ $ordine->metodo_pagamento->etichetta() }}
+                                </span>
+                                <x-stato-pagamento :ordine="$ordine" class="mt-0.5" />
+                            </td>
+                            <td class="px-5 py-4">
+                                <x-prezzo :centesimi="$ordine->valoreInDenaro()" />
+                                @if ($ordine->crediti_usati > 0)
+                                    <span class="block font-sans font-light text-[11px] text-testo-soft">
+                                        +{{ $ordine->crediti_usati }} crediti
+                                    </span>
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

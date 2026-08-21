@@ -23,10 +23,16 @@
         ];
     @endphp
 
-    <a href="{{ route('gestione.agenzie.index') }}"
-       class="font-sans text-[11px] tracking-[0.22em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
-        ← Tutte le agenzie
-    </a>
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <a href="{{ route('gestione.agenzie.index') }}"
+           class="font-sans text-[11px] tracking-[0.22em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
+            ← Tutte le agenzie
+        </a>
+        <a href="{{ route('gestione.agenzie.movimenti', $agenzia) }}"
+           class="font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro hover:text-oro transition-colors duration-300">
+            Movimenti →
+        </a>
+    </div>
 
     <div class="mt-8 grid gap-10 lg:grid-cols-[1fr_22rem]">
 

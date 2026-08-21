@@ -111,6 +111,13 @@
         font-weight: 500;
         color: var(--color-testo);
     }
+
+    /* Blocchi "chiave" (x-blocco variant="chiave", fondo caffè scuro): le
+       intestazioni al loro interno devono ereditare il colore chiaro del
+       blocco, non il colore fisso della regola sopra. */
+    .blocco-chiave h1, .blocco-chiave h2, .blocco-chiave h3, .blocco-chiave h4 {
+        color: inherit;
+    }
 }
 
 /* Utility ricorrenti del footer (fondo marrone caffè) */

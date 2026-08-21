@@ -1,0 +1,11 @@
+{
+    "name": "TributeVideo",
+    "alias": "tributevideo",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\TributeVideo\\Providers\\TributeVideoServiceProvider"
+    ],
+    "files": []
+}

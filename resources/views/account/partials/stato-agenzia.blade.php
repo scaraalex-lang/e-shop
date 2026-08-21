@@ -1,13 +1,18 @@
 @php
     use Modules\Commerce\Enums\StatoAgenzia;
 
-    // Ogni stato ha il suo colore di bordo e il suo testo: l'agenzia deve
+    // Ogni stato ha il suo tono funzionale (Opzione C): l'agenzia deve
     // capire a colpo d'occhio se può già lavorare con le condizioni B2B.
-    $stile = match ($agenzia->stato) {
-        StatoAgenzia::Approvata => ['bordo' => 'border-successo', 'fondo' => 'bg-panna/60'],
-        StatoAgenzia::Rifiutata => ['bordo' => 'border-errore',   'fondo' => 'bg-panna/60'],
-        StatoAgenzia::Sospesa   => ['bordo' => 'border-errore',   'fondo' => 'bg-panna/60'],
-        default                 => ['bordo' => 'border-oro',      'fondo' => 'bg-panna/60'],
+    $variant = match ($agenzia->stato) {
+        StatoAgenzia::Approvata => 'tono-successo',
+        StatoAgenzia::Rifiutata, StatoAgenzia::Sospesa => 'tono-attenzione',
+        default => 'tono-neutro',
+    };
+
+    $coloreEtichetta = match ($agenzia->stato) {
+        StatoAgenzia::Approvata => 'text-successo',
+        StatoAgenzia::Rifiutata, StatoAgenzia::Sospesa => 'text-errore',
+        default => 'text-oro-scuro',
     };
 
     $testo = match ($agenzia->stato) {
@@ -18,10 +23,10 @@
     };
 @endphp
 
-<section class="mb-10 border-l-2 {{ $stile['bordo'] }} {{ $stile['fondo'] }} px-7 py-6">
+<x-blocco :variant="$variant" class="mb-10 px-7 py-6">
     <div class="flex flex-wrap items-baseline justify-between gap-3">
         <h2 class="font-serif text-xl font-medium">Account agenzia</h2>
-        <span class="font-sans text-[11px] tracking-[0.22em] uppercase text-oro-scuro">
+        <span class="font-sans text-[11px] tracking-[0.22em] uppercase {{ $coloreEtichetta }}">
             {{ $agenzia->stato->etichetta() }}
         </span>
     </div>
@@ -35,4 +40,4 @@
             {{ $agenzia->motivo_rifiuto }}
         </p>
     @endif
-</section>
+</x-blocco>

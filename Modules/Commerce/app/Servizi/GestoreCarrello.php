@@ -68,13 +68,24 @@ class GestoreCarrello
     /**
      * Aggiunge pezzi al carrello. Se il prodotto c'è già, si somma alla riga
      * esistente invece di aprirne una seconda.
+     *
+     * `$defuntoId` marca la riga come stampa per una pratica precisa (vedi
+     * `OrdiniController::aggiungiStampa`): valorizzato solo alla creazione
+     * della riga, non sovrascrive un defunto già impostato da un giro
+     * precedente — se la riga esisteva già per un altro defunto è chi chiama
+     * a doverlo aver già impedito (vedi il controllo nel controller).
      */
-    public function aggiungi(Product $prodotto, int $quantita): RigaCarrello
+    public function aggiungi(Product $prodotto, int $quantita, ?int $defuntoId = null): RigaCarrello
     {
         $carrello = $this->correnteOCrea();
 
         $riga = $carrello->righe()->firstOrNew(['product_id' => $prodotto->id]);
         $riga->quantita = max(($riga->quantita ?? 0) + $quantita, 1);
+
+        if (! $riga->exists && $defuntoId) {
+            $riga->defunto_id = $defuntoId;
+        }
+
         $riga->save();
 
         return $riga;

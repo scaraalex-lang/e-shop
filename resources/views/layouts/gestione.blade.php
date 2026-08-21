@@ -24,6 +24,7 @@
             ['Ordini agenzie (B2B)', route('gestione.ordini.index', ['provenienza' => 'b2b']), fn () => request()->routeIs('gestione.ordini.*') && request()->query('provenienza') === 'b2b'],
             ['Studio ricordini', route('studio.ricordino'), 'studio.*'],
             ['Archivio preghiere', route('gestione.preghiere.index'), 'gestione.preghiere.*'],
+            ['TributeVideo', route('gestione.video-memoriale.index'), 'gestione.video-memoriale.*', 'qr'],
         ],
         'Catalogo' => [
             ['Prodotti', route('gestione.prodotti.index'), 'gestione.prodotti.*'],
@@ -47,8 +48,9 @@
 @section('content')
     <div class="flex flex-col lg:flex-row gap-12">
 
-        {{-- sidebar fissa: unica navigazione per tutta l'operatività --}}
-        <aside class="lg:w-64 shrink-0">
+        {{-- sidebar fissa: unica navigazione per tutta l'operatività. Caffè
+             chiaro per staccarla dal pannello centrale, sempre bianco/panna. --}}
+        <aside class="lg:w-64 shrink-0 bg-caffe/8 border border-oro/30 px-6 py-7">
             <div class="lg:sticky lg:top-[1.5rem]">
                 <span class="font-sans text-[11px] tracking-[0.35em] uppercase text-oro-scuro">
                     Area staff
@@ -73,30 +75,44 @@
                         @endforeach
                     </ul>
 
+                    {{-- Fisarmonica: un gruppo aperto alla volta (<details name="...">
+                         nativo, niente JS). Il gruppo che contiene la pagina corrente
+                         parte aperto, gli altri chiusi. --}}
                     @foreach ($macroAree as $area => $voci)
-                        <div>
-                            <span class="block font-sans text-[10px] tracking-[0.25em] uppercase text-testo-soft/70">
+                        @php
+                            $vociValutate = collect($voci)->map(fn ($v) => [
+                                $v[0], $v[1], $v[2] instanceof \Closure ? $v[2]() : request()->routeIs($v[2]), $v[3] ?? null,
+                            ]);
+                            $areaAttiva = $vociValutate->contains(fn ($v) => $v[2]);
+                        @endphp
+                        <details name="macro-area" @if ($areaAttiva) open @endif
+                                  class="group border-b border-caffe/10 pb-2 last:border-b-0 last:pb-0">
+                            <summary class="flex items-center justify-between cursor-pointer list-none
+                                             font-sans text-[10px] tracking-[0.25em] uppercase text-testo-soft/70
+                                             py-1 [&::-webkit-details-marker]:hidden">
                                 {{ $area }}
-                            </span>
-                            <ul class="mt-2 font-sans text-[12px] tracking-[0.16em] uppercase space-y-1.5">
-                                @foreach ($voci as [$voce, $href, $rotta])
-                                    @php
-                                        $attiva = $rotta instanceof \Closure ? $rotta() : request()->routeIs($rotta);
-                                    @endphp
+                                <span class="text-oro-scuro text-[13px] leading-none group-open:hidden">+</span>
+                                <span class="text-oro-scuro text-[13px] leading-none hidden group-open:inline">&minus;</span>
+                            </summary>
+                            <ul class="mt-2 pb-3 font-sans text-[12px] tracking-[0.16em] uppercase space-y-1.5">
+                                @foreach ($vociValutate as [$voce, $href, $attiva, $icona])
                                     <li>
                                         <a href="{{ $href }}"
                                            @class([
-                                               'inline-block py-0.5 transition-colors duration-300',
+                                               'inline-flex items-center gap-1.5 py-0.5 transition-colors duration-300',
                                                'text-oro-scuro' => $attiva,
                                                'text-testo hover:text-oro-scuro' => ! $attiva,
                                            ])
                                            @if ($attiva) aria-current="page" @endif>
+                                            @if ($icona)
+                                                <x-dynamic-component :component="'icon.'.$icona" class="w-3.5 h-3.5 shrink-0" />
+                                            @endif
                                             {{ $voce }}
                                         </a>
                                     </li>
                                 @endforeach
                             </ul>
-                        </div>
+                        </details>
                     @endforeach
                 </nav>
 

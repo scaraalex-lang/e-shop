@@ -47,6 +47,7 @@ Route::middleware('auth')->prefix('account/necrologi')->name('necrologi.')->grou
 | si gestisce da qui.
 */
 Route::middleware('auth')->prefix('account/defunti')->name('defunti.')->group(function () {
+    Route::get('/', [DefuntiController::class, 'index'])->name('index');
     Route::get('{defunto}', [DefuntiController::class, 'show'])->name('show');
     Route::post('{defunto}/manifesti', [ManifestiController::class, 'store'])->name('manifesti.store');
     Route::post('{defunto}/manifesti/carica', [ManifestiController::class, 'carica'])->name('manifesti.carica');
