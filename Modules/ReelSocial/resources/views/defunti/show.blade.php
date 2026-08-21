@@ -35,12 +35,18 @@
         <h2 class="font-serif text-xl font-medium">Storia social</h2>
 
         @if (! $storiaPronta)
-            <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">Non ancora creata.</p>
-            <div class="mt-4">
-                <x-button :href="route('defunti.storia-social.show', $defunto)" variant="contornata">
-                    Crea la storia
-                </x-button>
-            </div>
+            @if ($storiaAbilitata)
+                <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">Non ancora creata.</p>
+                <div class="mt-4">
+                    <x-button :href="route('defunti.storia-social.show', $defunto)" variant="contornata">
+                        Crea la storia
+                    </x-button>
+                </div>
+            @else
+                <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">
+                    Non ancora disponibile per questa persona — va acquistata prima.
+                </p>
+            @endif
         @else
             <div class="mt-4 flex items-start gap-4">
                 <img src="{{ $storia->anteprimaUrl() }}" alt="Anteprima storia" class="w-20 border border-caffe/15">
@@ -66,12 +72,18 @@
         <h2 class="font-serif text-xl font-medium">Video memoriale</h2>
 
         @if (! $video)
-            <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">Non ancora creato.</p>
-            <div class="mt-4">
-                <x-button :href="route('defunti.video-memoriale.show', $defunto)" variant="contornata">
-                    Genera il video
-                </x-button>
-            </div>
+            @if ($videoAbilitato)
+                <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">Non ancora creato.</p>
+                <div class="mt-4">
+                    <x-button :href="route('defunti.video-memoriale.show', $defunto)" variant="contornata">
+                        Genera il video
+                    </x-button>
+                </div>
+            @else
+                <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">
+                    Non ancora disponibile per questa persona — va acquistato prima.
+                </p>
+            @endif
         @else
             <p class="mt-2 font-sans text-[11px] tracking-[0.18em] uppercase {{ $videoPronto ? 'text-successo' : 'text-testo-soft' }}">
                 {{ $video->stato->etichetta() }}
