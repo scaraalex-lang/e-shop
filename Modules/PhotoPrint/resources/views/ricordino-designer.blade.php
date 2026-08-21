@@ -34,11 +34,18 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 .props-panel{width:240px;background:var(--white);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
 
 /* TOOLBAR */
-.toolbar{background:#1e1e2e;border-bottom:1px solid rgba(255,255,255,.1);padding:.35rem 1rem;display:flex;align-items:center;gap:.4rem;flex-shrink:0;flex-wrap:wrap}
+.toolbar{background:#1e1e2e;border-bottom:1px solid rgba(255,255,255,.1);padding:.35rem 1rem;display:flex;align-items:center;gap:.4rem;flex-shrink:0;flex-wrap:wrap;row-gap:.4rem}
 .tool-btn{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:.22rem .5rem;font-size:.7rem;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .tool-btn:hover{background:rgba(200,169,110,.3);border-color:var(--gold)}
 .tool-btn:disabled{opacity:.35;cursor:not-allowed;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15)}
-.tool-sep{width:1px;height:18px;background:rgba(255,255,255,.15);margin:0 .2rem}
+.tool-btn.icon{width:26px;height:26px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.tool-sep{width:1px;height:18px;background:rgba(255,255,255,.15);margin:0 .2rem;flex-shrink:0}
+.tool-group{display:flex;align-items:center;gap:.3rem;flex-wrap:nowrap}
+.tool-label{color:rgba(255,255,255,.4);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;margin-right:.35rem;flex-shrink:0}
+.align-ico{display:inline-flex;gap:2px;width:15px;height:13px;flex-shrink:0;vertical-align:middle;margin-right:.3rem}
+.align-ico i{flex:1;background:rgba(255,255,255,.25);border-radius:1px;display:block}
+.align-ico i.on{background:#fff}
+.align-ico.stack{flex-direction:column;width:13px;height:15px}
 
 /* CANVAS WRAPPER */
 .canvases-row{display:flex;gap:3rem;align-items:flex-start;justify-content:center;flex:1;padding:1.5rem;overflow:auto}
@@ -333,28 +340,38 @@ document.addEventListener('DOMContentLoaded', renderGdprBanner);
     </div>
     @endif
     <div class="toolbar">
-      <button class="tool-btn" id="btn-annulla" onclick="annulla()" title="Annulla (Ctrl+Z)">↺ Annulla</button>
-      <button class="tool-btn" id="btn-ripristina" onclick="ripristina()" title="Ripristina (Ctrl+Y)">↻ Ripristina</button>
+      <div class="tool-group">
+        <button class="tool-btn" id="btn-annulla" onclick="annulla()" title="Annulla (Ctrl+Z)">↺ Annulla</button>
+        <button class="tool-btn" id="btn-ripristina" onclick="ripristina()" title="Ripristina (Ctrl+Y)">↻ Ripristina</button>
+      </div>
       <div class="tool-sep"></div>
-      <span style="color:rgba(255,255,255,.4);font-size:.68rem">ALLINEA</span>
-      <button class="tool-btn" onclick="alignObjects('left')">⬛⬜⬜ Sin</button>
-      <button class="tool-btn" onclick="alignObjects('centerH')">⬜⬛⬜ Cen</button>
-      <button class="tool-btn" onclick="alignObjects('right')">⬜⬜⬛ Des</button>
-      <button class="tool-btn" onclick="alignObjects('top')">↑ Alto</button>
-      <button class="tool-btn" onclick="alignObjects('centerV')">↕ Mez</button>
-      <button class="tool-btn" onclick="alignObjects('bottom')">↓ Bas</button>
+      <div class="tool-group">
+        <span class="tool-label">Allinea</span>
+        <button class="tool-btn" onclick="alignObjects('left')"><span class="align-ico"><i class="on"></i><i></i><i></i></span>Sin</button>
+        <button class="tool-btn" onclick="alignObjects('centerH')"><span class="align-ico"><i></i><i class="on"></i><i></i></span>Cen</button>
+        <button class="tool-btn" onclick="alignObjects('right')"><span class="align-ico"><i></i><i></i><i class="on"></i></span>Des</button>
+        <button class="tool-btn" onclick="alignObjects('top')"><span class="align-ico stack"><i class="on"></i><i></i><i></i></span>Alto</button>
+        <button class="tool-btn" onclick="alignObjects('centerV')"><span class="align-ico stack"><i></i><i class="on"></i><i></i></span>Mez</button>
+        <button class="tool-btn" onclick="alignObjects('bottom')"><span class="align-ico stack"><i></i><i></i><i class="on"></i></span>Bas</button>
+      </div>
       <div class="tool-sep"></div>
-      <button class="tool-btn" onclick="distributeObjects('h')">↔ Dist H</button>
-      <button class="tool-btn" onclick="distributeObjects('v')">↕ Dist V</button>
+      <div class="tool-group">
+        <button class="tool-btn" onclick="distributeObjects('h')">↔ Dist H</button>
+        <button class="tool-btn" onclick="distributeObjects('v')">↕ Dist V</button>
+      </div>
       <div class="tool-sep"></div>
-      <button class="tool-btn" onclick="bringForward()">▲ Avanti</button>
-      <button class="tool-btn" onclick="sendBackward()">▼ Indietro</button>
+      <div class="tool-group">
+        <button class="tool-btn" onclick="bringForward()">▲ Avanti</button>
+        <button class="tool-btn" onclick="sendBackward()">▼ Indietro</button>
+      </div>
       <div class="tool-sep"></div>
-      <span style="color:rgba(255,255,255,.4);font-size:.68rem">ZOOM</span>
-      <button class="tool-btn" onclick="setZoom(-0.1)">−</button>
-      <span id="zoom-label" style="color:#fff;font-size:.72rem;min-width:35px;text-align:center">100%</span>
-      <button class="tool-btn" onclick="setZoom(0.1)">+</button>
-      <button class="tool-btn" onclick="resetZoom()">⌂</button>
+      <div class="tool-group">
+        <span class="tool-label">Zoom</span>
+        <button class="tool-btn icon" onclick="setZoom(-0.1)">−</button>
+        <span id="zoom-label" style="color:#fff;font-size:.72rem;min-width:35px;text-align:center">100%</span>
+        <button class="tool-btn icon" onclick="setZoom(0.1)">+</button>
+        <button class="tool-btn icon" onclick="resetZoom()">⌂</button>
+      </div>
     </div>
 
     <div class="canvases-row">

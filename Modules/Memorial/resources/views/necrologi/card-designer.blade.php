@@ -25,6 +25,10 @@ nav{background:#1a1a2e;padding:0 1.5rem;display:flex;align-items:center;justify-
 .cdn-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .btn-dark{background:rgba(255,255,255,.08);color:#e8e0d0;border:1px solid rgba(200,169,110,.2);padding:.5rem 1rem;border-radius:6px;font-size:.8rem;cursor:pointer;font-family:inherit}
 .btn-dark:hover{background:rgba(200,169,110,.15)}
+.btn-dark.icon{width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.cdn-tool-group{display:flex;align-items:center;gap:.4rem;flex-wrap:nowrap}
+.cdn-tool-sep{width:1px;height:20px;background:rgba(200,169,110,.2);flex-shrink:0}
+.cdn-tool-label{font-size:.7rem;color:rgba(200,169,110,.5);flex-shrink:0}
 .layers-panel{width:200px;flex-shrink:0;background:#111128;border-left:1px solid rgba(200,169,110,.15);display:flex;flex-direction:column;overflow:hidden}
 .layers-title{padding:.6rem 1rem;font-size:.72rem;font-weight:600;color:#c8a96e;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(200,169,110,.15);flex-shrink:0}
 .layers-list{flex:1;overflow-y:auto;padding:.4rem}
@@ -131,42 +135,59 @@ nav{background:#1a1a2e;padding:0 1.5rem;display:flex;align-items:center;justify-
   {{-- MAIN --}}
   <div class="cdn-main">
     <div class="cdn-toolbar">
-      <button class="btn-dark" onclick="undoCard()" title="Annulla (Ctrl+Z)">↩ Annulla</button>
-      <button class="btn-dark" onclick="redoCard()" title="Ripristina (Ctrl+Y)">↪ Ripristina</button>
-      <button class="btn-dark" onclick="document.getElementById('upload-foto-file').click()">Carica foto</button>
-      <input type="file" id="upload-foto-file" accept="image/*" style="display:none" onchange="loadFoto(this)">
-      <button class="btn-dark" onclick="centerFoto()">⊙ Centra foto</button>
+      <div class="cdn-tool-group">
+        <button class="btn-dark" onclick="undoCard()" title="Annulla (Ctrl+Z)">↩ Annulla</button>
+        <button class="btn-dark" onclick="redoCard()" title="Ripristina (Ctrl+Y)">↪ Ripristina</button>
+      </div>
+      <div class="cdn-tool-sep"></div>
+      <div class="cdn-tool-group">
+        <button class="btn-dark" onclick="document.getElementById('upload-foto-file').click()">Carica foto</button>
+        <input type="file" id="upload-foto-file" accept="image/*" style="display:none" onchange="loadFoto(this)">
+        <button class="btn-dark" onclick="centerFoto()">⊙ Centra foto</button>
+      </div>
       <div style="flex:1"></div>
-      <button class="nav-btn btn-gold" id="btn-salva" onclick="salvaCard()">Salva come card</button>
-      <a href="{{ route('necrologi.modifica', $necrologio) }}" id="btn-pubblica" class="nav-btn btn-gold"
-         style="{{ $necrologio->og_image ? '' : 'display:none' }};text-decoration:none">→ Vai al necrologio</a>
+      <div class="cdn-tool-group">
+        <button class="nav-btn btn-gold" id="btn-salva" onclick="salvaCard()">Salva come card</button>
+        <a href="{{ route('necrologi.modifica', $necrologio) }}" id="btn-pubblica" class="nav-btn btn-gold"
+           style="{{ $necrologio->og_image ? '' : 'display:none' }};text-decoration:none">→ Vai al necrologio</a>
+      </div>
     </div>
 
-    <div class="cdn-toolbar" style="background:#111128;padding:.4rem 1rem;gap:.5rem;flex-wrap:wrap;border-top:1px solid rgba(200,169,110,.08)">
-      <span style="font-size:.7rem;color:rgba(200,169,110,.5)">Font:</span>
-      <select id="txt-font" onchange="updateTesto()" style="background:#1a1a2e;border:1px solid rgba(200,169,110,.2);color:#e8e0d0;font-size:.75rem;padding:.25rem .5rem;border-radius:4px;font-family:inherit;outline:none">
-        <option value="Georgia, serif">Georgia</option>
-        <option value="Times New Roman, serif">Times New Roman</option>
-        <option value="Palatino, serif">Palatino</option>
-        <option value="Arial, sans-serif">Arial</option>
-        <option value="Verdana, sans-serif">Verdana</option>
-      </select>
-      <span style="font-size:.7rem;color:rgba(200,169,110,.5)">Colore:</span>
-      <input type="color" id="txt-colore-nome" value="#1a1a2e" oninput="updateTesto()" title="Colore nome" style="width:28px;height:24px;border:none;border-radius:3px;cursor:pointer">
-      <input type="color" id="txt-colore-date" value="#2a3a5a" oninput="updateTesto()" title="Colore date" style="width:28px;height:24px;border:none;border-radius:3px;cursor:pointer">
-      <span style="font-size:.7rem;color:rgba(200,169,110,.5)">Simboli:</span>
-      <button onclick="aggiungiSimbolo('✝')" class="btn-dark" style="padding:.2rem .5rem;font-size:.95rem">✝</button>
-      <button onclick="aggiungiSimbolo('✦')" class="btn-dark" style="padding:.2rem .5rem;font-size:.95rem">✦</button>
-      <button onclick="aggiungiSimbolo('♥')" class="btn-dark" style="padding:.2rem .5rem;font-size:.95rem">♥</button>
-      <button onclick="aggiungiSimbolo('★')" class="btn-dark" style="padding:.2rem .5rem;font-size:.95rem">★</button>
-      <button onclick="aggiungiSimbolo('🕊')" class="btn-dark" style="padding:.2rem .5rem;font-size:.85rem">🕊</button>
-      <div style="width:1px;height:20px;background:rgba(200,169,110,.2)"></div>
-      <span style="font-size:.7rem;color:rgba(200,169,110,.5)">Livelli:</span>
-      <button onclick="livelloSu()" class="btn-dark" style="padding:.2rem .5rem;font-size:.75rem" title="Porta avanti">⬆</button>
-      <button onclick="livelloGiu()" class="btn-dark" style="padding:.2rem .5rem;font-size:.75rem" title="Porta indietro">⬇</button>
-      <button onclick="livelloTop()" class="btn-dark" style="padding:.2rem .5rem;font-size:.75rem" title="In primo piano">⤒</button>
-      <button onclick="livelloBottom()" class="btn-dark" style="padding:.2rem .5rem;font-size:.75rem" title="In fondo">⤓</button>
-      <button onclick="templateInTop()" class="btn-dark" style="padding:.2rem .5rem;font-size:.7rem;border-color:#c8a96e;color:#c8a96e">TPL sopra</button>
+    <div class="cdn-toolbar" style="background:#111128;flex-wrap:wrap;row-gap:.4rem;border-top:1px solid rgba(200,169,110,.08)">
+      <div class="cdn-tool-group">
+        <span class="cdn-tool-label">Font:</span>
+        <select id="txt-font" onchange="updateTesto()" style="background:#1a1a2e;border:1px solid rgba(200,169,110,.2);color:#e8e0d0;font-size:.75rem;padding:.25rem .5rem;border-radius:4px;font-family:inherit;outline:none">
+          <option value="Georgia, serif">Georgia</option>
+          <option value="Times New Roman, serif">Times New Roman</option>
+          <option value="Palatino, serif">Palatino</option>
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="Verdana, sans-serif">Verdana</option>
+        </select>
+        <span class="cdn-tool-label">Colore:</span>
+        <input type="color" id="txt-colore-nome" value="#1a1a2e" oninput="updateTesto()" title="Colore nome" style="width:28px;height:24px;border:none;border-radius:3px;cursor:pointer">
+        <input type="color" id="txt-colore-date" value="#2a3a5a" oninput="updateTesto()" title="Colore date" style="width:28px;height:24px;border:none;border-radius:3px;cursor:pointer">
+      </div>
+      <div class="cdn-tool-sep"></div>
+      <div class="cdn-tool-group">
+        <span class="cdn-tool-label">Simboli:</span>
+        <button onclick="aggiungiSimbolo('✝')" class="btn-dark icon" style="font-size:.95rem">✝</button>
+        <button onclick="aggiungiSimbolo('✦')" class="btn-dark icon" style="font-size:.95rem">✦</button>
+        <button onclick="aggiungiSimbolo('♥')" class="btn-dark icon" style="font-size:.95rem">♥</button>
+        <button onclick="aggiungiSimbolo('★')" class="btn-dark icon" style="font-size:.95rem">★</button>
+        <button onclick="aggiungiSimbolo('🕊')" class="btn-dark icon" style="font-size:.85rem">🕊</button>
+      </div>
+      <div class="cdn-tool-sep"></div>
+      <div class="cdn-tool-group">
+        <span class="cdn-tool-label">Livelli:</span>
+        <button onclick="livelloSu()" class="btn-dark icon" style="font-size:.75rem" title="Porta avanti">⬆</button>
+        <button onclick="livelloGiu()" class="btn-dark icon" style="font-size:.75rem" title="Porta indietro">⬇</button>
+        <button onclick="livelloTop()" class="btn-dark icon" style="font-size:.75rem" title="In primo piano">⤒</button>
+        <button onclick="livelloBottom()" class="btn-dark icon" style="font-size:.75rem" title="In fondo">⤓</button>
+      </div>
+      <div class="cdn-tool-sep"></div>
+      <div class="cdn-tool-group">
+        <button onclick="templateInTop()" class="btn-dark" style="padding:.2rem .5rem;font-size:.7rem;border-color:#c8a96e;color:#c8a96e">TPL sopra</button>
+      </div>
     </div>
     <div class="cdn-canvas-wrap">
       <div id="canvas-container">

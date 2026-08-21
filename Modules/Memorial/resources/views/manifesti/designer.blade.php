@@ -96,6 +96,15 @@ canvas{display:block}
 .zoom-label{background:rgba(255,255,255,.15);color:#fff;border-radius:6px;padding:0 .6rem;font-size:.75rem;display:flex;align-items:center}
 .tool-btn{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:.25rem .5rem;font-size:.72rem;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .tool-btn:hover{background:rgba(200,169,110,.3);border-color:var(--gold)}
+.tool-btn.icon{width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+.toolbar{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;row-gap:.4rem}
+.tool-group{display:flex;align-items:center;gap:.3rem;flex-wrap:nowrap}
+.tool-sep{width:1px;height:20px;background:rgba(255,255,255,.15);flex-shrink:0}
+.tool-label{color:rgba(255,255,255,.4);font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;margin-right:.35rem;flex-shrink:0}
+.align-ico{display:inline-flex;gap:2px;width:15px;height:13px;flex-shrink:0}
+.align-ico i{flex:1;background:rgba(255,255,255,.25);border-radius:1px;display:block}
+.align-ico i.on{background:#fff}
+.align-ico.stack{flex-direction:column;width:13px;height:15px}
 .layers-box{margin:.6rem;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--cream)}
 .layers-actions{display:flex;gap:.3rem}
 .layers-actions button{font-size:.62rem;padding:.15rem .4rem;border:1px solid var(--border);border-radius:3px;background:var(--cream);color:var(--gray);cursor:pointer;font-family:'DM Sans',sans-serif}
@@ -253,42 +262,57 @@ function flipOggetto(asse) {
 
   <!-- CANVAS -->
   <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
-  <div style="background:#1e1e2e;border-bottom:1px solid rgba(255,255,255,.1);padding:.4rem 1rem;display:flex;align-items:center;gap:.5rem;flex-shrink:0;flex-wrap:wrap">
-    <button id="btn-undo" onclick="undoAction()" title="Annulla (Ctrl+Z)" class="tool-btn" style="font-size:1rem" disabled>↩</button>
-    <button id="btn-redo" onclick="redoAction()" title="Ripristina (Ctrl+Y)" class="tool-btn" style="font-size:1rem" disabled>↪</button>
-    <div style="width:1px;height:20px;background:rgba(255,255,255,.15);margin:0 .25rem"></div>
-    <button id="btn-guide" onclick="toggleGuide()" title="Linee guida" class="tool-btn">⊹ Guide</button>
-    <div style="width:1px;height:20px;background:rgba(255,255,255,.15);margin:0 .25rem"></div>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;margin-right:.25rem">ALLINEA</span>
-    <button class="tool-btn" onclick="alignObjects('left')" title="Allinea a sinistra">⬛⬜⬜</button>
-    <button class="tool-btn" onclick="alignObjects('centerH')" title="Centra orizzontalmente">⬜⬛⬜</button>
-    <button class="tool-btn" onclick="alignObjects('right')" title="Allinea a destra">⬜⬜⬛</button>
-    <button class="tool-btn" onclick="alignObjects('top')" title="Allinea in alto">⬛</button>
-    <button class="tool-btn" onclick="alignObjects('centerV')" title="Centra verticalmente">↕</button>
-    <button class="tool-btn" onclick="alignObjects('bottom')" title="Allinea in basso">⬇</button>
-    <div style="width:1px;height:20px;background:rgba(255,255,255,.15);margin:0 .25rem"></div>
-    <button class="tool-btn" onclick="distributeObjects('h')" title="Distribuisci orizzontalmente">↔ Dist H</button>
-    <button class="tool-btn" onclick="distributeObjects('v')" title="Distribuisci verticalmente">↕ Dist V</button>
-    <div style="width:1px;height:20px;background:rgba(255,255,255,.15);margin:0 .25rem"></div>
-    <button class="tool-btn" onclick="bringForward()" title="Porta avanti">▲</button>
-    <button class="tool-btn" onclick="sendBackward()" title="Porta indietro">▼</button>
-    <div style="width:1px;height:20px;background:rgba(255,255,255,.15);margin:0 .25rem"></div>
-    <span style="color:rgba(255,255,255,.4);font-size:.7rem;margin-right:.25rem">FOTO</span>
-    <button class="tool-btn" onclick="document.getElementById('foto-upload').click()">📷 Inserisci Foto</button>
-    <input type="file" id="foto-upload" accept="image/*" style="display:none" onchange="insertPhoto(this)">
-    <button class="tool-btn" id="btn-foto-pratica" onclick="inserisciFotoPrincipale()"
-            style="display:inline-flex;align-items:center;gap:.4rem"
-            @if(!($fotoPrincipale ?? null)) disabled title="Nessuna foto ancora caricata nella pratica" @endif>
-      @if($fotoPrincipale ?? null)
-        <img src="{{ $fotoPrincipale }}" style="width:22px;height:28px;object-fit:cover;border-radius:2px;border:1px solid rgba(255,255,255,.3)">
-      @else
-        🖼
-      @endif
-      Foto dell'ordine
-    </button>
-    <input type="file" id="santo-upload" accept="image/*" style="display:none" onchange="insertSanto(this)">
-    <button class="tool-btn" onclick="flipOggetto('X')" title="Rifletti orizzontale">↔ Flip H</button>
-    <button class="tool-btn" onclick="flipOggetto('Y')" title="Rifletti verticale">↕ Flip V</button>
+  <div class="toolbar" style="background:#1e1e2e;border-bottom:1px solid rgba(255,255,255,.1);padding:.4rem 1rem;flex-shrink:0">
+    <div class="tool-group">
+      <button id="btn-undo" onclick="undoAction()" title="Annulla (Ctrl+Z)" class="tool-btn icon" disabled>↩</button>
+      <button id="btn-redo" onclick="redoAction()" title="Ripristina (Ctrl+Y)" class="tool-btn icon" disabled>↪</button>
+    </div>
+    <div class="tool-sep"></div>
+    <div class="tool-group">
+      <button id="btn-guide" onclick="toggleGuide()" title="Linee guida" class="tool-btn">⊹ Guide</button>
+    </div>
+    <div class="tool-sep"></div>
+    <div class="tool-group">
+      <span class="tool-label">Allinea</span>
+      <button class="tool-btn icon" onclick="alignObjects('left')" title="Allinea a sinistra"><span class="align-ico"><i class="on"></i><i></i><i></i></span></button>
+      <button class="tool-btn icon" onclick="alignObjects('centerH')" title="Centra orizzontalmente"><span class="align-ico"><i></i><i class="on"></i><i></i></span></button>
+      <button class="tool-btn icon" onclick="alignObjects('right')" title="Allinea a destra"><span class="align-ico"><i></i><i></i><i class="on"></i></span></button>
+      <button class="tool-btn icon" onclick="alignObjects('top')" title="Allinea in alto"><span class="align-ico stack"><i class="on"></i><i></i><i></i></span></button>
+      <button class="tool-btn icon" onclick="alignObjects('centerV')" title="Centra verticalmente"><span class="align-ico stack"><i></i><i class="on"></i><i></i></span></button>
+      <button class="tool-btn icon" onclick="alignObjects('bottom')" title="Allinea in basso"><span class="align-ico stack"><i></i><i></i><i class="on"></i></span></button>
+    </div>
+    <div class="tool-sep"></div>
+    <div class="tool-group">
+      <button class="tool-btn" onclick="distributeObjects('h')" title="Distribuisci orizzontalmente">↔ Dist H</button>
+      <button class="tool-btn" onclick="distributeObjects('v')" title="Distribuisci verticalmente">↕ Dist V</button>
+    </div>
+    <div class="tool-sep"></div>
+    <div class="tool-group">
+      <button class="tool-btn icon" onclick="bringForward()" title="Porta avanti">▲</button>
+      <button class="tool-btn icon" onclick="sendBackward()" title="Porta indietro">▼</button>
+    </div>
+    <div class="tool-sep"></div>
+    <div class="tool-group">
+      <span class="tool-label">Foto</span>
+      <button class="tool-btn" onclick="document.getElementById('foto-upload').click()">📷 Inserisci Foto</button>
+      <input type="file" id="foto-upload" accept="image/*" style="display:none" onchange="insertPhoto(this)">
+      <button class="tool-btn" id="btn-foto-pratica" onclick="inserisciFotoPrincipale()"
+              style="display:inline-flex;align-items:center;gap:.4rem"
+              @if(!($fotoPrincipale ?? null)) disabled title="Nessuna foto ancora caricata nella pratica" @endif>
+        @if($fotoPrincipale ?? null)
+          <img src="{{ $fotoPrincipale }}" style="width:22px;height:28px;object-fit:cover;border-radius:2px;border:1px solid rgba(255,255,255,.3)">
+        @else
+          🖼
+        @endif
+        Foto dell'ordine
+      </button>
+      <input type="file" id="santo-upload" accept="image/*" style="display:none" onchange="insertSanto(this)">
+    </div>
+    <div class="tool-sep"></div>
+    <div class="tool-group">
+      <button class="tool-btn" onclick="flipOggetto('X')" title="Rifletti orizzontale">↔ Flip H</button>
+      <button class="tool-btn" onclick="flipOggetto('Y')" title="Rifletti verticale">↕ Flip V</button>
+    </div>
   </div>
   <div class="canvas-area" id="canvas-area">
     <div class="canvas-wrapper" id="canvas-wrapper">
