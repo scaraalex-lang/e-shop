@@ -20,6 +20,14 @@ class AttivaServiziOrdine
 {
     /**
      * @param  array<int, string>  $codiciServizio
+     * @param  ?int  $defuntoId  Se valorizzato, il nuovo ordine nasce già
+     *   agganciato a questo defunto invece che slegato — un servizio in più
+     *   per una persona già registrata, non una persona nuova. Solo un
+     *   intero, mai il model `Defunto`: Commerce non deve dipendere da
+     *   Memorial (stessa regola a senso unico di tutto il progetto).
+     *   `ordini.defunto_id` non ha vincolo unique (solo `defunti.ordine_id`
+     *   ce l'ha), quindi più ordini possono già puntare allo stesso defunto
+     *   senza bisogno di alcuna migration.
      * @return Ordine|array{richiesti:int,saldo:int,mancano:int} l'ordine creato, o l'esito "crediti insufficienti"
      */
     public function da(
@@ -28,8 +36,9 @@ class AttivaServiziOrdine
         array $codiciServizio,
         Occasione $occasione,
         ?int $numeroAnniversario,
+        ?int $defuntoId = null,
     ): Ordine|array {
-        return DB::transaction(function () use ($utente, $agenzia, $codiciServizio, $occasione, $numeroAnniversario) {
+        return DB::transaction(function () use ($utente, $agenzia, $codiciServizio, $occasione, $numeroAnniversario, $defuntoId) {
             $servizi = ServizioEditor::attivi()->whereIn('codice', $codiciServizio)->get();
             $costoTotale = (int) $servizi->sum('costo_crediti');
 
@@ -62,6 +71,13 @@ class AttivaServiziOrdine
                 'occasione' => $occasione,
                 'numero_anniversario' => $numeroAnniversario,
             ]);
+
+            if ($defuntoId) {
+                // defunto_id non è fillable di proposito (si imposta solo da
+                // codice server-side fidato, mai da input diretto) — stesso
+                // forceFill() già usato da LavorazioneController::salvaDefunto().
+                $ordine->forceFill(['defunto_id' => $defuntoId])->save();
+            }
 
             foreach ($servizi as $servizio) {
                 $ordine->servizi()->create([

@@ -51,6 +51,13 @@ Route::middleware('auth')->prefix('account/defunti')->name('defunti.')->group(fu
     Route::get('{defunto}', [DefuntiController::class, 'show'])->name('show');
     Route::post('{defunto}/manifesti', [ManifestiController::class, 'store'])->name('manifesti.store');
     Route::post('{defunto}/manifesti/carica', [ManifestiController::class, 'carica'])->name('manifesti.carica');
+
+    // Un servizio digitale in più per una persona già registrata (agenzie
+    // approvate soltanto, stessa regola di AttivaServiziOrdineRequest) —
+    // vedi AttivaServiziOrdine::da() per il perché non crea più un defunto
+    // slegato come prima.
+    Route::get('{defunto}/aggiungi-servizio', [DefuntiController::class, 'aggiungiServizioForm'])->name('aggiungi-servizio');
+    Route::post('{defunto}/aggiungi-servizio', [DefuntiController::class, 'aggiungiServizio'])->name('aggiungi-servizio.store');
 });
 
 Route::middleware('auth')->prefix('account/manifesti')->name('manifesti.')->group(function () {

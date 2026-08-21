@@ -88,7 +88,9 @@ class User extends Authenticatable
             $voci[] = ['I miei ordini', route('ordini'), ['ordini', 'ordine', 'lavorazione*']];
             // Unico punto d'ingresso cliccabile verso la Scheda Defunto: prima
             // ci si arrivava solo per redirect da Acquisto Servizi → Lavorazione.
-            $voci[] = ['I miei defunti', route('defunti.index'), ['defunti.index', 'defunti.show']];
+            // Rinominata da "I miei defunti": la lista è, per chi la usa, la
+            // lista di cosa ha già/può ancora acquistare per ogni persona.
+            $voci[] = ['I miei servizi', route('defunti.index'), ['defunti.index', 'defunti.show']];
         }
 
         // I necrologi sono uno strumento dell'agenzia, non un prodotto: non

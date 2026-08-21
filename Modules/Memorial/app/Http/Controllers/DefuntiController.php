@@ -3,10 +3,14 @@
 namespace Modules\Memorial\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
+use Modules\Commerce\Http\Requests\AttivaServiziOrdineRequest;
 use Modules\Commerce\Models\Ordine;
+use Modules\Commerce\Models\ServizioEditor;
+use Modules\Commerce\Servizi\AttivaServiziOrdine;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\Manifesto;
 use Modules\Memorial\Models\Necrologio;
@@ -143,7 +147,62 @@ class DefuntiController extends Controller
 
             'reelAbilitato' => $reelAbilitato,
             'reel' => $reel,
+
+            // Solo le agenzie approvate hanno crediti da spendere — stessa
+            // regola di AttivaServiziOrdineRequest::authorize().
+            'mostraAggiungiServizio' => $request->user()->eAgenziaApprovata(),
         ]);
+    }
+
+    /**
+     * Form "Aggiungi un servizio": solo i servizi NON ancora abilitati per
+     * questo defunto (riusa Ordine::designerAbilitato(), lo stesso gate già
+     * usato da Video/Storia/ecc. — gestisce da solo anche il caso "il kit
+     * fisico include già tutto").
+     */
+    public function aggiungiServizioForm(Request $request, Defunto $defunto): View
+    {
+        $ordini = $this->soloSuo($request, $defunto);
+        $utente = $request->user();
+        abort_unless($utente->eAgenziaApprovata(), 404);
+
+        $servizi = ServizioEditor::attivi()->attivabiliSuOrdine()->get()
+            ->reject(fn (ServizioEditor $s) => $ordini->contains(fn (Ordine $o) => $o->designerAbilitato($s->codice)));
+
+        return view('memorial::defunti.aggiungi-servizio', [
+            'defunto' => $defunto,
+            'servizi' => $servizi,
+            'creditiSaldo' => $utente->agenzia->creditiSaldo(),
+        ]);
+    }
+
+    /**
+     * Attiva i servizi scelti sullo STESSO defunto (AttivaServiziOrdine::da()
+     * con defuntoId): niente più un defunto duplicato e slegato come
+     * succedeva finora acquistando un servizio extra per una persona già
+     * registrata.
+     */
+    public function aggiungiServizio(AttivaServiziOrdineRequest $request, Defunto $defunto, AttivaServiziOrdine $attiva): RedirectResponse
+    {
+        $this->soloSuo($request, $defunto);
+        $utente = $request->user();
+        abort_unless($utente->eAgenziaApprovata(), 404);
+
+        $esito = $attiva->da(
+            $utente,
+            $utente->agenzia,
+            $request->codiciServizio(),
+            $request->occasione(),
+            $request->validated('numero_anniversario'),
+            defuntoId: $defunto->id,
+        );
+
+        if (is_array($esito)) {
+            return back()->with('stato', "Servono {$esito['richiesti']} crediti, ne avete {$esito['saldo']}: mancano {$esito['mancano']}.");
+        }
+
+        return redirect()->route('defunti.show', $defunto)
+            ->with('stato', 'Servizio attivato: trovi il nuovo passo qui sotto.');
     }
 
     /**

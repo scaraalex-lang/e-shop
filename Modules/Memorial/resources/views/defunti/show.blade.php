@@ -9,6 +9,14 @@
     <p class="mb-8 border-l-2 border-successo bg-panna px-5 py-4 font-sans text-[13px]">{{ session('stato') }}</p>
 @endif
 
+@if ($mostraAggiungiServizio)
+    <p class="mb-8">
+        <a href="{{ route('defunti.aggiungi-servizio', $defunto) }}">
+            <x-button variant="contornata">Aggiungi un servizio</x-button>
+        </a>
+    </p>
+@endif
+
 @php
     $formati = [
         'a4p' => 'A4 Portrait (21x29.7cm)', 'a3p' => 'A3 Portrait (29.7x42cm)',

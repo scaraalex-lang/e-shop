@@ -1,7 +1,7 @@
 @extends('layouts.account')
 
-@section('title', 'I miei defunti — MemorAI')
-@section('titolo', 'I miei defunti')
+@section('title', 'I miei servizi — MemorAI')
+@section('titolo', 'I miei servizi')
 @section('sottotitolo', 'La scheda di ogni persona già registrata: foto, manifesto, necrologio, ricordino, video memoriale.')
 
 @section('account')
@@ -30,6 +30,13 @@
                         @endif
                     </p>
                 </div>
+
+                @if (auth()->user()->eAgenziaApprovata())
+                    <a href="{{ route('defunti.aggiungi-servizio', $defunto) }}"
+                       class="font-sans text-[10px] tracking-[0.2em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
+                        Aggiungi un servizio
+                    </a>
+                @endif
 
                 <a href="{{ route('defunti.show', $defunto) }}"
                    class="font-sans text-[10px] tracking-[0.2em] uppercase text-oro-scuro hover:text-caffe transition-colors duration-300">
