@@ -54,6 +54,11 @@ nav{background:#1a1a2e;padding:0 1.5rem;display:flex;align-items:center;justify-
 </style>
 </head>
 <body>
+{{-- Dentro l'overlay iframe (vedi partials.designer-overlay) il link "torna
+     indietro" navigherebbe l'iframe stesso, confuso — si chiude con la ×
+     dell'overlay. --}}
+<style>body.in-iframe a.nav-btn.btn-ghost { display: none; }</style>
+<script>if (window !== window.top) document.body.classList.add('in-iframe');</script>
 
 <nav>
   <div class="logo">MemorAI — Card Necrologio</div>

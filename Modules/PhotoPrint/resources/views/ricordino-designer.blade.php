@@ -103,6 +103,13 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 </style>
 </head>
 <body>
+{{-- Dentro l'overlay iframe (vedi partials.designer-overlay) il link "torna
+     indietro" navigherebbe l'iframe stesso verso una pagina intera del sito,
+     schiacciata nel pannellino — confuso, si chiude con la × dell'overlay.
+     Selettore sul TAG <a>, non su tutta .nav-btn.btn-ghost: quella classe è
+     condivisa anche da bottoni funzionali (Pulisci, Template). --}}
+<style>body.in-iframe a.nav-btn.btn-ghost { display: none; }</style>
+<script>if (window !== window.top) document.body.classList.add('in-iframe');</script>
 
 <nav>
   <div class="logo">MemorAI — Designer Ricordini</div>
@@ -679,12 +686,6 @@ function applyTouchSettings(obj) {
 }
 
 window.onload = function() {
-  // Fullscreen automatico
-  setTimeout(function() {
-    var el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  }, 500);
   const fmt = FORMATI[currentFormat];
 
   // DPR per nitidezza su schermi Retina/HiDPI

@@ -409,7 +409,7 @@
         @endif
 
         <div class="mt-6">
-            <x-button :href="route('studio.ricordino')">
+            <x-button :href="route('studio.ricordino')" data-designer-overlay>
                 {{ $ricordino ? 'Riprendi la bozza' : 'Apri il Designer' }}
             </x-button>
         </div>
@@ -461,7 +461,7 @@
         </p>
 
         <div class="mt-6">
-            <x-button :href="route('defunti.storia-social.show', $defunto)">
+            <x-button :href="route('defunti.storia-social.show', $defunto)" data-designer-overlay>
                 {{ $storiaPronta ? 'Apri la storia' : 'Crea la storia' }}
             </x-button>
         </div>

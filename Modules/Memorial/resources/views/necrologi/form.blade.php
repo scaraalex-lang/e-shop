@@ -172,7 +172,7 @@
                 @endif
 
                 @unless ($necrologio->pubblicato)
-                    <a href="{{ route('necrologi.designer', $necrologio) }}"
+                    <a href="{{ route('necrologi.designer', $necrologio) }}" data-designer-overlay
                        class="inline-flex items-center justify-center font-sans uppercase text-[11px]
                               tracking-[0.2em] px-6 py-3 bg-caffe text-bianco
                               hover:bg-oro-scuro transition-colors duration-300">

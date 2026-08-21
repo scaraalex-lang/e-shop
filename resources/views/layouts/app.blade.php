@@ -287,6 +287,12 @@
     </footer>
     @endif
 
+    {{-- Overlay condiviso dei 4 designer a canvas (Ricordino, Manifesto,
+         Necrologio Card, Storia Social): un solo punto di inclusione, dato
+         che layouts.account e layouts.gestione estendono entrambi questo
+         layout — vedi il partial per come si aggancia ai link. --}}
+    @include('partials.designer-overlay')
+
     @stack('scripts')
 </body>
 </html>

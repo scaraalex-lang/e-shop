@@ -103,6 +103,12 @@ canvas{display:block}
 </style>
 </head>
 <body>
+{{-- Dentro l'overlay iframe (vedi partials.designer-overlay) il link "torna
+     indietro" navigherebbe l'iframe stesso, confuso — si chiude con la ×
+     dell'overlay. Selettore sul tag <a>: .nav-btn.btn-ghost è condivisa
+     anche da bottoni funzionali (es. Pulisci). --}}
+<style>body.in-iframe a.nav-btn.btn-ghost { display: none; }</style>
+<script>if (window !== window.top) document.body.classList.add('in-iframe');</script>
 <script>
 // Rifletti oggetto (bottoni Flip H/V della toolbar), definita prima del
 // canvas per leggere sempre window.canvas — stesso pattern del Designer

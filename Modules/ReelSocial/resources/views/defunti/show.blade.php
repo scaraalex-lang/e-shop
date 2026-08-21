@@ -38,7 +38,7 @@
             @if ($storiaAbilitata)
                 <p class="mt-2 font-sans font-light text-[13px] text-testo-soft">Non ancora creata.</p>
                 <div class="mt-4">
-                    <x-button :href="route('defunti.storia-social.show', $defunto)" variant="contornata">
+                    <x-button :href="route('defunti.storia-social.show', $defunto)" variant="contornata" data-designer-overlay>
                         Crea la storia
                     </x-button>
                 </div>
@@ -58,7 +58,7 @@
                             {{ route('storia-social.show', $storia) }}
                         </a>
                     </p>
-                    <a href="{{ route('defunti.storia-social.show', $defunto) }}"
+                    <a href="{{ route('defunti.storia-social.show', $defunto) }}" data-designer-overlay
                        class="mt-2 inline-block font-sans text-[11px] tracking-[0.18em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
                         Modifica la storia
                     </a>

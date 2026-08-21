@@ -99,7 +99,7 @@
                             @endif
 
                             <div class="mt-4 space-y-2">
-                                <x-button :href="route('manifesti.designer', $manifesto)" class="w-full">Apri</x-button>
+                                <x-button :href="route('manifesti.designer', $manifesto)" class="w-full" data-designer-overlay>Apri</x-button>
                                 @unless ($manifesto->principale)
                                     <form method="POST" action="{{ route('manifesti.principale', $manifesto) }}">
                                         @csrf
@@ -166,7 +166,7 @@
                 </div>
                 <div class="px-5 py-5 space-y-2">
                     <x-button :href="route('necrologi.modifica', $necrologioFunerale)" class="w-full">Modifica testo e date</x-button>
-                    <x-button :href="route('necrologi.designer', $necrologioFunerale)" variant="contornata" class="w-full">Componi la card</x-button>
+                    <x-button :href="route('necrologi.designer', $necrologioFunerale)" variant="contornata" class="w-full" data-designer-overlay>Componi la card</x-button>
                 </div>
             </div>
         @elseif ($necrologioAbilitato)
@@ -190,11 +190,11 @@
             @if ($ricordino)
                 <x-bozza-ricordino :ricordino="$ricordino" larghezza="w-52" class="mt-6" />
                 <div class="mt-5">
-                    <x-button :href="route('studio.ricordino')">Riprendi la bozza</x-button>
+                    <x-button :href="route('studio.ricordino')" data-designer-overlay>Riprendi la bozza</x-button>
                 </div>
             @else
                 <div class="mt-6">
-                    <x-button :href="route('studio.ricordino')">Apri il Designer</x-button>
+                    <x-button :href="route('studio.ricordino')" data-designer-overlay>Apri il Designer</x-button>
                 </div>
             @endif
         @endif
@@ -238,7 +238,7 @@
         </p>
 
         <div class="mt-6">
-            <x-button :href="route('defunti.storia-social.show', $defunto)">
+            <x-button :href="route('defunti.storia-social.show', $defunto)" data-designer-overlay>
                 {{ $storiaPronta ? 'Apri la storia' : 'Crea la storia' }}
             </x-button>
         </div>
