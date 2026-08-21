@@ -1078,26 +1078,53 @@ function anteprimaTemplate(json, cb) {
   });
 }
 function loadSavedTemplates() {
-  fetch('/admin/api/storia-templates').then(r=>r.json()).then(templates => {
+  // Due fonti indipendenti, unite nella stessa lista: la centrale MemorAI
+  // (sola lettura, cdn.memoraiengine.com — stessa decisione di caricaLibreria())
+  // e quella locale del tenant. Se una delle due non risponde l'altra si
+  // mostra comunque, non è un errore bloccante.
+  Promise.all([
+    fetch(CDN_MEMORAI + '/storia-video/template').then(r => r.ok ? r.json() : {template:[]}).catch(() => ({template:[]})),
+    fetch('/admin/api/storia-templates').then(r => r.json()).catch(() => []),
+  ]).then(([centrali, locali]) => {
     const container = document.getElementById('saved-templates-list');
-    if (!templates.length) { container.innerHTML='<div style="color:var(--gray);font-size:.75rem;font-style:italic;padding:.4rem">Nessun template</div>'; return; }
-    const predefiniti = templates.filter(t => t.globale);
-    const miei = templates.filter(t => !t.globale);
-    container.innerHTML = (predefiniti.length ? gruppoTemplate('Predefiniti / Globali', predefiniti) : '')
-                        + (miei.length ? gruppoTemplate('Della mia agenzia', miei) : '');
+    const predefiniti = locali.filter(t => t.globale);
+    const miei = locali.filter(t => !t.globale);
+    const html = gruppoTemplate('MemorAI (collezione centrale)', centrali.template || [], 'centrale')
+      + gruppoTemplate('Predefiniti / Globali', predefiniti, 'locale')
+      + gruppoTemplate('Della mia agenzia', miei, 'locale');
+    container.innerHTML = html || '<div style="color:var(--gray);font-size:.75rem;font-style:italic;padding:.4rem">Nessun template</div>';
   });
 }
-function gruppoTemplate(titolo, lista) {
+function gruppoTemplate(titolo, lista, fonte) {
+  if (!lista.length) return '';
   return '<div style="font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gray);padding:.3rem .1rem .25rem">' + titolo + '</div>'
-    + lista.map(t => `
+    + lista.map(t => {
+      const anteprima = fonte === 'centrale' ? (t.preview ? CDN_MEMORAI + t.preview : null) : t.anteprima;
+      const applica = fonte === 'centrale' ? `loadCentralTemplate(${_esc(JSON.stringify(t.id))})` : `loadSavedTemplate(${t.id})`;
+      return `
       <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.35rem;padding:.35rem;border:1px solid var(--border);border-radius:5px;background:var(--cream)">
-        <div style="width:34px;height:44px;border-radius:3px;flex-shrink:0;border:1px solid var(--border);background-color:#fff;background-size:cover;background-position:center${t.anteprima?`;background-image:url('${t.anteprima}')`:''}"></div>
+        <div style="width:34px;height:44px;border-radius:3px;flex-shrink:0;border:1px solid var(--border);background-color:#fff;background-size:cover;background-position:center${anteprima?`;background-image:url('${anteprima}')`:''}"></div>
         <div style="flex:1;min-width:0"><div style="font-size:.73rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_esc(t.nome)}</div></div>
         <div style="display:flex;flex-direction:column;gap:2px">
-          <button title="Applica" onclick="loadSavedTemplate(${t.id})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--ink);color:#fff;cursor:pointer">↓</button>
-          ${t.editabile ? `<button title="Elimina" onclick="deleteSavedTemplate(${t.id}, ${_esc(JSON.stringify(t.nome))})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>` : ''}
+          <button title="Applica" onclick="${applica}" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--ink);color:#fff;cursor:pointer">↓</button>
+          ${fonte === 'locale' && t.editabile ? `<button title="Elimina" onclick="deleteSavedTemplate(${t.id}, ${_esc(JSON.stringify(t.nome))})" style="font-size:.62rem;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--red);color:#fff;cursor:pointer">✕</button>` : ''}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
+}
+/** Template centrale: il singolo (con canvas_json) si scarica solo all'applicazione, l'elenco resta leggero. */
+async function loadCentralTemplate(id) {
+  const t = await fetch(CDN_MEMORAI + '/storia-video/template/' + encodeURIComponent(id)).then(r => r.ok ? r.json() : null).catch(() => null);
+  if (!t || !t.canvas_json) { modale({ titolo: 'Template non disponibile', testo: 'Non è stato possibile scaricare questo template dalla collezione centrale.' }); return; }
+
+  if (canvas.getObjects().length) {
+    const conferma = await modale({
+      titolo: 'Applicare il template?', testo: 'Il contenuto attuale verrà sostituito. I dati del defunto vengono riempiti in automatico.',
+      azioni: [{ testo: 'Annulla', valore: null, tipo: 'neutro' }, { testo: 'Applica', valore: 'ok', tipo: 'primario' }],
+    });
+    if (!conferma.azione) return;
+  }
+  canvas.loadFromJSON(t.canvas_json, function() { riempiConDefunto(); canvas.renderAll(); refreshLayers(); });
 }
 function _esc(s){ return String(s).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); }
 
