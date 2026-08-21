@@ -110,12 +110,19 @@ class OrdiniController extends Controller
      */
     public function servizi(Request $request): View
     {
-        $agenzia = $request->user()->agenzia;
+        $utente = $request->user();
+        // Stesso criterio del POST (AttivaServiziOrdineRequest::authorize()):
+        // prima si controllava solo che la relazione agenzia esistesse, non
+        // che fosse approvata. Un'agenzia in attesa vedeva il form attivo ma
+        // ogni submit falliva sempre con 403 — percepito come "non succede
+        // niente" perché Laravel non logga le AuthorizationException.
+        $agenzia = $utente->eAgenziaApprovata() ? $utente->agenzia : null;
 
         return view('commerce::servizi.index', [
             'creditiSaldo' => $agenzia?->creditiSaldo(),
             'prodottoCrediti' => $agenzia ? Product::active()->where('sku', 'SRV-CREDITI-100')->first() : null,
             'servizi' => $agenzia ? ServizioEditor::attivi()->attivabiliSuOrdine()->get() : null,
+            'agenziaInAttesa' => $utente->eAgenzia() && ! $agenzia,
         ]);
     }
 
