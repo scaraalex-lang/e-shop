@@ -10,6 +10,7 @@ use Modules\ReelSocial\Http\Controllers\ReelPubblicoController;
  | video/{video} in TributeVideo e storia/{storia} in SocialStory.
  */
 Route::get('reel/{reel}', [ReelPubblicoController::class, 'show'])->name('reel.show');
+Route::get('reel/{reel}/qr', [ReelPubblicoController::class, 'qr'])->name('reel.qr');
 
 /*
  | La pagina aggregatore, legata a un defunto reale: mostra Storia Social

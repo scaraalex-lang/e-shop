@@ -143,6 +143,14 @@
                             {{ route('reel.show', $reel) }}
                         </a>
                     </p>
+
+                    <div>
+                        <p class="font-sans text-[11px] tracking-[0.18em] uppercase text-testo-soft">
+                            Instagram non permette di postare storie da PC: inquadra da telefono
+                            per aprire il link lì e scaricarlo direttamente.
+                        </p>
+                        <img src="{{ route('reel.qr', $reel) }}" alt="QR del reel" class="mt-3 w-32 h-32 border border-caffe/15">
+                    </div>
                 </div>
             @else
                 <div class="mt-4 border-l-2 border-errore bg-panna px-5 py-4 font-sans text-[13px]">
