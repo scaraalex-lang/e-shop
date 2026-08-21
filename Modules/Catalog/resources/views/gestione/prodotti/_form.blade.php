@@ -205,6 +205,12 @@
             Ha il QR memoriale
         </label>
         <label class="flex items-center gap-3 font-sans text-[14px]">
+            <input type="hidden" name="has_social_story" value="0">
+            <input type="checkbox" name="has_social_story" value="1" @checked($vecchio('has_social_story'))
+                   class="border-caffe/40 text-oro focus:ring-oro/40">
+            Sblocca la Storia Social
+        </label>
+        <label class="flex items-center gap-3 font-sans text-[14px]">
             <input type="hidden" name="is_configurable" value="0">
             <input type="checkbox" name="is_configurable" value="1" @checked($vecchio('is_configurable'))
                    class="border-caffe/40 text-oro focus:ring-oro/40">

@@ -1,0 +1,11 @@
+{
+    "name": "SocialStory",
+    "alias": "socialstory",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\SocialStory\\Providers\\SocialStoryServiceProvider"
+    ],
+    "files": []
+}

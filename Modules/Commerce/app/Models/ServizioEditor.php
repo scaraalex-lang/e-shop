@@ -30,7 +30,7 @@ class ServizioEditor extends Model
      * da staff) ma si acquista direttamente da un necrologio già esistente,
      * non da un ordine — vedi NecrologiController::acquistaEmbed().
      */
-    public const CODICI_ORDINE = ['ricordini', 'manifesti', 'necrologi', 'video-memoriale'];
+    public const CODICI_ORDINE = ['ricordini', 'manifesti', 'necrologi', 'video-memoriale', 'storia-social'];
 
     public function attivazioni(): HasMany
     {

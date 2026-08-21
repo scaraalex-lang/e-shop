@@ -52,6 +52,18 @@ class LavorazioneController extends Controller
             ->select(['id', 'token', 'stato'])
             ->first() : null;
 
+        // Storia Social B2C: stesso schema del video memoriale sopra, gate
+        // su has_social_story invece di has_qr_memorial — query builder
+        // puro, PhotoPrint non deve mai dipendere da SocialStory.
+        $storiaAbilitata = $defunto !== null
+            && $ordine->stato_pagamento === StatoPagamento::Pagato
+            && $ordine->righe->contains(fn ($riga) => $riga->product?->has_social_story === true);
+        $storia = $defunto ? DB::table('storie_social')
+            ->where('defunto_id', $defunto->id)
+            ->latest('id')
+            ->select(['id', 'token', 'canvas'])
+            ->first() : null;
+
         return view('photoprint::lavorazione.show', [
             'ordine' => $ordine->load('servizi.servizioEditor'),
             'defunto' => $defunto,
@@ -59,6 +71,8 @@ class LavorazioneController extends Controller
             'foto' => FotoPratica::where('ordine_id', $ordine->id)->latest()->get(),
             'videoAbilitato' => $videoAbilitato,
             'video' => $video,
+            'storiaAbilitata' => $storiaAbilitata,
+            'storia' => $storia,
         ]);
     }
 

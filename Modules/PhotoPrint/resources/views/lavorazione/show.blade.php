@@ -442,6 +442,32 @@
     </section>
     @endif
 
+    {{-- ============ 3ter. la storia social (solo B2C, se il prodotto la sblocca) ============ --}}
+    {{-- Sbloccata solo a ordine davvero pagato: vedi LavorazioneController. --}}
+    @if ($defunto && ! $ordine->agenzia_id)
+    <section class="bg-bianco px-7 py-8 {{ $storiaAbilitata ? '' : 'opacity-45 pointer-events-none' }}">
+        <header class="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 class="font-serif text-2xl font-medium">La storia social</h2>
+            @php
+                $storiaPronta = $storia && ! empty(json_decode($storia->canvas ?? '', true)['objects'] ?? []);
+            @endphp
+            @if ($storiaPronta)
+                <span class="font-sans text-[10px] tracking-[0.2em] uppercase text-successo">Pronta</span>
+            @endif
+        </header>
+
+        <p class="mt-2 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+            Un fotogramma editoriale da condividere manualmente come storia su Facebook e Instagram.
+        </p>
+
+        <div class="mt-6">
+            <x-button :href="route('defunti.storia-social.show', $defunto)">
+                {{ $storiaPronta ? 'Apri la storia' : 'Crea la storia' }}
+            </x-button>
+        </div>
+    </section>
+    @endif
+
     {{-- ============ scheda defunto (solo agenzie) ============ --}}
     @if ($ordine->agenzia_id && $defunto)
         <section class="bg-bianco px-7 py-8">

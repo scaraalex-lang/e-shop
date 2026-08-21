@@ -94,6 +94,16 @@ class DefuntiController extends Controller
             ->select(['id', 'token', 'stato', 'messaggio_errore'])
             ->first();
 
+        // Stesso schema del Video Memoriale sopra: Memorial non deve mai
+        // dipendere da SocialStory (che già dipende da Memorial), query
+        // builder puro invece del model Eloquent.
+        $storiaAbilitata = $ordini->contains(fn (Ordine $o) => $o->designerAbilitato('storia-social'));
+        $storia = DB::table('storie_social')
+            ->where('defunto_id', $defunto->id)
+            ->latest('id')
+            ->select(['id', 'token', 'canvas'])
+            ->first();
+
         return view('memorial::defunti.show', [
             'defunto' => $defunto,
             'ordinePrincipale' => $ordinePrincipale,
@@ -116,6 +126,9 @@ class DefuntiController extends Controller
             // separato dal ritratto principale usato da manifesto/ricordino.
             'videoAbilitato' => $videoAbilitato,
             'video' => $video,
+
+            'storiaAbilitata' => $storiaAbilitata,
+            'storia' => $storia,
         ]);
     }
 

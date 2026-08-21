@@ -215,6 +215,26 @@
             </x-button>
         </div>
     </section>
+
+    <section class="border border-caffe/15 bg-bianco px-6 py-8 sm:px-10 sm:py-10 {{ $storiaAbilitata ? '' : 'opacity-45 pointer-events-none' }}">
+        <h2 class="font-serif text-2xl font-medium">6. Storia Social</h2>
+        @php
+            $storiaPronta = $storia && ! empty(json_decode($storia->canvas ?? '', true)['objects'] ?? []);
+        @endphp
+        <p class="mt-2 font-sans text-[11px] tracking-[0.2em] uppercase {{ $storiaPronta ? 'text-successo' : 'text-testo-soft' }}">
+            {{ $storiaPronta ? 'Pronta' : 'Disponibile' }}
+        </p>
+        <p class="mt-3 max-w-2xl font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+            Un fotogramma editoriale da condividere manualmente come storia su Facebook e Instagram,
+            attingendo alla libreria grafica MemorAI.
+        </p>
+
+        <div class="mt-6">
+            <x-button :href="route('defunti.storia-social.show', $defunto)">
+                {{ $storiaPronta ? 'Apri la storia' : 'Crea la storia' }}
+            </x-button>
+        </div>
+    </section>
 </div>
 
 {{-- ============ extra: altri necrologi ============ --}}

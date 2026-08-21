@@ -35,6 +35,10 @@ class ServiziEditorSeeder extends Seeder
             // proxy Python + storage/banda Cloudinary — un costo di infrastruttura
             // che ricordini/manifesti/necrologi non hanno.
             ['codice' => 'video-memoriale', 'etichetta' => 'Video Memoriale', 'costo_crediti' => 30, 'costo_crediti_a_termine' => null],
+            // Un solo fotogramma composto nel designer: costo di
+            // infrastruttura più basso del video (nessun rendering server),
+            // in linea con ricordini/manifesti/necrologi.
+            ['codice' => 'storia-social', 'etichetta' => 'Storia Social', 'costo_crediti' => 15, 'costo_crediti_a_termine' => null],
         ];
 
         foreach ($servizi as $s) {
