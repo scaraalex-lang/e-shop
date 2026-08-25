@@ -178,14 +178,20 @@
                                 Se modifichi la storia o il video, rigenera il reel per aggiornarlo.
                             </p>
                         @endif
-                        <form method="POST" action="{{ route('defunti.pubblicazione-social.crea-reel', $defunto) }}" class="mt-3">
-                            @csrf
-                            @if ($reelDaAggiornare)
-                                <x-primary-button>Rigenera reel</x-primary-button>
-                            @else
-                                <x-button type="submit" variant="contornata">Rigenera reel</x-button>
-                            @endif
-                        </form>
+                        <div class="mt-3 flex flex-wrap items-center gap-3">
+                            <x-button :href="$reel->downloadUrl()" download
+                                      :variant="$reelDaAggiornare ? 'contornata' : 'piena'">
+                                Scarica il reel
+                            </x-button>
+                            <form method="POST" action="{{ route('defunti.pubblicazione-social.crea-reel', $defunto) }}">
+                                @csrf
+                                @if ($reelDaAggiornare)
+                                    <x-primary-button>Rigenera reel</x-primary-button>
+                                @else
+                                    <x-button type="submit" variant="contornata">Rigenera reel</x-button>
+                                @endif
+                            </form>
+                        </div>
                     </div>
                 </div>
             @else
