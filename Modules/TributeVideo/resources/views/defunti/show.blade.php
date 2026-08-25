@@ -115,7 +115,11 @@
                     <div class="mt-2 flex items-center gap-5">
                         <img src="{{ route('video.qr', $video) }}" alt="QR del video memoriale"
                              class="w-40 h-40 border border-caffe/25">
-                        <a href="{{ route('video.qr', $video) }}" download="video-memoriale-{{ \Illuminate\Support\Str::slug($defunto->nomeCompleto()) }}.png">
+                        {{-- Stesso codice del video, col suffisso -qr: il QR e il file
+                             che apre restano appaiati in cartella Download. Il QR e'
+                             same-origin (lo serve VideoPubblicoController::qr), quindi
+                             qui basta l'attributo HTML `download`. --}}
+                        <a href="{{ route('video.qr', $video) }}" download="{{ $video->nomeFile() }}-qr.png">
                             <x-button variant="contornata">Scarica il QR</x-button>
                         </a>
                     </div>
