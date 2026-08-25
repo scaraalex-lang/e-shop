@@ -45,11 +45,27 @@ class Reel extends Model
     }
 
     /**
+     * Nome del file scaricato: servizio + codice univoco del reel.
+     * Senza, Cloudinary serve il public_id generato dal proxy e in cartella
+     * Download finiscono file indistinguibili fra loro (e fra i reel di
+     * defunti diversi). Il codice è l'id della riga, così da un file si
+     * risale sempre al record; il token no, è la credenziale del link
+     * pubblico e non va in giro in un nome di file.
+     *
+     * Senza estensione: `fl_attachment` la aggiunge da sé in base al formato.
+     */
+    public function nomeFile(): string
+    {
+        return 'reel-memorai-'.Str::padLeft((string) $this->id, 6, '0');
+    }
+
+    /**
      * URL di download diretto: l'attributo HTML `download` da solo non
      * basta per un file cross-origin come Cloudinary (i browser lo
      * ignorano fuori dal proprio dominio) — serve il flag `fl_attachment`
      * di Cloudinary, che fa rispondere con `Content-Disposition: attachment`
-     * indipendentemente dall'origine.
+     * indipendentemente dall'origine, e col nome file che gli si passa dopo
+     * i due punti.
      */
     public function downloadUrl(): ?string
     {
@@ -57,7 +73,7 @@ class Reel extends Model
             return null;
         }
 
-        return str_replace('/upload/', '/upload/fl_attachment/', $this->cloudinary_url);
+        return str_replace('/upload/', '/upload/fl_attachment:'.$this->nomeFile().'/', $this->cloudinary_url);
     }
 
     /** Si può rigenerare solo a render concluso (bene o male) — stesso motivo di VideoMemoriale::modificabile(). */
