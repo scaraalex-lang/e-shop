@@ -45,6 +45,14 @@
                 Storia
             </span>
             <h1 class="mt-4 font-serif text-3xl font-medium leading-tight">{{ $nome }}</h1>
+
+            @if ($storia->anteprimaUrl())
+                <div class="mt-6">
+                    <x-button :href="$storia->anteprimaUrl()" :download="$storia->nomeFile()" variant="contornata">
+                        Scarica la storia
+                    </x-button>
+                </div>
+            @endif
         </div>
     </article>
 

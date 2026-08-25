@@ -103,6 +103,12 @@
                 </div>
 
                 <div>
+                    <x-button :href="$video->downloadUrl()" download variant="contornata">
+                        Scarica il video
+                    </x-button>
+                </div>
+
+                <div>
                     <span class="font-sans text-[11px] tracking-[0.22em] uppercase text-testo-soft">
                         QR da incidere sulla fotoceramica
                     </span>

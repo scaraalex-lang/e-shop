@@ -80,6 +80,37 @@ class VideoMemoriale extends Model
         return preg_replace('/\.mp4$/', '.jpg', $this->cloudinary_url);
     }
 
+    /**
+     * Nome del file scaricato: servizio + codice univoco del video.
+     * Senza, Cloudinary serve il public_id generato dal proxy (64 caratteri
+     * casuali) e in cartella Download i video di defunti diversi sono
+     * indistinguibili — stesso ragionamento di Reel::nomeFile().
+     *
+     * Il codice è l'id della riga, non il token: dal file si risale al record
+     * e il token resta la credenziale del link pubblico. Senza estensione:
+     * la aggiunge `fl_attachment`, che anzi rifiuta un nome che contiene un
+     * punto (risponde 400).
+     */
+    public function nomeFile(): string
+    {
+        return 'video-memoriale-'.Str::padLeft((string) $this->id, 6, '0');
+    }
+
+    /**
+     * URL di download diretto: l'attributo HTML `download` da solo non basta
+     * per un file cross-origin come Cloudinary (i browser lo ignorano fuori
+     * dal proprio dominio) — serve `fl_attachment`, che risponde con
+     * `Content-Disposition: attachment` col nome passato dopo i due punti.
+     */
+    public function downloadUrl(): ?string
+    {
+        if (! $this->cloudinary_url) {
+            return null;
+        }
+
+        return str_replace('/upload/', '/upload/fl_attachment:'.$this->nomeFile().'/', $this->cloudinary_url);
+    }
+
     public function inCoda(): void
     {
         $this->forceFill(['stato' => StatoVideoMemoriale::InCoda])->save();

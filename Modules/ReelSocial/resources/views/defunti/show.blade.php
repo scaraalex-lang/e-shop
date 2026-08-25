@@ -58,10 +58,16 @@
                             {{ route('storia-social.show', $storia) }}
                         </a>
                     </p>
-                    <a href="{{ route('defunti.storia-social.show', $defunto) }}" data-designer-overlay
-                       class="mt-2 inline-block font-sans text-[11px] tracking-[0.18em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
-                        Modifica la storia
-                    </a>
+                    <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
+                        <a href="{{ route('defunti.storia-social.show', $defunto) }}" data-designer-overlay
+                           class="font-sans text-[11px] tracking-[0.18em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
+                            Modifica la storia
+                        </a>
+                        <a href="{{ $storia->anteprimaUrl() }}" download="{{ $storia->nomeFile() }}"
+                           class="font-sans text-[11px] tracking-[0.18em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
+                            Scarica la storia
+                        </a>
+                    </div>
                 </div>
             </div>
         @endif
@@ -96,10 +102,16 @@
                             {{ route('video.show', $video) }}
                         </a>
                     </p>
-                    <a href="{{ route('defunti.video-memoriale.show', $defunto) }}"
-                       class="mt-2 inline-block font-sans text-[11px] tracking-[0.18em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
-                        Vedi o modifica il video
-                    </a>
+                    <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
+                        <a href="{{ route('defunti.video-memoriale.show', $defunto) }}"
+                           class="font-sans text-[11px] tracking-[0.18em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
+                            Vedi o modifica il video
+                        </a>
+                        <a href="{{ $video->downloadUrl() }}" download
+                           class="font-sans text-[11px] tracking-[0.18em] uppercase text-testo-soft hover:text-oro-scuro transition-colors duration-300">
+                            Scarica il video
+                        </a>
+                    </div>
                 </div>
             @else
                 <div class="mt-4">

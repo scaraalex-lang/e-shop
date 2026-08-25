@@ -448,6 +448,10 @@ const agenziaData = @json($agenziaData ?? []);
 const savedCanvas = @json($storia->canvas);
 const fotoPrincipale = @json($fotoPrincipale ?? null);
 const storiaToken = @json($storia->token);
+// Nome dell'export manuale: servizio + codice univoco, lo stesso del file
+// scaricato dal link pubblico. Estensione forzata a png: qui si esporta il
+// canvas, non il jpeg dell'anteprima salvata.
+const storiaNomeFile = @json($storia->nomeFile('png'));
 const csrfToken = '{{ csrf_token() }}';
 
 // Allega CSRF e sessione a tutte le chiamate /admin/api/: stesso schema di
@@ -1061,7 +1065,7 @@ function inserisciFotoPrincipale() {
 function exportPNG() {
   const dataURL = canvas.toDataURL({ format: 'png', quality: 1, multiplier: 2 });
   const a = document.createElement('a');
-  a.href = dataURL; a.download = 'storia-social.png'; a.click();
+  a.href = dataURL; a.download = storiaNomeFile; a.click();
 }
 
 // ── SALVATAGGIO ──

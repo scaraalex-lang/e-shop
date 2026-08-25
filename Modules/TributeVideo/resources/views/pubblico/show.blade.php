@@ -56,7 +56,7 @@
             >
                 <source src="{{ $video->cloudinary_url }}" type="video/mp4">
                 Il tuo browser non supporta la riproduzione video.
-                <a href="{{ $video->cloudinary_url }}">Scarica il video</a>.
+                <a href="{{ $video->downloadUrl() }}">Scarica il video</a>.
             </video>
         </div>
 
@@ -79,6 +79,12 @@
                     &ldquo;{{ $video->citazione }}&rdquo;
                 </p>
             @endif
+
+            <div class="mt-6">
+                <x-button :href="$video->downloadUrl()" download variant="contornata">
+                    Scarica il video
+                </x-button>
+            </div>
         </div>
     </article>
 
