@@ -163,6 +163,30 @@
                         </p>
                         <img src="{{ route('reel.qr', $reel) }}" alt="QR del reel" class="mt-3 w-32 h-32 border border-caffe/15">
                     </div>
+
+                    {{-- Storia e video restano modificabili anche dopo il reel: senza
+                         questo bottone il reel resterebbe per sempre alla versione con
+                         cui è stato creato, senza nemmeno un modo di accorgersene. --}}
+                    <div class="border-t border-caffe/15 pt-4">
+                        @if ($reelDaAggiornare)
+                            <p class="font-sans text-[13px] leading-relaxed text-testo-soft">
+                                Hai modificato la storia o il video dopo aver creato questo reel:
+                                il file qui sopra mostra ancora la versione precedente.
+                            </p>
+                        @else
+                            <p class="font-sans text-[13px] leading-relaxed text-testo-soft">
+                                Se modifichi la storia o il video, rigenera il reel per aggiornarlo.
+                            </p>
+                        @endif
+                        <form method="POST" action="{{ route('defunti.pubblicazione-social.crea-reel', $defunto) }}" class="mt-3">
+                            @csrf
+                            @if ($reelDaAggiornare)
+                                <x-primary-button>Rigenera reel</x-primary-button>
+                            @else
+                                <x-button type="submit" variant="contornata">Rigenera reel</x-button>
+                            @endif
+                        </form>
+                    </div>
                 </div>
             @else
                 <div class="mt-4 border-l-2 border-errore bg-panna px-5 py-4 font-sans text-[13px]">

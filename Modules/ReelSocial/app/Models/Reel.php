@@ -5,6 +5,8 @@ namespace Modules\ReelSocial\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Modules\ReelSocial\Enums\StatoReel;
+use Modules\SocialStory\Models\StoriaSocial;
+use Modules\TributeVideo\Models\VideoMemoriale;
 
 /**
  * Un reel: copertina della Storia Social + Video Memoriale concatenati in un
@@ -62,6 +64,39 @@ class Reel extends Model
     public function modificabile(): bool
     {
         return in_array($this->stato, [StatoReel::Pronto, StatoReel::Errore], true);
+    }
+
+    /**
+     * True se storia o video sono stati modificati DOPO che questo reel è
+     * stato renderizzato: il file esistente mostra ancora la versione vecchia.
+     *
+     * Il confronto è su `render_avviato_il` e non su `updated_at` del reel,
+     * perché `segnaPronto()` tocca `updated_at` a fine render — usarlo
+     * significherebbe confrontare la modifica della storia con un istante
+     * successivo al render stesso, e un reel appena rigenerato risulterebbe
+     * comunque da aggiornare quando la storia è stata toccata durante il render.
+     */
+    public function daAggiornare(?StoriaSocial $storia, ?VideoMemoriale $video): bool
+    {
+        if (! $this->pronto() || ! $this->render_avviato_il) {
+            return false;
+        }
+
+        // Storia o video sostituiti da un altro record: il reel punta a roba vecchia.
+        if ($storia && $storia->id !== $this->storia_social_id) {
+            return true;
+        }
+        if ($video && $video->id !== $this->video_memoriale_id) {
+            return true;
+        }
+
+        foreach ([$storia?->updated_at, $video?->updated_at] as $modificato) {
+            if ($modificato && $modificato->greaterThan($this->render_avviato_il)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function inElaborazione(): void

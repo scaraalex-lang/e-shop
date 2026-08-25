@@ -49,6 +49,7 @@ class DefuntoPubblicazioneController extends Controller
             'storia' => $storia,
             'video' => $video,
             'reel' => $reel,
+            'reelDaAggiornare' => (bool) $reel?->daAggiornare($storia, $video),
             'storiaAbilitata' => $this->abilitato($ordini, 'storia-social', 'has_social_story'),
             'videoAbilitato' => $this->abilitato($ordini, 'video-memoriale', 'has_qr_memorial'),
         ]);
