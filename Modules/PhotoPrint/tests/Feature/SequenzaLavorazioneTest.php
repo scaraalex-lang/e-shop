@@ -154,4 +154,32 @@ class SequenzaLavorazioneTest extends TestCase
             ->assertOk()
             ->assertViewHas('fotoElaborata', '/storage/photoprint/pratica/principale.jpg');
     }
+
+    /**
+     * Una foto caricata non è ancora "confermata" (lo diventa solo salvando
+     * dal canvas del Foto Manager, vedi FotoPraticaTest). Prima di questo
+     * fix la sezione "Il ricordino" si attivava comunque, e il click apriva
+     * l'overlay solo per vederlo reindirizzare alla lavorazione — la stessa
+     * pagina di partenza, dentro l'iframe.
+     */
+    public function test_il_bottone_del_designer_resta_disattivato_con_foto_non_confermata(): void
+    {
+        $ordine = $this->ordineInLavorazione();
+        $this->apriLavorazione($ordine);
+        $this->salvaDefunto($ordine);
+
+        DB::table('foto_pratica')->insert([
+            'ordine_id' => $ordine->id,
+            'path' => 'photoprint/pratica/grezza.jpg',
+            'tipo' => 'originale',
+            'is_principale' => false,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->actingAs($ordine->user)
+            ->get("/account/ordini/{$ordine->numero}/lavorazione")
+            ->assertOk()
+            ->assertViewHas('fotoPrincipale', null)
+            ->assertSee('salvala dal canvas per attivare il Designer', false);
+    }
 }
