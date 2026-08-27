@@ -60,7 +60,7 @@
             </div>
         @elseif ($ordinePrincipale)
             <div class="mt-6">
-                <x-button :href="route('studio.foto')">Apri il Foto Manager</x-button>
+                <x-button :href="route('studio.foto.defunto', $defunto)">Apri il Foto Manager</x-button>
             </div>
         @endif
     </section>
@@ -190,11 +190,11 @@
             @if ($ricordino)
                 <x-bozza-ricordino :ricordino="$ricordino" larghezza="w-52" class="mt-6" />
                 <div class="mt-5">
-                    <x-button :href="route('studio.ricordino')" data-designer-overlay>Riprendi la bozza</x-button>
+                    <x-button :href="route('studio.ricordino.defunto', $defunto)" data-designer-overlay>Riprendi la bozza</x-button>
                 </div>
             @else
                 <div class="mt-6">
-                    <x-button :href="route('studio.ricordino')" data-designer-overlay>Apri il Designer</x-button>
+                    <x-button :href="route('studio.ricordino.defunto', $defunto)" data-designer-overlay>Apri il Designer</x-button>
                 </div>
             @endif
         @endif

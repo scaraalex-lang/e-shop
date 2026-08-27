@@ -362,7 +362,7 @@
     {{-- Solo B2C: per le agenzie questa scorciatoia scavalcherebbe la
          canalizzazione, che per loro passa dalla Scheda del defunto qui sotto. --}}
     @if ($ordine->designerAbilitato('ricordini') && ! $ordine->agenzia_id)
-    <section class="bg-bianco px-7 py-8 {{ $foto->isNotEmpty() ? '' : 'opacity-45 pointer-events-none' }}">
+    <section class="bg-bianco px-7 py-8 {{ $fotoPrincipale ? '' : 'opacity-45 pointer-events-none' }}">
         <header class="flex flex-wrap items-baseline justify-between gap-3">
             <h2 class="font-serif text-2xl font-medium">Il ricordino</h2>
             @if ($ricordino)
@@ -374,6 +374,17 @@
             Componi fronte e retro: il ritratto, le date, la preghiera. Puoi partire da uno dei
             nostri modelli e cambiare quello che vuoi.
         </p>
+
+        {{-- La foto è caricata ma non ancora confermata dal canvas del Foto
+             Manager: il Designer la richiede per forza, quindi il bottone
+             qui sotto va tenuto disattivato e va spiegato perché, non
+             lasciato andare a sbattere contro il redirect del designer. --}}
+        @if ($foto->isNotEmpty() && ! $fotoPrincipale)
+            <p class="mt-3 max-w-2xl font-sans text-[13px] leading-relaxed text-oro-scuro">
+                Hai caricato una foto ma non l'hai ancora confermata: apri il Foto Manager e
+                salvala dal canvas per attivare il Designer.
+            </p>
+        @endif
 
         @if ($ricordino)
             <x-bozza-ricordino :ricordino="$ricordino" class="mt-5" />

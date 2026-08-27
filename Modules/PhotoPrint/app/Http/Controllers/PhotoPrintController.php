@@ -3,6 +3,7 @@
 namespace Modules\PhotoPrint\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Commerce\Models\Ordine;
 use Modules\Memorial\Models\Defunto;
@@ -111,6 +112,49 @@ class PhotoPrintController extends Controller
                 'autorizzato_at' => $defunto->gdpr_autorizzato_at?->format('d/m/Y H:i'),
             ],
         ]);
+    }
+
+    /**
+     * Punto d'ingresso al Foto Manager dalla Scheda del Defunto.
+     *
+     * La lavorazione mette l'ordine in sessione da sola arrivandoci
+     * (LavorazioneController::show), ma la Scheda del Defunto no: chi ci
+     * torna senza essere ripassato dalla lavorazione di QUESTO ordine (caso
+     * normale per un'agenzia che segue più pratiche) trovava la sessione
+     * vuota o puntata su un'altra pratica, e il click "Apri il Foto Manager"
+     * rimbalzava sull'archivio pratiche invece di aprire l'editor per questo
+     * defunto — dentro l'overlay iframe sembrava che il sito si annidasse
+     * dentro se stesso.
+     */
+    public function apriFotoDefunto(Request $request, Defunto $defunto): RedirectResponse
+    {
+        $this->lavorazione->imposta($this->ordinePerDefunto($request, $defunto));
+
+        return redirect()->route('studio.foto');
+    }
+
+    /** Stesso punto d'ingresso, per "Apri il Designer"/"Riprendi la bozza". */
+    public function apriRicordinoDefunto(Request $request, Defunto $defunto): RedirectResponse
+    {
+        $this->lavorazione->imposta($this->ordinePerDefunto($request, $defunto));
+
+        return redirect()->route('studio.ricordino');
+    }
+
+    /**
+     * L'ordine di questo defunto su cui l'utente può lavorare: stessa scelta
+     * già fatta da DefuntiController::show() per $ordinePrincipale, più lo
+     * stesso controllo di proprietà/apertura di LavorazioneController::soloSuo().
+     */
+    private function ordinePerDefunto(Request $request, Defunto $defunto): Ordine
+    {
+        $ordine = Ordine::find($defunto->ordine_id)
+            ?? Ordine::where('defunto_id', $defunto->id)->latest('id')->first();
+
+        abort_unless($ordine && $ordine->diChi($request->user()), 404);
+        abort_unless($ordine->lavorazioneApribile(), 403, 'Questo ordine non è (più) in lavorazione.');
+
+        return $ordine;
     }
 
     /**

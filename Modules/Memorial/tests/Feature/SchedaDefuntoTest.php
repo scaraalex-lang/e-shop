@@ -12,6 +12,7 @@ use Modules\Commerce\Models\Ordine;
 use Modules\Commerce\Tests\Concerns\CreaSoggetti;
 use Modules\Memorial\Models\Defunto;
 use Modules\Memorial\Models\Manifesto;
+use Modules\PhotoPrint\Servizi\LavorazioneCorrente;
 use Tests\TestCase;
 
 /**
@@ -190,5 +191,56 @@ class SchedaDefuntoTest extends TestCase
         $defunto = Defunto::firstOrFail();
 
         $this->actingAs($this->staff())->get(route('defunti.show', $defunto))->assertOk();
+    }
+
+    /**
+     * A differenza della lavorazione (che mette l'ordine in sessione da sola
+     * arrivandoci), la Scheda del Defunto no: un'agenzia che segue più
+     * pratiche e ci torna con la sessione lavorazione puntata su un ALTRO
+     * ordine (o vuota) trovava il bottone "Apri il Designer" attivo ma il
+     * click rimbalzava sull'archivio pratiche — l'overlay mostrava l'intero
+     * sito annidato dentro sé stesso invece del designer. I link della
+     * Scheda ora passano da una rotta che rimette l'ordine giusto in
+     * sessione prima di entrare (vedi PhotoPrintController::apriRicordinoDefunto).
+     */
+    public function test_apri_il_designer_dalla_scheda_defunto_funziona_anche_con_la_sessione_su_un_altro_ordine(): void
+    {
+        $referente = $this->referenteAgenzia();
+        $ordine = $this->ordineInLavorazione();
+        $ordine->forceFill(['agenzia_id' => $referente->agenzia_id])->save();
+        $this->salvaDefunto($ordine);
+        $this->conFotoPrincipale($ordine);
+        $defunto = Defunto::firstOrFail();
+
+        // La sessione lavorazione non è mai stata impostata per QUESTO
+        // ordine in questo "login" (o punta altrove) — il caso normale di
+        // chi arriva alla Scheda da "I miei defunti", non dalla lavorazione.
+        app(LavorazioneCorrente::class)->dimentica();
+
+        $this->actingAs($referente)
+            ->get(route('studio.ricordino.defunto', $defunto))
+            ->assertRedirect(route('studio.ricordino'));
+
+        $this->actingAs($referente)
+            ->get(route('studio.ricordino'))
+            ->assertOk()
+            ->assertViewHas('praticaId', $defunto->id);
+    }
+
+    public function test_apri_il_designer_dalla_scheda_defunto_rifiuta_un_estraneo(): void
+    {
+        $referente = $this->referenteAgenzia();
+        $ordine = $this->ordineInLavorazione();
+        $ordine->forceFill(['agenzia_id' => $referente->agenzia_id])->save();
+        $this->salvaDefunto($ordine);
+        $this->conFotoPrincipale($ordine);
+        $defunto = Defunto::firstOrFail();
+
+        $altro = $this->referenteAgenzia(attributi: [
+            'ragione_sociale' => 'Casa Funeraria Aurora S.n.c.',
+            'partita_iva' => '12485671007',
+        ]);
+
+        $this->actingAs($altro)->get(route('studio.ricordino.defunto', $defunto))->assertNotFound();
     }
 }

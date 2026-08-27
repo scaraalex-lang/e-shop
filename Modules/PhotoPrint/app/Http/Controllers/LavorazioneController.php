@@ -80,6 +80,11 @@ class LavorazioneController extends Controller
             'defunto' => $defunto,
             'ricordino' => $ricordino,
             'foto' => FotoPratica::where('ordine_id', $ordine->id)->latest()->get(),
+            // Una foto caricata non è ancora "confermata" (lo diventa solo
+            // salvando dal canvas del Foto Manager): il Designer la richiede
+            // per forza (PhotoPrintController::ricordinoDesigner) e senza,
+            // rimanda qui — dentro l'overlay sembra che "non si apra".
+            'fotoPrincipale' => FotoPratica::principaleDi($ordine->id),
             'videoAbilitato' => $videoAbilitato,
             'video' => $video,
             'storiaAbilitata' => $storiaAbilitata,

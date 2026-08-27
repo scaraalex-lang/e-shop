@@ -42,6 +42,19 @@ Route::middleware(['auth', AccessoStudio::class])->group(function () {
 });
 
 /*
+ | Punto d'ingresso dalla Scheda del Defunto (Modules/Memorial): a differenza
+ | della lavorazione di un ordine, la Scheda non porta l'ordine nell'indirizzo
+ | e da sola non mette nulla in sessione — questi due passaggi (ri)mettono
+ | l'ordine giusto in sessione prima di entrare, poi le rotte sopra e
+ | AccessoStudio fanno il loro controllo come sempre. Solo `auth`: la verifica
+ | "questo defunto è tuo" sta dentro il controller, come per la lavorazione.
+ */
+Route::middleware('auth')->group(function () {
+    Route::get('/defunti/{defunto}/studio/foto', [PhotoPrintController::class, 'apriFotoDefunto'])->name('studio.foto.defunto');
+    Route::get('/defunti/{defunto}/studio/ricordino', [PhotoPrintController::class, 'apriRicordinoDefunto'])->name('studio.ricordino.defunto');
+});
+
+/*
  | La lavorazione fotografica di un ordine, vista dal cliente: dati del
  | defunto, consenso, ingresso negli editor, approvazione della bozza.
  |
