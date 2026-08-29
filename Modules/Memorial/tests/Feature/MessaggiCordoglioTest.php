@@ -12,8 +12,8 @@ use Modules\Memorial\Models\Necrologio;
 use Tests\TestCase;
 
 /**
- * Messaggi di cordoglio: lasciati senza account sulla pagina del manifesto
- * (il funerale, non la card del trigesimo), solo nome e testo.
+ * Messaggi di cordoglio: lasciati senza account sulla card principale del
+ * necrologio, solo nome e testo.
  */
 class MessaggiCordoglioTest extends TestCase
 {
@@ -61,10 +61,10 @@ class MessaggiCordoglioTest extends TestCase
         [, $agenzia] = $this->agenziaConReferente();
         $n = $this->necrologioPubblico($agenzia);
 
-        $this->post(route('necrologio.manifesto.messaggio', ['agenzia' => $agenzia->slug, 'percorso' => $n->percorso]), [
+        $this->post(route('necrologio.messaggio', ['agenzia' => $agenzia->slug, 'percorso' => $n->percorso]), [
             'nome' => 'Maria Verdi',
             'messaggio' => 'Un pensiero affettuoso per Luigia.',
-        ])->assertRedirect($n->urlManifesto($agenzia->slug));
+        ])->assertRedirect($n->url($agenzia->slug));
 
         $this->assertDatabaseHas('messaggi_cordoglio', [
             'necrologio_id' => $n->id,
@@ -79,7 +79,7 @@ class MessaggiCordoglioTest extends TestCase
         $n = $this->necrologioPubblico($agenzia);
         $n->messaggiCordoglio()->create(['nome' => 'Maria Verdi', 'messaggio' => 'Con affetto.']);
 
-        $this->get($n->urlManifesto($agenzia->slug))
+        $this->get($n->url($agenzia->slug))
             ->assertOk()
             ->assertSee('Maria Verdi')
             ->assertSee('Con affetto.');
@@ -90,8 +90,8 @@ class MessaggiCordoglioTest extends TestCase
         [, $agenzia] = $this->agenziaConReferente();
         $n = $this->necrologioPubblico($agenzia);
 
-        $this->from($n->urlManifesto($agenzia->slug))
-            ->post(route('necrologio.manifesto.messaggio', ['agenzia' => $agenzia->slug, 'percorso' => $n->percorso]), [
+        $this->from($n->url($agenzia->slug))
+            ->post(route('necrologio.messaggio', ['agenzia' => $agenzia->slug, 'percorso' => $n->percorso]), [
                 'nome' => 'Spam Bot',
                 'messaggio' => 'Comprate qui.',
                 'sito_web' => 'http://spam.example',
@@ -111,7 +111,7 @@ class MessaggiCordoglioTest extends TestCase
             'percorso' => Necrologio::componiPercorso($defunto),
         ]);
 
-        $this->post(route('necrologio.manifesto.messaggio', ['agenzia' => $agenzia->slug, 'percorso' => $n->percorso]), [
+        $this->post(route('necrologio.messaggio', ['agenzia' => $agenzia->slug, 'percorso' => $n->percorso]), [
             'nome' => 'Maria Verdi',
             'messaggio' => 'Con affetto.',
         ])->assertNotFound();

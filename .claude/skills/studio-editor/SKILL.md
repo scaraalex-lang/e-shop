@@ -125,6 +125,35 @@ Dettagli operativi:
   `necrologi` / `santi` / `ricordino_templates`; consenso GDPR sul defunto
   registrabile dal designer e dalla lavorazione.
 
+**Necrologio pubblico: una card sola, non più due pagine** (2026-08-27)
+- `Necrologio::pubblico()` resta il gate a tre condizioni (consenso +
+  interruttore + non scaduto): finché una manca, `/ricordi/{agenzia}/{percorso}`
+  mostra il modulo per pubblicare invece dell'indirizzo, e la sezione embed
+  mostra "il codice compare qui appena è pubblicato" — **non è un bug**, è
+  il flusso in due passi (`necrologi.consenso` poi `necrologi.pubblica`,
+  separati apposta). Capita spesso che sembri "non funzioni niente": prima di
+  toccare codice, controllare `pubblicazione_consenso`/`pubblicato`/
+  `pubblicato_fino_al` sul record.
+- I **messaggi di cordoglio** (`MessaggioCordoglio`, tabella
+  `messaggi_cordoglio`) sono ora sulla card principale del necrologio
+  (`pubblico.blade.php`), non più su `/ricordi/{agenzia}/{percorso}/manifesto`:
+  un solo URL per il defunto con tutto il materiale dentro (necrologio +
+  anteprima manifesto cliccabile + messaggi), com'è oggi lo strumento che
+  l'agenzia condivide e tiene sotto controllo. Route `POST
+  ricordi/{agenzia}/{percorso}/messaggio` (`necrologio.messaggio`); la pagina
+  `/manifesto` resta solo la visualizzazione a piena pagina (PDF o immagine).
+- **Bordo della card**: `border-caffe` pieno (non più `/15`, quasi invisibile).
+- **Luogo/indirizzo dell'evento** (chiesa, trigesimo, funerale) è un link a
+  Google Maps (`maps/search/?api=1&query=...`), icona pin SVG inline (niente
+  servizi esterni, coerente con la regola GDPR sulle risorse remote).
+- **Manifesto multi-orientamento**: i formati vanno da verticali (50x70,
+  70x100) a orizzontali (61x45, 50x32) — ogni `<img>` di anteprima deve avere
+  sia un limite di altezza che `max-w-full`/`w-full`, mai solo uno dei due,
+  altrimenti un formato orizzontale trabocca dal contenitore. Punti toccati:
+  `pubblico.blade.php` (card pubblica) e `necrologi/form.blade.php` (thumbnail
+  lato agenzia); `manifesto-pubblico.blade.php` e `defunti/show.blade.php`
+  erano già a posto (`w-full`/`h-auto`, nessuna altezza fissa).
+
 ## Prossimi passi, in ordine di priorità
 
 Il cliente vero del sottosistema editor è l'**agenzia B2B**: fa decine di

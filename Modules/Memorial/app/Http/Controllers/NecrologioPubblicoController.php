@@ -36,6 +36,7 @@ class NecrologioPubblicoController extends Controller
             'defunto' => $necrologio->defunto,
             'agenzia' => $onoranza,
             'indirizzo' => $necrologio->url($onoranza->slug),
+            'messaggi' => $necrologio->messaggiCordoglio,
         ]);
 
         if (! $necrologio->embeddabile()) {
@@ -62,13 +63,13 @@ class NecrologioPubblicoController extends Controller
             'defunto' => $necrologio->defunto,
             'agenzia' => $onoranza,
             'indirizzo' => $necrologio->urlManifesto($onoranza->slug),
-            'messaggi' => $necrologio->messaggiCordoglio,
         ]);
     }
 
     /**
      * Un pensiero lasciato senza account: solo nome e testo, nessun contatto.
-     * Sta sotto il manifesto (il funerale), non sulla card del trigesimo.
+     * Sta sulla card principale del necrologio, non sul foglio del manifesto:
+     * è lì che si torna dopo averlo lasciato.
      */
     public function inviaMessaggio(Request $request, string $agenzia, string $percorso): RedirectResponse
     {
@@ -88,7 +89,7 @@ class NecrologioPubblicoController extends Controller
         ]);
 
         return redirect()
-            ->route('necrologio.manifesto.pubblico', ['agenzia' => $agenzia, 'percorso' => $percorso])
+            ->route('necrologio', ['agenzia' => $agenzia, 'percorso' => $percorso])
             ->with('messaggio_inviato', true);
     }
 

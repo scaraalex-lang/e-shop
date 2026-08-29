@@ -115,6 +115,8 @@ Route::get('ricordi/{agenzia}/{percorso}/manifesto', [NecrologioPubblicoControll
 
 // Messaggi di cordoglio: pubblico, senza account — un limite di frequenza
 // basta come freno allo spam, niente moderazione preventiva per ora.
-Route::post('ricordi/{agenzia}/{percorso}/manifesto/messaggio', [NecrologioPubblicoController::class, 'inviaMessaggio'])
+// Stanno sulla card principale (il trigesimo/l'occasione), non più su una
+// pagina a parte: un solo URL per il defunto con tutto il materiale dentro.
+Route::post('ricordi/{agenzia}/{percorso}/messaggio', [NecrologioPubblicoController::class, 'inviaMessaggio'])
     ->middleware('throttle:5,1')
-    ->name('necrologio.manifesto.messaggio');
+    ->name('necrologio.messaggio');

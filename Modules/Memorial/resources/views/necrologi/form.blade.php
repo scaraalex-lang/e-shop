@@ -117,8 +117,10 @@
                     <x-input-label value="Il manifesto" />
                     <a href="{{ route('defunti.show', $necrologio->defunto) }}" class="relative mt-1 inline-block">
                         @if ($manifestoPrincipale?->webUrl())
+                            {{-- max-w-full di sicurezza: un manifesto orizzontale (61x45, 50x32…)
+                                 a 112px di altezza può essere più largo del form che lo contiene. --}}
                             <img src="{{ $manifestoPrincipale->webUrl() }}" alt="Manifesto"
-                                 class="h-28 w-auto border border-caffe/15">
+                                 class="h-28 w-auto max-w-full border border-caffe/15">
                         @else
                             <span class="flex h-28 w-44 items-center justify-center border border-dashed border-caffe/25
                                          bg-panna/40 font-sans text-[11px] text-testo-soft text-center px-3">
