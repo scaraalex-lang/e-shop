@@ -50,6 +50,7 @@ class ProdottoRequest extends FormRequest
             'is_photo_printable' => ['nullable', 'boolean'],
             'has_qr_memorial' => ['nullable', 'boolean'],
             'has_social_story' => ['nullable', 'boolean'],
+            'has_video_book' => ['nullable', 'boolean'],
 
             'is_kit' => ['nullable', 'boolean'],
             'included_units' => ['nullable', 'required_if:is_kit,1', 'integer', 'min:0'],
@@ -103,6 +104,7 @@ class ProdottoRequest extends FormRequest
             'is_photo_printable' => $this->boolean('is_photo_printable'),
             'has_qr_memorial' => $this->boolean('has_qr_memorial'),
             'has_social_story' => $this->boolean('has_social_story'),
+            'has_video_book' => $this->boolean('has_video_book'),
             'is_kit' => $this->boolean('is_kit'),
             'included_units' => $this->boolean('is_kit') ? $this->integer('included_units') : null,
             'extra_unit_price' => $this->boolean('is_kit') ? Euro::centesimi($this->input('extra_unit_price')) : null,

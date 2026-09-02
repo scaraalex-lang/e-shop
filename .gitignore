@@ -33,3 +33,10 @@ Thumbs.db
 
 # Cartella di scambio con l'utente (sorgenti memoraiengine, font, foto, screenshot)
 /FileMemorai/
+/filescambio/
+
+# Artefatti di HOME quando composer/artisan girano come www-data con
+# HOME=/var/www/eshop (cache composer, psysh, ecc.) — mai file di progetto
+/.cache/
+/.config/
+/.local/
