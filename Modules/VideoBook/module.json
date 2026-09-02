@@ -1,0 +1,11 @@
+{
+    "name": "VideoBook",
+    "alias": "videobook",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\VideoBook\\Providers\\VideoBookServiceProvider"
+    ],
+    "files": []
+}

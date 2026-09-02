@@ -108,6 +108,28 @@
     @endif
 </section>
 
+@php
+    // Percorso a sé, non legato alla lavorazione/defunto: qualunque ordine
+    // con un Video Book o un Fotoalbum VideoBook porta dritto all'editor,
+    // senza scheda del defunto di mezzo (vedi VideoBook\EditorController).
+    $ordineHaVideoBook = $ordine->righe->contains(fn ($r) => $r->product?->has_video_book === true);
+@endphp
+@if ($ordineHaVideoBook)
+    <section class="mt-12 border-l-2 border-oro bg-panna/60 px-6 py-5">
+        <h2 class="font-serif text-xl">Il video book</h2>
+        <p class="mt-2 font-sans font-light text-[14px] leading-relaxed text-testo-soft">
+            Carica le foto, componi le pagine e genera video e PDF in anteprima. Dopo il
+            pagamento diventano scaricabili.
+        </p>
+
+        <div class="mt-5">
+            <x-button :href="route('videobook.apri', $ordine)" data-designer-overlay>
+                Apri l'editor del video book
+            </x-button>
+        </div>
+    </section>
+@endif
+
 @if ($ricordino?->approvato() && $categorieStampa->isNotEmpty())
     {{-- ============ composizione dell'ordine di stampa ============ --}}
     <section class="mt-12">

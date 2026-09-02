@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/videobook",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\VideoBook\\": "app/",
+            "Modules\\VideoBook\\Database\\Factories\\": "database/factories/",
+            "Modules\\VideoBook\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\VideoBook\\Tests\\": "tests/"
+        }
+    }
+}
