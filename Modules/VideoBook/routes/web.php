@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\VideoBook\Http\Controllers\EditorController;
+use Modules\VideoBook\Http\Controllers\ImpostazioniController;
 use Modules\VideoBook\Http\Controllers\PaginaApiController;
 use Modules\VideoBook\Http\Controllers\PaginaTemplateController;
 use Modules\VideoBook\Http\Controllers\PdfController;
@@ -17,6 +18,10 @@ use Modules\VideoBook\Http\Controllers\VideoController;
 Route::middleware('auth')->group(function () {
     Route::get('account/ordini/{ordine}/videobook', [EditorController::class, 'apriDalOrdine'])->name('videobook.apri');
     Route::get('studio/videobook/{libro}', [EditorController::class, 'show'])->name('studio.videobook');
+
+    // Solo staff (controllo dentro ImpostazioniController, stesso criterio di mandaInProduzione()).
+    Route::get('admin/videobook/impostazioni', [ImpostazioniController::class, 'index'])->name('videobook.impostazioni');
+    Route::post('admin/videobook/impostazioni/profilo-colore', [ImpostazioniController::class, 'caricaProfiloColore'])->name('videobook.impostazioni.profilo-colore');
 });
 
 /*
@@ -29,16 +34,20 @@ Route::prefix('admin/api/videobook')->middleware(['auth', 'throttle:60,1'])->gro
     Route::get('templates', [PaginaTemplateController::class, 'index']);
 
     Route::put('{libro}/formato', [EditorController::class, 'aggiornaFormato']);
+    Route::post('{libro}/produzione', [EditorController::class, 'mandaInProduzione']);
+    Route::delete('{libro}/produzione', [EditorController::class, 'riportaInBozza']);
 
     Route::post('{libro}/pagine/inizializza', [PaginaApiController::class, 'inizializzaPagine']);
     Route::post('{libro}/pagine',           [PaginaApiController::class, 'aggiungiPagina']);
     Route::post('{libro}/pagine/riordina',  [PaginaApiController::class, 'riordinaPagine']);
     Route::put('pagine/{pagina}/template',  [PaginaApiController::class, 'cambiaTemplate']);
+    Route::put('pagine/{pagina}/titolo',    [PaginaApiController::class, 'aggiornaTitoloPagina']);
     Route::delete('pagine/{pagina}',        [PaginaApiController::class, 'eliminaPagina']);
 
     Route::post('pagine/{pagina}/foto', [PaginaApiController::class, 'caricaFoto']);
     Route::put('foto/{foto}',           [PaginaApiController::class, 'aggiornaFoto']);
     Route::put('foto/{foto}/stile',     [PaginaApiController::class, 'aggiornaStileFoto']);
+    Route::post('foto/{foto}/auto-correzione', [PaginaApiController::class, 'autoCorreggiFoto']);
     Route::delete('foto/{foto}',        [PaginaApiController::class, 'eliminaFoto']);
 
     // Box di testo liberi (pannello Strumenti → Box di testo), vedi TestoPagina.

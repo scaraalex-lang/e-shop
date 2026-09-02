@@ -32,7 +32,7 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 .editor-layout{display:flex;flex:1;overflow:hidden}
 
 /* SIDEBAR: le pagine del libro */
-.sidebar{width:280px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.sidebar{width:320px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 .sidebar-head{padding:1rem;border-bottom:1px solid var(--border)}
 .sidebar-list{flex:1;overflow-y:auto;padding:.75rem}
 .sidebar-vuota{color:var(--gray);font-size:.85rem;text-align:center;padding:2rem 1rem}
@@ -42,22 +42,28 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 .formato-btn:hover{border-color:var(--gold);color:var(--ink)}
 .formato-btn strong{color:var(--ink)}
 
-.pagina-card{display:flex;align-items:stretch;gap:.4rem;border:1px solid var(--border);border-radius:8px;margin-bottom:.6rem;background:#fff;overflow:hidden}
+/* Card pagina in sidebar: miniatura grande e ben visibile in cima (stesso
+   disegno di .filmstrip-pagina/miniAnteprimaPagina() usato per lo slider
+   foto in basso), poi un'etichetta MODIFICABILE (input, non testo fisso —
+   senza titolo proprio ricade sul nome del template come placeholder),
+   poi le azioni. Le pagine ancora senza foto restano sbiadite —
+   "compilate" vs "da compilare" si vedono a colpo d'occhio. */
+.pagina-card{border:1px solid var(--border);border-radius:10px;margin-bottom:.8rem;background:#fff;overflow:hidden}
 .pagina-card.attiva{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
-.pagina-seleziona{flex:1;display:flex;align-items:center;gap:.6rem;padding:.6rem;border:none;background:none;cursor:pointer;text-align:left;font-family:'DM Sans',sans-serif}
-/* Miniatura vera (foto incluse, non solo il numero) nella lista pagine
-   della sidebar: stesso disegno di .filmstrip-pagina/miniAnteprimaPagina(),
-   qui verticale. Le pagine ancora senza foto restano sbiadite — "compilate"
-   vs "da compilare" si vedono a colpo d'occhio. */
-.pagina-mini{position:relative;width:34px;flex-shrink:0}
-.pagina-mini .filmstrip-pagina{border:1px solid var(--border);box-shadow:none}
-.pagina-mini-numero{position:absolute;bottom:-3px;right:-3px;background:var(--ink);color:#fff;font-size:.6rem;line-height:1;padding:2px 4px;border-radius:999px}
-.pagina-seleziona.non-compilata .pagina-mini{opacity:.45}
-.pagina-info{display:flex;flex-direction:column;gap:.1rem;min-width:0}
-.pagina-info strong{font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pagina-info small{font-size:.72rem;color:var(--gray)}
-.pagina-azioni{display:flex;flex-direction:column;border-left:1px solid var(--border)}
-.pagina-azioni button{flex:1;border:none;background:none;cursor:pointer;font-size:.7rem;color:var(--gray);padding:0 .4rem;min-height:26px}
+.pagina-mini-btn{display:block;width:100%;border:none;padding:0;cursor:pointer;background:var(--cream)}
+.pagina-mini{position:relative;width:100%}
+.pagina-mini .filmstrip-pagina{border:none;border-radius:0;box-shadow:none}
+.pagina-mini-numero{position:absolute;bottom:.4rem;right:.4rem;background:rgba(26,26,46,.75);color:#fff;font-size:.68rem;line-height:1;padding:.2rem .45rem;border-radius:999px}
+.pagina-mini-btn.non-compilata .pagina-mini{opacity:.45}
+.pagina-corpo{padding:.55rem .7rem .3rem}
+.pagina-titolo{width:100%;border:none;background:none;padding:0;font-size:.85rem;font-weight:600;color:var(--ink);font-family:'DM Sans',sans-serif}
+.pagina-titolo::placeholder{color:var(--gray);font-weight:500}
+.pagina-titolo:hover{text-decoration:underline;text-decoration-style:dotted;text-decoration-color:var(--border)}
+.pagina-titolo:focus{outline:none;text-decoration:none;background:var(--cream);border-radius:4px}
+.pagina-sottotitolo{display:block;font-size:.72rem;color:var(--gray);margin-top:.15rem}
+.pagina-azioni{display:flex;border-top:1px solid var(--border);margin-top:.5rem}
+.pagina-azioni button{flex:1;border:none;border-right:1px solid var(--border);background:none;cursor:pointer;font-size:.75rem;color:var(--gray);padding:.4rem;min-height:30px}
+.pagina-azioni button:last-child{border-right:none}
 .pagina-azioni button:hover:not(:disabled){background:var(--cream);color:var(--ink)}
 .pagina-azioni button:disabled{opacity:.3;cursor:not-allowed}
 
@@ -110,7 +116,18 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 
 .pagina-foglio{position:relative;width:100%;background:#fff;border-radius:2px;box-shadow:0 12px 40px rgba(0,0,0,.35);flex-shrink:0}
 
-.slot-wrap,.slot-caption-wrap{position:absolute}
+/* Libro "in produzione" (vedi Libro::completato()/renderStatoProduzione()):
+   ogni superficie che muta pagine/foto/testi/formato diventa inerte — non
+   solo il server la rifiuta (assicuraModificabile), qui si comunica subito
+   perché non risponde. .foglio-seleziona resta fuori apposta: cambiare
+   pagina attiva è navigazione, non una modifica. */
+body.produzione-bloccata .sidebar-head,
+body.produzione-bloccata .strumenti-bar,
+body.produzione-bloccata .pagina-foglio,
+body.produzione-bloccata .canvas-senza-layout,
+body.produzione-bloccata .pagina-toolbar{pointer-events:none;opacity:.6;filter:saturate(.7)}
+
+.slot-wrap{position:absolute}
 .slot-foto{width:100%;height:100%;border-radius:4px;background-size:cover;background-position:center;position:relative;overflow:hidden}
 .slot-foto.vuoto{border:2px dashed var(--gold);background:var(--cream-dark);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.2rem;cursor:pointer;color:#a5863f}
 .slot-foto.vuoto:hover{background:var(--cream)}
@@ -119,22 +136,23 @@ nav{background:var(--ink);padding:0 1.5rem;display:flex;align-items:center;justi
 .slot-num{font-size:.7rem;letter-spacing:.05em}
 .slot-foto.riempito{cursor:default}
 .slot-foto.riempito.drag-over{outline:3px solid var(--gold);outline-offset:-3px}
-.slot-elimina,.slot-sostituisci,.slot-strumenti{position:absolute;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;opacity:0;transition:opacity .15s;z-index:2}
-.slot-foto.riempito:hover .slot-elimina,.slot-foto.riempito:hover .slot-sostituisci,.slot-foto.riempito:hover .slot-strumenti{opacity:1}
+.slot-elimina,.slot-sostituisci,.slot-strumenti,.slot-auto{position:absolute;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;opacity:0;transition:opacity .15s,background .15s;z-index:2}
+.slot-foto.riempito:hover .slot-elimina,.slot-foto.riempito:hover .slot-sostituisci,.slot-foto.riempito:hover .slot-strumenti,.slot-foto.riempito:hover .slot-auto{opacity:1}
 .slot-elimina{top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgba(26,26,46,.75);color:#fff;font-size:.9rem;line-height:1}
 .slot-strumenti{top:6px;left:6px;width:22px;height:22px;border-radius:50%;background:rgba(26,26,46,.75);color:#fff;font-size:.85rem;line-height:1;display:flex;align-items:center;justify-content:center}
 .slot-sostituisci{bottom:6px;left:50%;transform:translateX(-50%);padding:.25rem .6rem;border-radius:999px;background:rgba(26,26,46,.75);color:#fff;font-size:.68rem}
+/* Switch di correzione automatica (esposizione/contrasto, vedi
+   Servizi\AutoCorrezioneFoto): come gli altri controlli appare solo
+   all'hover, ma resta visibile — sfondo oro — quando attivo, così si vede
+   a colpo d'occhio quali foto sono già state corrette. */
+.slot-auto{bottom:6px;left:6px;width:22px;height:22px;border-radius:50%;background:rgba(26,26,46,.75);color:#fff;font-size:.85rem;line-height:1;display:flex;align-items:center;justify-content:center}
+.slot-auto.attivo{opacity:1;background:var(--gold)}
 
 /* foto dentro il riquadro: posizionabile (drag) e ridimensionabile (maniglia), proporzionata sull'aspect ratio originale */
 .slot-foto-img{position:absolute;top:0;left:0;max-width:none;cursor:grab;-webkit-user-drag:none;user-select:none;touch-action:none}
 .slot-foto-img.trascinando{cursor:grabbing}
 .slot-resize-handle{position:absolute;right:6px;bottom:6px;width:16px;height:16px;border-radius:50%;background:var(--gold);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:nwse-resize;opacity:0;transition:opacity .15s;z-index:2;touch-action:none}
 .slot-foto.riempito:hover .slot-resize-handle,.slot-resize-handle.attivo{opacity:1}
-
-.slot-caption-wrap{display:flex;align-items:flex-start;justify-content:center;padding-top:2px}
-.slot-didascalia{width:100%;border:none;border-bottom:1px dashed rgba(165,134,63,.5);background:transparent;text-align:center;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:.8rem;color:var(--ink);padding:2px 4px}
-.slot-didascalia::placeholder{color:#b8ac9a}
-.slot-didascalia:focus{outline:none;border-bottom-color:var(--gold)}
 
 /* Box di testo liberi ("Strumenti" → Box di testo): sfondo semi-trasparente
    per far risaltare la scritta sopra una foto, posizione/misura libere
@@ -206,6 +224,8 @@ input[type=color].strumenti-colore{width:38px;height:34px;padding:2px;border:1px
 .strumenti-preset button.attivo{border-color:var(--gold);background:var(--cream);font-weight:600}
 .strumenti-separatore{border:none;border-top:1px solid var(--border);margin:1.1rem 0}
 .strumenti-elimina-box{width:100%;background:none;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:.5rem;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:.4rem}
+.strumenti-ripristina{width:100%;background:none;border:1px solid var(--gold);color:var(--ink);border-radius:6px;padding:.5rem;font-size:.8rem;cursor:pointer;font-family:'DM Sans',sans-serif}
+.strumenti-ripristina:hover{background:var(--cream-dark)}
 
 /* MODALE conferma */
 .conferma-box{background:#fff;border-radius:10px;max-width:360px;width:100%;padding:1.3rem}
@@ -250,6 +270,8 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
 <nav>
   <div class="logo">MemorAI <small>Impaginatore</small></div>
   <div class="nav-links">
+    <div class="video-stato" id="produzione-stato" hidden></div>
+    <button type="button" class="nav-btn btn-ghost" id="btn-produzione" hidden></button>
     <div class="video-stato" id="pdf-stato" hidden></div>
     <div class="video-stato" id="video-stato" hidden></div>
     <button type="button" class="nav-btn btn-gold" id="btn-genera-video">Genera video e PDF</button>
@@ -373,6 +395,7 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
   const templates = @json($templatesData);
   const formati = @json($formatiData);
   const strumenti = @json($strumentiData);
+  const isStaff = @json($isStaff);
   let video = @json($videoData);
   let paginaAttivaId = libro.pagine.length ? libro.pagine[0].id : null;
 
@@ -401,6 +424,8 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
   const videoStatoEl = document.getElementById('video-stato');
   const pdfStatoEl = document.getElementById('pdf-stato');
   const btnGeneraVideoEl = document.getElementById('btn-genera-video');
+  const produzioneStatoEl = document.getElementById('produzione-stato');
+  const btnProduzioneEl = document.getElementById('btn-produzione');
 
   let slotFileTarget = null; // slot in attesa del click sull'input nascosto
 
@@ -441,28 +466,31 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
       return;
     }
     const ordinate = libro.pagine.slice().sort(function (a, b) { return a.ordine - b.ordine; });
+    const bloccato = libro.completato; // in produzione: si sfoglia, non si riordina/rinomina/elimina — vedi renderStatoProduzione()
     sidebarListEl.innerHTML = ordinate.map(function (p, i) {
       const attiva = p.id === paginaAttivaId ? ' attiva' : '';
       const nomeTemplate = p.template ? escHtml(p.template.name) : 'Scegli il layout';
       const totale = p.template ? p.template.numero_foto : 0;
       const compilata = p.foto.length > 0;
       const sottotitolo = p.template ? (p.foto.length + '/' + totale + ' foto') : 'ancora da comporre';
-      // La lista pagine è di per sé già verticale (la sidebar): qui diventa
-      // il vero "slider" — miniatura vera con le foto (stessa di
-      // miniAnteprimaPagina(), usata anche nello slider orizzontale delle
-      // foto) invece del solo numero, e le pagine ancora senza foto restano
-      // visibilmente sbiadite — a colpo d'occhio si vede cos'è compilato e
-      // cosa manca ancora.
+      // Card pagina: miniatura grande e ben visibile (stessa di
+      // miniAnteprimaPagina(), usata anche nello slider foto in basso),
+      // sbiadita finché la pagina non ha foto — poi un'etichetta VERA,
+      // modificabile (input, placeholder = nome del template finché non le
+      // si dà un nome proprio), poi le azioni.
       return '' +
         '<div class="pagina-card' + attiva + '">' +
-          '<button type="button" class="pagina-seleziona' + (compilata ? '' : ' non-compilata') + '" data-azione="seleziona" data-pagina="' + p.id + '">' +
+          '<button type="button" class="pagina-mini-btn' + (compilata ? '' : ' non-compilata') + '" data-azione="seleziona" data-pagina="' + p.id + '" title="Apri questa pagina">' +
             '<span class="pagina-mini">' + miniAnteprimaPagina(p) + '<span class="pagina-mini-numero">' + (i + 1) + '</span></span>' +
-            '<span class="pagina-info"><strong>' + nomeTemplate + '</strong><small>' + sottotitolo + '</small></span>' +
           '</button>' +
+          '<div class="pagina-corpo">' +
+            '<input type="text" class="pagina-titolo" maxlength="60" value="' + escHtml(p.titolo || '') + '" placeholder="' + nomeTemplate + '" data-azione="titolo-pagina" data-pagina="' + p.id + '"' + (bloccato ? ' disabled' : '') + '>' +
+            '<small class="pagina-sottotitolo" data-azione="seleziona" data-pagina="' + p.id + '" style="cursor:pointer">' + sottotitolo + '</small>' +
+          '</div>' +
           '<div class="pagina-azioni">' +
-            '<button type="button" data-azione="su" data-pagina="' + p.id + '" ' + (i === 0 ? 'disabled' : '') + ' title="Sposta su">↑</button>' +
-            '<button type="button" data-azione="giu" data-pagina="' + p.id + '" ' + (i === ordinate.length - 1 ? 'disabled' : '') + ' title="Sposta giù">↓</button>' +
-            '<button type="button" data-azione="elimina-pagina" data-pagina="' + p.id + '" title="Elimina pagina">🗑</button>' +
+            '<button type="button" data-azione="su" data-pagina="' + p.id + '" ' + (bloccato || i === 0 ? 'disabled' : '') + ' title="Sposta su">↑</button>' +
+            '<button type="button" data-azione="giu" data-pagina="' + p.id + '" ' + (bloccato || i === ordinate.length - 1 ? 'disabled' : '') + ' title="Sposta giù">↓</button>' +
+            '<button type="button" data-azione="elimina-pagina" data-pagina="' + p.id + '" ' + (bloccato ? 'disabled' : '') + ' title="Elimina pagina">🗑</button>' +
           '</div>' +
         '</div>';
     }).join('');
@@ -478,6 +506,26 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     if (azione === 'su' || azione === 'giu') { spostaPagina(paginaId, azione === 'su' ? -1 : 1); return; }
     if (azione === 'elimina-pagina') { eliminaPagina(paginaId); return; }
   });
+
+  // L'etichetta della card è un campo vero, non solo testo: si rinomina
+  // scrivendoci sopra, si salva quando si esce dal campo (blur/invio),
+  // niente bottone "salva".
+  sidebarListEl.addEventListener('change', function (e) {
+    if (!e.target.matches('.pagina-titolo')) return;
+    aggiornaTitoloPagina(Number(e.target.dataset.pagina), e.target.value.trim());
+  });
+
+  function aggiornaTitoloPagina(paginaId, titolo) {
+    const pagina = libro.pagine.find(function (p) { return p.id === paginaId; });
+    if (pagina) pagina.titolo = titolo || null;
+    fetch('/admin/api/videobook/pagine/' + paginaId + '/titolo', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titolo: titolo }),
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (!res.success) mostraErrore(res.error || 'Titolo non salvato.');
+    });
+  }
 
   function spostaPagina(paginaId, delta) {
     const ordinate = libro.pagine.slice().sort(function (a, b) { return a.ordine - b.ordine; });
@@ -528,6 +576,47 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
   function stileAspectRatio() {
     const f = formatoLibroMm();
     return 'aspect-ratio:' + f.w + '/' + f.h;
+  }
+
+  // ---- Griglia dei template: dall'albero colonna/riga/foto ai riquadri ---
+  //
+  // `template.slots` non è più un elenco di rettangoli già pronti: è un
+  // albero `{area, nodo}` (vedi PaginaTemplateSeeder/Support\GrigliaPagina
+  // lato PHP, stessa identica logica qui) che va risolto per il FORMATO VERO
+  // di questo libro — è così che GAP_MM resta un distacco reale tra due foto
+  // su qualunque taglia di stampa, invece di una frazione congelata su un
+  // solo formato.
+
+  const GAP_MM = 4;
+
+  /** I riquadri concreti {ordine,x,y,w,h} (frazioni 0-1) di un template, per il formato di QUESTO libro. */
+  function slotsRisolti(template) {
+    const formato = formatoLibroMm();
+    const gapX = GAP_MM / formato.w, gapY = GAP_MM / formato.h;
+    const area = (template.slots && template.slots.area) || [0, 0, 1, 1];
+    const slots = [];
+    visitaNodoGriglia(template.slots.nodo, area, gapX, gapY, slots);
+    return slots;
+  }
+
+  function visitaNodoGriglia(nodo, box, gapX, gapY, slots) {
+    const x0 = box[0], y0 = box[1], x1 = box[2], y1 = box[3];
+    if (nodo.tipo === 'foto') {
+      slots.push({ ordine: nodo.ordine, x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+      return;
+    }
+    const figli = nodo.figli;
+    const pesoTotale = figli.reduce(function (somma, figlio) { return somma + figlio.peso; }, 0);
+    const orizzontale = nodo.tipo === 'colonna'; // affiancati: si dividono la larghezza, gap orizzontale
+    const gap = orizzontale ? gapX : gapY;
+    const disponibile = (orizzontale ? x1 - x0 : y1 - y0) - gap * (figli.length - 1);
+    let cursore = orizzontale ? x0 : y0;
+    figli.forEach(function (figlio) {
+      const misura = disponibile * (figlio.peso / pesoTotale);
+      const subBox = orizzontale ? [cursore, y0, cursore + misura, y1] : [x0, cursore, x1, cursore + misura];
+      visitaNodoGriglia(figlio.nodo, subBox, gapX, gapY, slots);
+      cursore += misura + gap;
+    });
   }
 
   // ---- Canvas: la doppia pagina attiva, affiancata come un libro aperto --
@@ -605,7 +694,7 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     // solo il perimetro del layout: la miniatura deve valere come
     // riferimento visivo di cosa c'è in quella pagina, non solo di che
     // template usa.
-    const riquadri = p.template.slots.map(function (s) {
+    const riquadri = slotsRisolti(p.template).map(function (s) {
       const foto = fotoPerSlot[s.ordine];
       const posizione = 'left:' + (s.x * 100) + '%;top:' + (s.y * 100) + '%;width:' + (s.w * 100) + '%;height:' + (s.h * 100) + '%';
       return foto
@@ -676,18 +765,18 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
   // ---- Strumenti: formattazione testo, box liberi, regolazione foto ------
   //
   // Un solo pannello (modale-strumenti) con tre schede, la base su cui
-  // aggiungere altre funzioni in seguito. "Testo" formatta l'elemento di
-  // testo attivo — una didascalia o un box libero, stessa forma di `stile`
-  // per entrambi (vedi Support\StileTesto lato PHP) — "Box di testo" crea/
-  // elimina i box liberi della pagina, "Foto" regola/vira/incornicia la
-  // foto attiva. `elementoTestoAttivo`/`fotoStrumentiAttiva` tracciano SOLO
-  // cosa il pannello sta modificando: non è una selezione visiva persistente
-  // come `paginaAttivaId`, si perde quando cambi pagina o chiudi il modale.
+  // aggiungere altre funzioni in seguito. "Testo" formatta il box di testo
+  // attivo (vedi Support\StileTesto lato PHP per le chiavi di `stile`) —
+  // "Box di testo" crea/elimina i box liberi della pagina, "Foto" regola/
+  // vira/incornicia la foto attiva. `elementoTestoAttivo`/`fotoStrumentiAttiva`
+  // tracciano SOLO cosa il pannello sta modificando: non è una selezione
+  // visiva persistente come `paginaAttivaId`, si perde quando cambi pagina o
+  // chiudi il modale.
 
-  let elementoTestoAttivo = null; // { tipo: 'didascalia'|'box', id } | null
+  let elementoTestoAttivo = null; // id del box di testo attivo, o null
   let fotoStrumentiAttiva = null; // id foto | null
 
-  const BASE_TESTO_REM = 0.8; // rem a dimensione:100 — stessa base per didascalie e box
+  const BASE_TESTO_REM = 0.8; // rem a dimensione:100
 
   /** Lo stile CSS inline (font/dimensione/allineamento/peso/decorazione/colore) di un elemento di testo. */
   function stileTestoCss(stile) {
@@ -738,10 +827,9 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
       if (t.slot != null) (testiPerSlot[t.slot] = testiPerSlot[t.slot] || []).push(t);
     });
 
-    return tpl.slots.map(function (s) {
+    return slotsRisolti(tpl).map(function (s) {
       const foto = fotoPerSlot[s.ordine];
       const xPct = s.x * 100, yPct = s.y * 100, wPct = s.w * 100, hPct = s.h * 100;
-      const capH = Math.max(0, Math.min(8, 99 - (yPct + hPct)));
 
       // I box agganciati a questo slot vivono DENTRO il contenitore della
       // foto (.slot-foto, overflow:hidden): non solo vincolati per calcolo
@@ -755,6 +843,7 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
             '<div class="slot-resize-handle" title="Trascina per ingrandire o rimpicciolire"></div>' +
             '<button type="button" class="slot-elimina" data-azione="elimina-foto" data-foto="' + foto.id + '" title="Rimuovi">×</button>' +
             '<button type="button" class="slot-strumenti" data-azione="strumenti-foto" data-foto="' + foto.id + '" title="Regola, viraggio, bordino">🎨</button>' +
+            '<button type="button" class="slot-auto' + (foto.stile.auto_corretto ? ' attivo' : '') + '" data-azione="auto-correggi" data-foto="' + foto.id + '" title="' + (foto.stile.auto_corretto ? 'Correzione automatica attiva — clicca per ripristinare' : 'Correggi automaticamente esposizione e contrasto') + '">✨</button>' +
             '<button type="button" class="slot-sostituisci" data-azione="sostituisci-foto" data-slot="' + s.ordine + '">Sostituisci</button>' +
             testiSlot +
           '</div>'
@@ -762,13 +851,7 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
             '<span class="slot-plus">+</span><span class="slot-num">Foto ' + s.ordine + '</span>' +
           '</div>';
 
-      const didascaliaHtml = foto
-        ? '<input type="text" class="slot-didascalia" maxlength="180" placeholder="Didascalia…" value="' + escHtml(foto.didascalia) + '" data-azione="didascalia" data-foto="' + foto.id + '" style="' + stileTestoCss(foto.stile) + '">'
-        : '';
-
-      return '' +
-        '<div class="slot-wrap" style="left:' + xPct + '%;top:' + yPct + '%;width:' + wPct + '%;height:' + hPct + '%">' + fotoHtml + '</div>' +
-        '<div class="slot-caption-wrap" style="left:' + xPct + '%;top:' + (yPct + hPct) + '%;width:' + wPct + '%;height:' + capH + '%">' + didascaliaHtml + '</div>';
+      return '<div class="slot-wrap" style="left:' + xPct + '%;top:' + yPct + '%;width:' + wPct + '%;height:' + hPct + '%">' + fotoHtml + '</div>';
     }).join('');
   }
 
@@ -910,7 +993,7 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
           if (!res.success) { mostraErrore(res.error || 'Eliminazione non riuscita.'); return; }
           const pagina = paginaAttiva();
           if (pagina) pagina.testi = (pagina.testi || []).filter(function (t) { return t.id !== testoId; });
-          if (elementoTestoAttivo && elementoTestoAttivo.tipo === 'box' && elementoTestoAttivo.id === testoId) elementoTestoAttivo = null;
+          if (elementoTestoAttivo === testoId) elementoTestoAttivo = null;
           renderCanvas();
         });
     });
@@ -1106,17 +1189,13 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
       if (tipo === 'seleziona-pagina') { paginaAttivaId = Number(azioneBtn.dataset.pagina); renderSidebar(); renderCanvas(); return; }
       if (tipo === 'scegli-layout') { paginaAttivaId = Number(azioneBtn.dataset.pagina); apriSelettoreTemplate('assegna'); return; }
       if (tipo === 'strumenti-foto') { fotoStrumentiAttiva = Number(azioneBtn.dataset.foto); apriStrumenti('foto'); return; }
-      if (tipo === 'strumenti-testo') { elementoTestoAttivo = { tipo: 'box', id: Number(azioneBtn.dataset.testo) }; apriStrumenti('testo'); return; }
+      if (tipo === 'auto-correggi') { toggleAutoCorrezione(Number(azioneBtn.dataset.foto)); return; }
+      if (tipo === 'strumenti-testo') { elementoTestoAttivo = Number(azioneBtn.dataset.testo); apriStrumenti('testo'); return; }
       if (tipo === 'elimina-testo') { eliminaBoxTesto(Number(azioneBtn.dataset.testo)); return; }
       return;
     }
     const slotVuoto = e.target.closest('.slot-foto.vuoto');
     if (slotVuoto) { slotFileTarget = Number(slotVuoto.dataset.slot); inputFileEl.click(); }
-  });
-
-  canvasEl.addEventListener('change', function (e) {
-    if (!e.target.matches('.slot-didascalia')) return;
-    aggiornaDidascalia(Number(e.target.dataset.foto), e.target.value);
   });
 
   // Il testo del box (contenteditable) si salva da solo mentre si scrive — vedi pianificaSalvaContenutoTesto().
@@ -1129,17 +1208,12 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     pianificaSalvaContenutoTesto(testoId, contenuto);
   });
 
-  // Cliccare in una didascalia o in un box marca QUELLO come l'elemento che
-  // "Strumenti" → Testo formatta — non è una selezione persistente, vive
-  // solo finché non si clicca altrove o si cambia pagina.
+  // Cliccare in un box marca QUELLO come l'elemento che "Strumenti" → Testo
+  // formatta — non è una selezione persistente, vive solo finché non si
+  // clicca altrove o si cambia pagina.
   canvasEl.addEventListener('focusin', function (e) {
-    if (e.target.matches('.slot-didascalia')) {
-      elementoTestoAttivo = { tipo: 'didascalia', id: Number(e.target.dataset.foto) };
-      if (!modaleStrumentiEl.hidden) renderPannelloStrumenti();
-      return;
-    }
     if (e.target.matches('.testo-box-contenuto')) {
-      elementoTestoAttivo = { tipo: 'box', id: Number(e.target.dataset.testo) };
+      elementoTestoAttivo = Number(e.target.dataset.testo);
       if (!modaleStrumentiEl.hidden) renderPannelloStrumenti();
     }
   });
@@ -1165,18 +1239,6 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
         renderSidebar(); renderCanvas();
       })
       .catch(function () { mostraErrore('Caricamento non riuscito: riprova.'); });
-  }
-
-  function aggiornaDidascalia(fotoId, testo) {
-    const foto = trovaFotoPerId(fotoId);
-    if (foto) foto.didascalia = testo; // altrimenti un giro di renderCanvas() (es. cambio pagina e ritorno) la riporterebbe al valore vecchio
-    fetch('/admin/api/videobook/foto/' + fotoId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ didascalia: testo }),
-    }).then(function (r) { return r.json(); }).then(function (res) {
-      if (!res.success) mostraErrore(res.error || 'Didascalia non salvata.');
-    });
   }
 
   function eliminaFoto(fotoId) {
@@ -1229,15 +1291,16 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
   });
 
   /**
-   * L'anteprima del layout nel selettore: disegnata dagli stessi `slots` (in
-   * coordinate relative) usati per la pagina vera, con l'aspect-ratio del
-   * formato scelto per QUESTO libro — non l'anteprima statica 4:3 salvata
-   * una volta sola sul template (t.thumbnail, generata da
-   * GeneratoreAnteprimaTemplate), che apparirebbe distorta o fuori
-   * proporzione su un formato quadrato o molto panoramico.
+   * L'anteprima del layout nel selettore: disegnata risolvendo lo stesso
+   * `slots` (l'albero, vedi slotsRisolti()) usato per la pagina vera, con
+   * l'aspect-ratio e il gap reale del formato scelto per QUESTO libro — non
+   * l'anteprima statica 4:3 salvata una volta sola sul template (t.thumbnail,
+   * generata da GeneratoreAnteprimaTemplate su un formato di default), che
+   * apparirebbe distorta o fuori proporzione su un formato quadrato o molto
+   * panoramico.
    */
   function templateAnteprimaHtml(t) {
-    const riquadri = (t.slots || []).slice().sort(function (a, b) { return a.ordine - b.ordine; }).map(function (s) {
+    const riquadri = slotsRisolti(t).slice().sort(function (a, b) { return a.ordine - b.ordine; }).map(function (s) {
       return '<span style="position:absolute;left:' + (s.x * 100) + '%;top:' + (s.y * 100) + '%;width:' + (s.w * 100) + '%;height:' + (s.h * 100) + '%"></span>';
     }).join('');
     return '<div class="template-anteprima" style="' + stileAspectRatio() + '">' + riquadri + '</div>';
@@ -1354,11 +1417,55 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
 
   renderFormatoCorrente();
 
+  // ---- Stato "in produzione" ----------------------------------------------
+  //
+  // Azione manuale dello staff (EditorController::mandaInProduzione/
+  // riportaInBozza): da qui in poi ogni endpoint mutante rifiuta con 422
+  // (assicuraModificabile lato server) — qui si comunica lo stato e si
+  // rende inerte la superficie di modifica (classe `produzione-bloccata` sul
+  // body, vedi CSS) prima ancora che l'utente ci provi.
+
+  function renderStatoProduzione() {
+    document.body.classList.toggle('produzione-bloccata', libro.completato);
+    // pointer-events:none (CSS) basta per mouse/touch, ma non per la
+    // tastiera: disabled sui bottoni "principali" chiude anche quella via.
+    document.getElementById('btn-nuova-pagina').disabled = libro.completato;
+    btnFormatoEl.disabled = libro.completato;
+
+    produzioneStatoEl.hidden = ! libro.completato;
+    if (libro.completato) produzioneStatoEl.innerHTML = '<span class="video-badge errore">🔒 In produzione</span>';
+
+    btnProduzioneEl.hidden = ! isStaff;
+    if (isStaff) {
+      btnProduzioneEl.textContent = libro.completato ? 'Riporta in bozza' : 'Manda in produzione';
+    }
+  }
+
+  btnProduzioneEl.addEventListener('click', function () {
+    const messaggio = libro.completato
+      ? 'Riportare il libro in bozza per poterlo correggere?'
+      : 'Mandare il libro in produzione? Nessuno potrà più modificarlo finché non lo riporti in bozza.';
+
+    conferma(messaggio, libro.completato ? 'Riporta in bozza' : 'Manda in produzione', 'var(--gold)').then(function (ok) {
+      if (!ok) return;
+      fetch('/admin/api/videobook/' + libro.id + '/produzione', { method: libro.completato ? 'DELETE' : 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (!res.success) { mostraErrore(res.error || 'Operazione non riuscita.'); return; }
+          libro.completato = res.stato === 'completato';
+          libro.stato = res.stato;
+          renderStatoProduzione();
+        });
+    });
+  });
+
+  renderStatoProduzione();
+
   // ---- Pannello Strumenti: formattazione testo, box liberi, foto ---------
   //
-  // Tre schede sullo stesso modale: "Testo" formatta l'elemento di testo
-  // attivo (`elementoTestoAttivo`, impostato cliccando in una didascalia o
-  // in un box), "Box di testo" crea/elenca i box liberi della pagina,
+  // Tre schede sullo stesso modale: "Testo" formatta il box di testo
+  // attivo (`elementoTestoAttivo`, impostato cliccando in un box), "Box di
+  // testo" crea/elenca i box liberi della pagina,
   // "Foto" regola/vira/incornicia la foto attiva (`fotoStrumentiAttiva`,
   // impostata dal bottone 🎨 sul riquadro). Ogni campo si salva da solo
   // (PUT .../stile) non appena cambia — niente bottone "salva" per il
@@ -1430,18 +1537,14 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     trascina.addEventListener('pointercancel', fine);
   })();
 
-  /** L'oggetto (foto o box) a cui si riferisce `elementoTestoAttivo`, o null. */
+  /** Il box a cui si riferisce `elementoTestoAttivo`, o null. */
   function elementoTestoOggetto() {
-    if (!elementoTestoAttivo) return null;
-    return elementoTestoAttivo.tipo === 'didascalia' ? trovaFotoPerId(elementoTestoAttivo.id) : trovaTesto(elementoTestoAttivo.id);
+    return elementoTestoAttivo != null ? trovaTesto(elementoTestoAttivo) : null;
   }
 
-  function elementoTestoDomEls(elemento) {
-    if (!elemento) return [];
-    const sel = elemento.tipo === 'didascalia'
-      ? '.slot-didascalia[data-foto="' + elemento.id + '"]'
-      : '.testo-box-contenuto[data-testo="' + elemento.id + '"]';
-    return Array.from(canvasEl.querySelectorAll(sel));
+  function elementoTestoDomEls(testoId) {
+    if (testoId == null) return [];
+    return Array.from(canvasEl.querySelectorAll('.testo-box-contenuto[data-testo="' + testoId + '"]'));
   }
 
   // Un solo debounce per (url, campo): così due campi cambiati in rapida
@@ -1462,21 +1565,18 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     }, 350);
   }
 
-  /** Cambia un campo dello stile dell'elemento di testo attivo: DOM subito, salvataggio con un piccolo ritardo. */
+  /** Cambia un campo dello stile del box di testo attivo: DOM subito, salvataggio con un piccolo ritardo. */
   function impostaStileTesto(campo, valore) {
-    const elemento = elementoTestoAttivo;
+    const testoId = elementoTestoAttivo;
     const oggetto = elementoTestoOggetto();
-    if (!elemento || !oggetto) return;
+    if (testoId == null || !oggetto) return;
     oggetto.stile[campo] = valore;
-    elementoTestoDomEls(elemento).forEach(function (el) { el.setAttribute('style', stileTestoCss(oggetto.stile)); });
-    if (elemento.tipo === 'box' && (campo === 'sfondo_colore' || campo === 'sfondo_opacita')) {
-      const box = canvasEl.querySelector('.testo-box[data-testo="' + elemento.id + '"]');
+    elementoTestoDomEls(testoId).forEach(function (el) { el.setAttribute('style', stileTestoCss(oggetto.stile)); });
+    if (campo === 'sfondo_colore' || campo === 'sfondo_opacita') {
+      const box = canvasEl.querySelector('.testo-box[data-testo="' + testoId + '"]');
       if (box) box.style.background = hexToRgba(oggetto.stile.sfondo_colore, oggetto.stile.sfondo_opacita);
     }
-    const url = elemento.tipo === 'didascalia'
-      ? '/admin/api/videobook/foto/' + elemento.id + '/stile'
-      : '/admin/api/videobook/testi/' + elemento.id + '/stile';
-    persistiStile(url, campo, valore);
+    persistiStile('/admin/api/videobook/testi/' + testoId + '/stile', campo, valore);
   }
 
   /** Cambia un campo dello stile della foto attiva (Strumenti → Foto): stessa logica di impostaStileTesto(). */
@@ -1486,6 +1586,8 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     foto.stile[campo] = valore;
     canvasEl.querySelectorAll('.slot-foto[data-foto="' + foto.id + '"]').forEach(function (slotEl) {
       slotEl.setAttribute('style', bordoFotoCss(foto.stile));
+      const bottoneAuto = slotEl.querySelector('.slot-auto');
+      if (bottoneAuto) bottoneAuto.classList.toggle('attivo', !!foto.stile.auto_corretto);
       const img = slotEl.querySelector('.slot-foto-img');
       if (!img) return;
       img.style.filter = filtroFotoCss(foto.stile);
@@ -1497,11 +1599,45 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     persistiStile('/admin/api/videobook/foto/' + foto.id + '/stile', campo, valore);
   }
 
+  /**
+   * Lo switch "✨" sotto la foto: accende chiede al server di analizzare il
+   * file e suggerire luminosita/contrasto/saturazione (Servizi\
+   * AutoCorrezioneFoto, serve il file vero, non si calcola nel browser);
+   * spegne riporta le stesse tre chiavi ai default, un solo PUT — stessa
+   * idea del bottone "Ripristina" del pannello Foto, ma senza aprirlo.
+   */
+  function toggleAutoCorrezione(fotoId) {
+    const foto = trovaFotoPerId(fotoId);
+    if (!foto) return;
+
+    if (foto.stile.auto_corretto) {
+      const ripristino = { luminosita: strumenti.default.luminosita, contrasto: strumenti.default.contrasto, saturazione: strumenti.default.saturazione, auto_corretto: false };
+      Object.assign(foto.stile, ripristino);
+      renderCanvas();
+      fetch('/admin/api/videobook/foto/' + fotoId + '/stile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ripristino),
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (!res.success) mostraErrore(res.error || 'Modifica non salvata.');
+      });
+      return;
+    }
+
+    fetch('/admin/api/videobook/foto/' + fotoId + '/auto-correzione', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res.success) { mostraErrore(res.error || 'Correzione automatica non riuscita.'); return; }
+        foto.stile = res.foto.stile;
+        renderCanvas();
+      });
+  }
+
   function renderPannelloTesto() {
-    const elemento = elementoTestoAttivo;
+    const testoId = elementoTestoAttivo;
     const oggetto = elementoTestoOggetto();
-    if (!elemento || !oggetto) {
-      strumentiPannelloEl.innerHTML = '<p class="strumenti-hint">Seleziona una didascalia o un box di testo nella pagina per formattarlo.</p>';
+    if (testoId == null || !oggetto) {
+      strumentiPannelloEl.innerHTML = '<p class="strumenti-hint">Seleziona un box di testo nella pagina per formattarlo.</p>';
       return;
     }
     const st = oggetto.stile;
@@ -1528,14 +1664,12 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
         '</div>' +
         '<input type="color" class="strumenti-colore" value="' + st.colore + '" data-campo-colore="colore" title="Colore testo">' +
       '</div></div>' +
-      (elemento.tipo === 'box'
-        ? '<hr class="strumenti-separatore">' +
-          '<div class="strumenti-campo"><label>Sfondo del box (trasparenza)</label><div class="strumenti-riga">' +
-            '<input type="color" class="strumenti-colore" value="' + st.sfondo_colore + '" data-campo-colore="sfondo_colore" title="Colore sfondo">' +
-            '<div class="strumenti-slider"><input type="range" min="0" max="100" step="5" value="' + st.sfondo_opacita + '" data-campo-slider="sfondo_opacita"><output>' + st.sfondo_opacita + '%</output></div>' +
-          '</div></div>' +
-          '<button type="button" class="strumenti-elimina-box" data-elimina-box="' + elemento.id + '">🗑 Elimina questo box</button>'
-        : '');
+      '<hr class="strumenti-separatore">' +
+      '<div class="strumenti-campo"><label>Sfondo del box (trasparenza)</label><div class="strumenti-riga">' +
+        '<input type="color" class="strumenti-colore" value="' + st.sfondo_colore + '" data-campo-colore="sfondo_colore" title="Colore sfondo">' +
+        '<div class="strumenti-slider"><input type="range" min="0" max="100" step="5" value="' + st.sfondo_opacita + '" data-campo-slider="sfondo_opacita"><output>' + st.sfondo_opacita + '%</output></div>' +
+      '</div></div>' +
+      '<button type="button" class="strumenti-elimina-box" data-elimina-box="' + testoId + '">🗑 Elimina questo box</button>';
   }
 
   function renderPannelloBox() {
@@ -1596,7 +1730,7 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
         if (!res.success) { mostraErrore(res.error || 'Impossibile aggiungere il box.'); return; }
         pagina.testi = pagina.testi || [];
         pagina.testi.push(res.testo);
-        elementoTestoAttivo = { tipo: 'box', id: res.testo.id };
+        elementoTestoAttivo = res.testo.id;
         renderCanvas();
         cambiaSchedaStrumenti('testo');
       });
@@ -1629,7 +1763,19 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
       '<div class="strumenti-campo"><label>Bordino</label><div class="strumenti-preset">' +
         bottonePreset('bordo', null, 'Nessuno') +
         strumenti.bordi.map(function (b) { return bottonePreset('bordo', b, BORDO_ETICHETTE[b] || b); }).join('') +
-      '</div></div>';
+      '</div></div>' +
+      '<hr class="strumenti-separatore">' +
+      '<button type="button" class="strumenti-ripristina" data-ripristina-foto="' + foto.id + '">↺ Ripristina regolazioni originali</button>';
+  }
+
+  /** Riporta luminosità/contrasto/saturazione/viraggio/bordino ai default — non tocca il file caricato, mai toccato in primo luogo. */
+  function ripristinaRegolazioniFoto(fotoId) {
+    const foto = trovaFotoPerId(fotoId);
+    if (!foto) return;
+    ['luminosita', 'contrasto', 'saturazione', 'viraggio', 'bordo', 'auto_corretto'].forEach(function (campo) {
+      if (foto.stile[campo] !== strumenti.default[campo]) impostaStileFoto(campo, strumenti.default[campo]);
+    });
+    renderPannelloFoto();
   }
 
   strumentiPannelloEl.addEventListener('click', function (e) {
@@ -1652,10 +1798,13 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     const viraggio = e.target.closest('[data-viraggio]');
     if (viraggio) { impostaStileFoto('viraggio', viraggio.dataset.viraggio || null); renderPannelloFoto(); return; }
 
+    const ripristinaFoto = e.target.closest('[data-ripristina-foto]');
+    if (ripristinaFoto) { ripristinaRegolazioniFoto(Number(ripristinaFoto.dataset.ripristinaFoto)); return; }
+
     if (e.target.closest('#btn-aggiungi-box')) { aggiungiBoxTesto(); return; }
 
     const selBox = e.target.closest('[data-seleziona-box]');
-    if (selBox) { elementoTestoAttivo = { tipo: 'box', id: Number(selBox.dataset.selezionaBox) }; cambiaSchedaStrumenti('testo'); return; }
+    if (selBox) { elementoTestoAttivo = Number(selBox.dataset.selezionaBox); cambiaSchedaStrumenti('testo'); return; }
 
     const delBox = e.target.closest('[data-elimina-box]');
     if (delBox) { eliminaBoxTesto(Number(delBox.dataset.eliminaBox)); modaleStrumentiEl.hidden = true; }
@@ -1668,7 +1817,18 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
       const valore = Number(el.value);
       const output = el.parentElement.querySelector('output');
       if (output) output.textContent = valore + '%';
-      if (strumentiTabAttiva === 'foto') impostaStileFoto(campo, valore); else impostaStileTesto(campo, valore);
+      if (strumentiTabAttiva === 'foto') {
+        impostaStileFoto(campo, valore);
+        // Toccare uno slider a mano dopo ✨ rende il risultato un mix, non
+        // più puro auto: il pallino si spegne per dirlo onestamente (vedi
+        // toggleAutoCorrezione()) — i tre valori restano quelli scelti.
+        const fotoAttiva = trovaFotoPerId(fotoStrumentiAttiva);
+        if (['luminosita', 'contrasto', 'saturazione'].indexOf(campo) !== -1 && fotoAttiva && fotoAttiva.stile.auto_corretto) {
+          impostaStileFoto('auto_corretto', false);
+        }
+      } else {
+        impostaStileTesto(campo, valore);
+      }
       return;
     }
     if (el.matches('[data-campo-colore]')) impostaStileTesto(el.dataset.campoColore, el.value);
@@ -1868,8 +2028,8 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
   }
 
   /**
-   * Disegna un testo (didascalia o box) dentro un rettangolo con lo stesso
-   * stile scelto nel pannello Strumenti — font/dimensione/allineamento/
+   * Disegna il testo di un box dentro un rettangolo con lo stesso stile
+   * scelto nel pannello Strumenti — font/dimensione/allineamento/
    * grassetto/corsivo/sottolineato/colore, stessa combinazione di
    * stileTestoCss() ma per canvas 2D (niente text-decoration: il
    * sottolineato è una riga disegnata a mano).
@@ -1898,7 +2058,7 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     });
   }
 
-  /** Il canvas di UNA pagina, alla risoluzione di stampa: foto (cover) + didascalia, stessa geometria dei riquadri a schermo. */
+  /** Il canvas di UNA pagina, alla risoluzione di stampa: foto (cover), stessa geometria dei riquadri a schermo. */
   async function disegnaPaginaCanvas(pagina, larghezzaMm, altezzaMm) {
     const wPx = Math.round(larghezzaMm / 25.4 * DPI_STAMPA);
     const hPx = Math.round(altezzaMm / 25.4 * DPI_STAMPA);
@@ -1913,20 +2073,14 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     const fotoPerSlot = {};
     pagina.foto.forEach(function (f) { fotoPerSlot[f.slot] = f; });
 
-    for (const s of pagina.template.slots) {
+    const slots = slotsRisolti(pagina.template);
+    for (const s of slots) {
       const foto = fotoPerSlot[s.ordine];
       if (!foto) continue;
 
       const dx = s.x * wPx, dy = s.y * hPx, dw = s.w * wPx, dh = s.h * hPx;
       const img = await caricaImmagine(foto.url);
       disegnaCover(ctx, img, dx, dy, dw, dh, foto);
-
-      if (foto.didascalia) {
-        const capH = Math.max(0, Math.min(0.08, 0.99 - (s.y + s.h))) * hPx;
-        if (capH > wPx * 0.01) {
-          disegnaTestoStile(ctx, foto.didascalia, dx, dy + dh + capH * 0.15, dw, capH, foto.stile || {}, wPx, false);
-        }
-      }
     }
 
     // Box di testo (pannello Strumenti → Box di testo): sfondo semi-
@@ -1941,7 +2095,7 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
       let clip = null;
 
       if (t.slot != null && pagina.template) {
-        const s = pagina.template.slots.find(function (sl) { return sl.ordine === t.slot; });
+        const s = slots.find(function (sl) { return sl.ordine === t.slot; });
         if (s) {
           relX = s.x + t.x * s.w;
           relY = s.y + t.y * s.h;
@@ -1979,7 +2133,7 @@ body.in-iframe a.nav-btn.btn-ghost{display:none}
     renderPdfStato();
 
     try {
-      await document.fonts.ready; // la didascalia usa il font serif già caricato dalla pagina
+      await document.fonts.ready; // i box di testo usano il font già caricato dalla pagina
       const { w, h } = formatoLibroMm();
 
       const immagini = [];

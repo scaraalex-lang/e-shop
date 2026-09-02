@@ -3,6 +3,7 @@
 namespace Modules\VideoBook\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -12,13 +13,14 @@ use Modules\VideoBook\Models\Libro;
 use Modules\VideoBook\Models\Pagina;
 use Modules\VideoBook\Models\PaginaTemplate;
 use Modules\VideoBook\Models\TestoPagina;
+use Modules\VideoBook\Servizi\AutoCorrezioneFoto;
 use Modules\VideoBook\Support\StileTesto;
 
 /**
  * Le pagine di un libro e i due tipi di contenuto che può ospitare: le foto
  * nei riquadri del template (aggiungere/togliere una pagina, cambiare il
- * suo layout, caricare/sostituire/togliere una foto, la sua didascalia) e i
- * box di testo liberi (TestoPagina) — più lo "stile" condiviso da entrambi
+ * suo layout, caricare/sostituire/togliere una foto) e i box di testo
+ * liberi (TestoPagina) — più lo "stile" condiviso da entrambi
  * (font/bordino/regolazione/viraggio del pannello Strumenti, vedi
  * StileTesto).
  *
@@ -34,6 +36,9 @@ class PaginaApiController extends Controller
     public function aggiungiPagina(Request $request, Libro $libro)
     {
         $this->assicuraProprio($request, $libro);
+        if ($blocco = $this->assicuraModificabile($libro)) {
+            return $blocco;
+        }
 
         $validated = $request->validate([
             'template_id' => ['required', 'exists:videobook_page_templates,id'],
@@ -62,6 +67,9 @@ class PaginaApiController extends Controller
     public function inizializzaPagine(Request $request, Libro $libro)
     {
         $this->assicuraProprio($request, $libro);
+        if ($blocco = $this->assicuraModificabile($libro)) {
+            return $blocco;
+        }
 
         if ($libro->pagine()->exists()) {
             return response()->json(['error' => 'Il libro ha già delle pagine.'], 422);
@@ -88,6 +96,9 @@ class PaginaApiController extends Controller
     public function cambiaTemplate(Request $request, Pagina $pagina)
     {
         $this->assicuraProprioPagina($request, $pagina);
+        if ($blocco = $this->bloccoSePaginaCompletata($pagina)) {
+            return $blocco;
+        }
 
         $validated = $request->validate([
             'template_id' => ['required', 'exists:videobook_page_templates,id'],
@@ -107,6 +118,9 @@ class PaginaApiController extends Controller
     public function riordinaPagine(Request $request, Libro $libro)
     {
         $this->assicuraProprio($request, $libro);
+        if ($blocco = $this->assicuraModificabile($libro)) {
+            return $blocco;
+        }
 
         $validated = $request->validate([
             'ordine'   => ['required', 'array', 'min:1'],
@@ -123,6 +137,9 @@ class PaginaApiController extends Controller
     public function eliminaPagina(Request $request, Pagina $pagina)
     {
         $this->assicuraProprioPagina($request, $pagina);
+        if ($blocco = $this->bloccoSePaginaCompletata($pagina)) {
+            return $blocco;
+        }
 
         $pagina->foto->each(fn (FotoPagina $f) => Storage::disk('public')->delete($f->path));
         $pagina->delete();
@@ -138,7 +155,10 @@ class PaginaApiController extends Controller
     public function caricaFoto(Request $request, Pagina $pagina)
     {
         $this->assicuraProprioPagina($request, $pagina);
-        $pagina->loadMissing('template');
+        $pagina->loadMissing('template', 'libro');
+        if ($blocco = $this->assicuraModificabile($pagina->libro)) {
+            return $blocco;
+        }
 
         $validated = $request->validate([
             'slot'  => ['required', 'integer', 'min:1'],
@@ -148,11 +168,14 @@ class PaginaApiController extends Controller
             'photo.max'   => 'L\'immagine supera i 12 MB: ridimensionala e riprova.',
         ]);
 
-        if (! $pagina->template?->slot((int) $validated['slot'])) {
+        if (! $pagina->template?->hasSlot((int) $validated['slot'])) {
             return response()->json(['error' => 'Questo riquadro non esiste nel layout della pagina.'], 422);
         }
 
-        $path = $request->file('photo')->store(self::DISK_DIR, 'public');
+        // Formato originale (store() non ricodifica mai, tiene solo
+        // l'estensione), ma in una sottocartella per ordine: le foto di un
+        // libro restano raggruppate, non tutte piatte in un solo mucchio.
+        $path = $request->file('photo')->store($this->cartellaFoto($pagina), 'public');
 
         $esistente = $pagina->fotoNelloSlot((int) $validated['slot']);
         if ($esistente) {
@@ -172,9 +195,11 @@ class PaginaApiController extends Controller
     public function aggiornaFoto(Request $request, FotoPagina $foto)
     {
         $this->assicuraProprioFoto($request, $foto);
+        if ($blocco = $this->bloccoSeFotoCompletata($foto)) {
+            return $blocco;
+        }
 
         $validated = $request->validate([
-            'didascalia'     => ['nullable', 'string', 'max:180'],
             'durata_secondi' => ['nullable', 'integer', 'min:1', 'max:255'],
             // Come la foto è inquadrata nel riquadro: drag per posizionare,
             // maniglia per zoomare (editor.blade.php). 0.5/4.0 = da
@@ -193,25 +218,52 @@ class PaginaApiController extends Controller
     public function eliminaFoto(Request $request, FotoPagina $foto)
     {
         $this->assicuraProprioFoto($request, $foto);
+        if ($blocco = $this->bloccoSeFotoCompletata($foto)) {
+            return $blocco;
+        }
         $this->eliminaFileEDati($foto);
 
         return response()->json(['success' => true]);
     }
 
     /**
-     * Formattazione della foto/didascalia dal pannello Strumenti: font,
-     * bordino, regolazione (luminosità/contrasto/saturazione), viraggio —
-     * tutto tranne ritaglio/posizione, che restano su aggiornaFoto(). Solo
-     * le chiavi inviate cambiano, le altre del `stile` esistente restano
-     * (merge, non sostituzione: il pannello manda un campo alla volta).
+     * Formattazione della foto dal pannello Strumenti: bordino, regolazione
+     * (luminosità/contrasto/saturazione), viraggio — tutto tranne
+     * ritaglio/posizione, che restano su aggiornaFoto(). Solo le chiavi
+     * inviate cambiano, le altre del `stile` esistente restano (merge, non
+     * sostituzione: il pannello manda un campo alla volta).
      */
     public function aggiornaStileFoto(Request $request, FotoPagina $foto)
     {
         $this->assicuraProprioFoto($request, $foto);
+        if ($blocco = $this->bloccoSeFotoCompletata($foto)) {
+            return $blocco;
+        }
 
         $validated = $request->validate($this->regoleStile());
 
         $foto->update(['stile' => array_merge($foto->stile ?? [], $validated)]);
+
+        return response()->json(['success' => true, 'foto' => $this->fotoPerFrontend($foto)]);
+    }
+
+    /**
+     * Lo switch "✨" sotto la foto (editor.blade.php): analizza il file su
+     * disco e applica luminosita/contrasto/saturazione suggeriti come farebbe
+     * a mano aggiornaStileFoto() — stesso merge, stesso `stile` non
+     * distruttivo, sempre ripristinabile. Vedi Servizi\AutoCorrezioneFoto per
+     * l'algoritmo (classico, non un modello: perché nel commento lì).
+     */
+    public function autoCorreggiFoto(Request $request, FotoPagina $foto): JsonResponse
+    {
+        $this->assicuraProprioFoto($request, $foto);
+        if ($blocco = $this->bloccoSeFotoCompletata($foto)) {
+            return $blocco;
+        }
+
+        $suggerimento = (new AutoCorrezioneFoto())->analizza(Storage::disk('public')->path($foto->path));
+
+        $foto->update(['stile' => array_merge($foto->stile ?? [], $suggerimento, ['auto_corretto' => true])]);
 
         return response()->json(['success' => true, 'foto' => $this->fotoPerFrontend($foto)]);
     }
@@ -229,6 +281,9 @@ class PaginaApiController extends Controller
     public function aggiungiTesto(Request $request, Pagina $pagina)
     {
         $this->assicuraProprioPagina($request, $pagina);
+        if ($blocco = $this->bloccoSePaginaCompletata($pagina)) {
+            return $blocco;
+        }
 
         $validated = $request->validate([
             'slot' => ['sometimes', 'nullable', 'integer', 'min:1'],
@@ -237,7 +292,7 @@ class PaginaApiController extends Controller
         $agganciato = false;
         if (! empty($validated['slot'])) {
             $pagina->loadMissing('template');
-            if (! $pagina->template?->slot((int) $validated['slot'])) {
+            if (! $pagina->template?->hasSlot((int) $validated['slot'])) {
                 return response()->json(['error' => 'Questo riquadro non esiste nel layout della pagina.'], 422);
             }
             $agganciato = true;
@@ -260,6 +315,9 @@ class PaginaApiController extends Controller
     public function aggiornaTesto(Request $request, TestoPagina $testo)
     {
         $this->assicuraProprioTesto($request, $testo);
+        if ($blocco = $this->bloccoSeTestoCompletato($testo)) {
+            return $blocco;
+        }
 
         $validated = $request->validate([
             'x'     => ['sometimes', 'numeric', 'min:0', 'max:1'],
@@ -320,6 +378,9 @@ class PaginaApiController extends Controller
     public function aggiornaStileTesto(Request $request, TestoPagina $testo)
     {
         $this->assicuraProprioTesto($request, $testo);
+        if ($blocco = $this->bloccoSeTestoCompletato($testo)) {
+            return $blocco;
+        }
 
         $validated = $request->validate($this->regoleStile());
 
@@ -331,9 +392,34 @@ class PaginaApiController extends Controller
     public function eliminaTesto(Request $request, TestoPagina $testo)
     {
         $this->assicuraProprioTesto($request, $testo);
+        if ($blocco = $this->bloccoSeTestoCompletato($testo)) {
+            return $blocco;
+        }
         $testo->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * L'etichetta libera della card in sidebar ("Chiesa", "Ricevimento"…):
+     * senza, la card mostra il nome del template come placeholder — vedi
+     * paginaPerFrontend() e la migration di `titolo`.
+     */
+    public function aggiornaTitoloPagina(Request $request, Pagina $pagina)
+    {
+        $this->assicuraProprioPagina($request, $pagina);
+        if ($blocco = $this->bloccoSePaginaCompletata($pagina)) {
+            return $blocco;
+        }
+
+        $validated = $request->validate([
+            'titolo' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        // Stringa vuota = "nessun titolo personalizzato", non un titolo vuoto: torna al placeholder del template.
+        $pagina->update(['titolo' => filled($validated['titolo'] ?? null) ? $validated['titolo'] : null]);
+
+        return response()->json(['success' => true, 'pagina' => $this->paginaPerFrontend($pagina)]);
     }
 
     // ---- Helper ------------------------------------------------------
@@ -344,11 +430,18 @@ class PaginaApiController extends Controller
         $foto->delete();
     }
 
+    /** Sottocartella di DISK_DIR per questo libro: raggruppata per ordine, o per libro se l'ordine non è (ancora) agganciato. */
+    private function cartellaFoto(Pagina $pagina): string
+    {
+        return self::DISK_DIR.'/'.($pagina->libro?->ordine_id ?? 'libro-'.$pagina->videobook_progetto_id);
+    }
+
     private function paginaPerFrontend(Pagina $pagina): array
     {
         return [
             'id'       => $pagina->id,
             'ordine'   => $pagina->ordine,
+            'titolo'   => $pagina->titolo,
             'template' => $pagina->template ? [
                 'id'          => $pagina->template->id,
                 'name'        => $pagina->template->nome,
@@ -369,7 +462,6 @@ class PaginaApiController extends Controller
             'scala'          => $foto->scala,
             'pos_x'          => $foto->pos_x,
             'pos_y'          => $foto->pos_y,
-            'didascalia'     => $foto->didascalia,
             'durata_secondi' => $foto->durata_secondi,
             'stile'          => $foto->stileEffettivo(),
         ];
@@ -409,6 +501,7 @@ class PaginaApiController extends Controller
             'contrasto'      => ['sometimes', 'integer', 'min:50', 'max:150'],
             'saturazione'    => ['sometimes', 'integer', 'min:0', 'max:200'],
             'viraggio'       => ['sometimes', 'nullable', 'string', Rule::in(StileTesto::viraggiDisponibili())],
+            'auto_corretto'  => ['sometimes', 'boolean'],
             'sfondo_colore'  => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'sfondo_opacita' => ['sometimes', 'integer', 'min:0', 'max:100'],
         ];
@@ -427,5 +520,24 @@ class PaginaApiController extends Controller
     private function assicuraProprioTesto(Request $request, TestoPagina $testo): void
     {
         $this->assicuraProprioPagina($request, $testo->pagina);
+    }
+
+    // Stesso trio di sopra, ma per il blocco "in produzione" (assicuraModificabile
+    // in ControllaAccessoLibro): risponde 422 invece di lanciare, va restituito
+    // dal chiamante (`if ($blocco = ...) return $blocco;`), non solo invocato.
+
+    private function bloccoSePaginaCompletata(Pagina $pagina): ?JsonResponse
+    {
+        return $this->assicuraModificabile($pagina->libro);
+    }
+
+    private function bloccoSeFotoCompletata(FotoPagina $foto): ?JsonResponse
+    {
+        return $this->bloccoSePaginaCompletata($foto->pagina);
+    }
+
+    private function bloccoSeTestoCompletato(TestoPagina $testo): ?JsonResponse
+    {
+        return $this->bloccoSePaginaCompletata($testo->pagina);
     }
 }

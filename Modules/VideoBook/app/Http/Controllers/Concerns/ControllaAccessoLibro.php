@@ -2,14 +2,15 @@
 
 namespace Modules\VideoBook\Http\Controllers\Concerns;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\Commerce\Enums\StatoPagamento;
 use Modules\Commerce\Models\Ordine;
 use Modules\VideoBook\Models\Libro;
 
 /**
- * Chi può aprire/lavorare un libro e quando i suoi file sono scaricabili —
- * due domande diverse, non una sola.
+ * Chi può aprire/lavorare un libro, quando i suoi file sono scaricabili e
+ * quando è ancora modificabile — tre domande diverse, non una sola.
  *
  * "Posso lavorarci" (aprire l'editor, caricare foto, generare
  * un'anteprima) vale già dal momento in cui l'ordine esiste: il video book
@@ -17,8 +18,10 @@ use Modules\VideoBook\Models\Libro;
  * è un percorso a sé — vedi CLAUDE.md, flusso foto. "Posso scaricare il
  * risultato" vale solo a pagamento avvenuto per il privato; l'agenzia non
  * ha mai questo secondo gate (fattura posticipata, fase 1 export dati).
+ * "Posso modificarlo" vale sempre finché lo staff non lo manda in
+ * produzione — vedi assicuraModificabile().
  *
- * Prima di questo trait i due criteri erano confusi in uno solo
+ * Prima di questo trait i primi due criteri erano confusi in uno solo
  * (`videoBookPagato`), duplicato uguale in quattro controller diversi
  * (Editor, PaginaApi, Video, Pdf): bloccava l'editor stesso finché l'ordine
  * non risultava pagato, impedendo la sola cosa che invece deve restare
@@ -55,6 +58,29 @@ trait ControllaAccessoLibro
 
         $ordine = $this->ordineDelLibro($libro);
         abort_unless($ordine && $ordine->diChi($user) && $this->contieneVideoBook($ordine), 404);
+    }
+
+    /**
+     * "Posso modificarlo" è una terza domanda, diversa dalle prime due: un
+     * libro "in produzione" (Libro::completato(), acceso a mano dallo staff
+     * con EditorController::mandaInProduzione) non si tocca più — nemmeno lo
+     * staff, che per correggerlo deve prima riportarlo in bozza
+     * (EditorController::riportaInBozza) — finché non viene sbloccato.
+     * Risposta JSON e non abort(): a differenza di un 403/404 di autorizzazione
+     * (un caso anomalo, quasi mai incontrato da un utente in buona fede),
+     * questo è uno stato normale che l'utente può incontrare lavorando, e il
+     * JS lo mostra con mostraErrore(res.error) come ogni altro errore di
+     * validazione — non una pagina d'errore.
+     */
+    private function assicuraModificabile(Libro $libro): ?JsonResponse
+    {
+        if (! $libro->completato()) {
+            return null;
+        }
+
+        return response()->json([
+            'error' => 'Il libro è in produzione: le modifiche sono bloccate. Riportalo in bozza per correggerlo.',
+        ], 422);
     }
 
     /** I file (video, PDF) sono scaricabili: staff/agenzia sempre, il privato solo a ordine pagato. */

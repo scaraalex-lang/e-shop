@@ -4,9 +4,12 @@ namespace Modules\VideoBook\Support;
 
 /**
  * Default e chiavi ammesse per la colonna JSON `stile` di FotoPagina
- * (didascalia + bordino/regolazione/viraggio della foto) e TestoPagina (box
- * di testo liberi) — un solo posto per non disallineare le due tabelle e la
- * validazione in PaginaApiController.
+ * (bordino/regolazione/viraggio della foto) e TestoPagina (font/
+ * allineamento/sfondo del box di testo) — un solo posto per non
+ * disallineare le due tabelle e la validazione in PaginaApiController. Le
+ * chiavi "Testo" restano nella struttura condivisa anche se FotoPagina non
+ * ha più un testo da formattare (didascalia rimossa): semplicemente non
+ * vengono più scritte/lette per una foto.
  *
  * Solo le chiavi diverse dal default sono salvate nella colonna (vedi
  * PaginaApiController::aggiornaStileFoto/aggiornaStileTesto): `effettivo()`
@@ -19,7 +22,7 @@ class StileTesto
     public static function default(): array
     {
         return [
-            // Testo (didascalia o contenuto del box)
+            // Testo (contenuto del box; ignorati su FotoPagina)
             'font'          => 'Cormorant Garamond',
             'dimensione'    => 100,   // percentuale della dimensione base
             'allineamento'  => 'center',
@@ -33,6 +36,11 @@ class StileTesto
             'contrasto'     => 100,
             'saturazione'   => 100,
             'viraggio'      => null, // null | seppia | bn | vintage | freddo
+            // true se luminosita/contrasto/saturazione vengono dall'ultima
+            // Servizi\AutoCorrezioneFoto e non da uno slider mosso a mano —
+            // solo per lo switch "✨" sotto la foto (editor.blade.php), non
+            // cambia come i tre valori vengono applicati.
+            'auto_corretto' => false,
             // Box di testo (ignorati su FotoPagina)
             'sfondo_colore'  => '#1a1a2e',
             'sfondo_opacita' => 55,   // percentuale

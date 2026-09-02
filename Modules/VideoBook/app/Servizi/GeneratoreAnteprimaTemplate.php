@@ -4,6 +4,8 @@ namespace Modules\VideoBook\Servizi;
 
 use Illuminate\Support\Facades\Storage;
 use Modules\VideoBook\Models\PaginaTemplate;
+use Modules\VideoBook\Support\FormatiLibro;
+use Modules\VideoBook\Support\GrigliaPagina;
 
 /**
  * Anteprima SVG di un layout: i riquadri del template disegnati come
@@ -11,6 +13,12 @@ use Modules\VideoBook\Models\PaginaTemplate;
  * tutti non deve contenere l'immagine di nessuno in particolare (stesso
  * principio dei predefiniti di RicordinoTemplateSeeder, che salvano solo
  * segnaposto).
+ *
+ * `slots` è un albero (vedi GrigliaPagina), non più rettangoli già pronti:
+ * qui va risolto per un formato — quello di default (FormatiLibro::default())
+ * visto che questa card non è legata a nessun libro/formato reale, a
+ * differenza dell'anteprima live nel selettore (editor.blade.php,
+ * templateAnteprimaHtml()) che usa il formato vero scelto per quel libro.
  *
  * SVG e non un raster: per un disegno di soli rettangoli resta nitido a
  * qualunque dimensione mostrata nella card, pesa pochi byte, ed è
@@ -44,7 +52,10 @@ class GeneratoreAnteprimaTemplate
         $panna = self::PANNA;
         $oroScuro = self::ORO_SCURO;
 
-        $riquadri = collect($template->slots)
+        $formato = collect(FormatiLibro::tutti())->firstWhere('codice', FormatiLibro::default());
+        $slotsRisolti = GrigliaPagina::risolvi($template->slots, $formato['larghezza_cm'] * 10, $formato['altezza_cm'] * 10);
+
+        $riquadri = collect($slotsRisolti)
             ->sortBy('ordine')
             ->map(fn (array $slot) => $this->riquadro($slot, $w, $h))
             ->implode("\n");

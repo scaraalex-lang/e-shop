@@ -56,7 +56,6 @@ class GeneraVideoBook implements ShouldQueue
             ->flatMap(fn (Pagina $p) => $p->foto->sortBy('slot'))
             ->map(fn ($f) => [
                 'path' => Storage::disk('public')->path($f->path),
-                'testo' => $f->didascalia,
                 'durata' => $f->durata_secondi,
                 'zoom' => true,
             ])

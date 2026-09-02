@@ -75,6 +75,8 @@ class EditorController extends Controller
             'libroData'     => [
                 'id'          => $libro->id,
                 'formato'     => $libro->formato,
+                'stato'       => $libro->stato->value,
+                'completato'  => $libro->completato(),
                 // Il PDF resta visibile per l'anteprima (si apre in una
                 // scheda, non forza il salvataggio) anche prima di pagare:
                 // solo il bottone "Scarica" del video è vincolato a
@@ -84,6 +86,7 @@ class EditorController extends Controller
                 'pagine'  => $libro->pagine->map(fn ($p) => [
                     'id'       => $p->id,
                     'ordine'   => $p->ordine,
+                    'titolo'   => $p->titolo,
                     'template' => $p->template ? [
                         'id'          => $p->template->id,
                         'name'        => $p->template->nome,
@@ -97,7 +100,6 @@ class EditorController extends Controller
                         'scala'          => $f->scala,
                         'pos_x'          => $f->pos_x,
                         'pos_y'          => $f->pos_y,
-                        'didascalia'     => $f->didascalia,
                         'durata_secondi' => $f->durata_secondi,
                         'stile'          => $f->stileEffettivo(),
                     ])->values(),
@@ -130,6 +132,9 @@ class EditorController extends Controller
             // libro"): unica fonte anche per la validazione, vedi
             // aggiornaFormato() e Support\FormatiLibro.
             'formatiData' => FormatiLibro::tutti(),
+            // Solo lo staff vede/aziona "Manda in produzione"/"Riporta in
+            // bozza" — stesso criterio di mandaInProduzione()/riportaInBozza().
+            'isStaff' => (bool) $request->user()?->eStaff(),
             // Le opzioni del pannello Strumenti (font, bordino, viraggio):
             // stessa lista usata per validare le richieste PUT .../stile.
             'strumentiData' => [
@@ -160,6 +165,9 @@ class EditorController extends Controller
     public function aggiornaFormato(Request $request, Libro $libro): JsonResponse
     {
         $this->assicuraProprio($request, $libro);
+        if ($blocco = $this->assicuraModificabile($libro)) {
+            return $blocco;
+        }
 
         $validated = $request->validate([
             'formato' => ['required', 'string', Rule::in(FormatiLibro::codici())],
@@ -168,5 +176,33 @@ class EditorController extends Controller
         $libro->update(['formato' => $validated['formato']]);
 
         return response()->json(['success' => true, 'formato' => $libro->formato]);
+    }
+
+    /**
+     * "Manda in produzione": azione manuale dello staff, non un effetto
+     * collaterale del generare PDF/video (l'anteprima resta libera prima di
+     * pagare, vedi ControllaAccessoLibro) — da qui in poi ogni endpoint che
+     * cambia pagine/foto/testi/formato rifiuta la richiesta
+     * (assicuraModificabile()) finché non si torna in bozza.
+     */
+    public function mandaInProduzione(Request $request, Libro $libro): JsonResponse
+    {
+        $this->assicuraProprio($request, $libro);
+        abort_unless($request->user()?->eStaff(), 403, 'Solo lo staff manda un libro in produzione.');
+
+        $libro->segnaCompletato();
+
+        return response()->json(['success' => true, 'stato' => $libro->stato->value]);
+    }
+
+    /** Sblocca un libro "in produzione" per poterlo correggere — stesso permesso di mandaInProduzione(). */
+    public function riportaInBozza(Request $request, Libro $libro): JsonResponse
+    {
+        $this->assicuraProprio($request, $libro);
+        abort_unless($request->user()?->eStaff(), 403, 'Solo lo staff riporta in bozza un libro in produzione.');
+
+        $libro->riportaInBozza();
+
+        return response()->json(['success' => true, 'stato' => $libro->stato->value]);
     }
 }

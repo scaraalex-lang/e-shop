@@ -18,7 +18,7 @@ class Pagina extends Model
 {
     protected $table = 'videobook_pagine';
 
-    protected $fillable = ['videobook_progetto_id', 'template_id', 'ordine'];
+    protected $fillable = ['videobook_progetto_id', 'template_id', 'titolo', 'ordine'];
 
     public function libro(): BelongsTo
     {

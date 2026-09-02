@@ -8,14 +8,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Un layout di pagina riusabile: quanti riquadri foto ci sono e dove.
  *
- * `slots` è l'unica fonte della geometria: un array di
- * `{ordine, x, y, w, h}` in coordinate relative (0-1), applicabile a
- * qualunque formato fisico scelto per il libro — stesso ruolo che
- * [[\Modules\Memorial\Models\RicordinoTemplate]] ha per il Ricordino
- * Designer, qui per pagine con più foto invece di un solo fronte/retro.
+ * `slots` è l'unica fonte della geometria, ma non la geometria finita: è un
+ * albero `{area, nodo}` (colonna/riga/foto, vedi Support\GrigliaPagina e
+ * PaginaTemplateSeeder) che si risolve in rettangoli concreti solo
+ * conoscendo il formato fisico scelto per il libro — è così che un gap di
+ * 4mm tra due foto resta 4mm veri in stampa su qualunque taglia (15x15 come
+ * 38x36), invece di un numero relativo congelato una volta sola. Stesso
+ * ruolo che [[\Modules\Memorial\Models\RicordinoTemplate]] ha per il
+ * Ricordino Designer, qui per pagine con più foto invece di un solo
+ * fronte/retro.
  *
- * Non contiene didascalie: quelle sono per-foto, vivono su [[FotoPagina]]
- * quando l'utente riempie il riquadro, non sul layout.
+ * Non contiene didascalie: le foto non ne hanno più (rimosse dal layout di
+ * stampa e dal video, vedi FotoPagina).
  */
 class PaginaTemplate extends Model
 {
@@ -62,10 +66,32 @@ class PaginaTemplate extends Model
         return $query->where('numero_foto', $numeroFoto);
     }
 
-    /** Geometria (x,y,w,h) del riquadro `slot`, o null se il layout non lo prevede. */
-    public function slot(int $slot): ?array
+    /** true se il layout prevede un riquadro foto con questo numero. Solo esistenza: la geometria serve un formato, vedi Support\GrigliaPagina. */
+    public function hasSlot(int $ordine): bool
     {
-        return collect($this->slots)->firstWhere('ordine', $slot);
+        return in_array($ordine, $this->ordiniFoto(), true);
+    }
+
+    /** Tutti i numeri di riquadro (foglie 'foto') previsti dal layout, in qualunque punto dell'albero. */
+    public function ordiniFoto(): array
+    {
+        $ordini = [];
+        $this->raccogliOrdini($this->slots['nodo'] ?? [], $ordini);
+
+        return $ordini;
+    }
+
+    private function raccogliOrdini(array $nodo, array &$ordini): void
+    {
+        if (($nodo['tipo'] ?? null) === 'foto') {
+            $ordini[] = $nodo['ordine'];
+
+            return;
+        }
+
+        foreach ($nodo['figli'] ?? [] as $figlio) {
+            $this->raccogliOrdini($figlio['nodo'], $ordini);
+        }
     }
 
     /** URL relativo dell'anteprima (stessa scelta di RicordinoTemplate::anteprimaUrl()). */
