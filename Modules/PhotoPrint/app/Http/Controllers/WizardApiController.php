@@ -168,7 +168,9 @@ class WizardApiController extends Controller
         }
 
         $path = self::DISK_DIR.'/pratica/'.Str::uuid().'.jpg';
-        Storage::disk('public')->put($path, $binary);
+        if (! Storage::disk('public')->put($path, $binary)) {
+            return response()->json(['error' => 'Salvataggio su disco fallito'], 500);
+        }
 
         $tipo = (string) $request->input('tipo', 'ritagliata');
         $principale = (bool) $request->input('is_principale', false);
@@ -221,7 +223,9 @@ class WizardApiController extends Controller
         }
 
         $path = self::DISK_DIR . '/tmp/' . Str::uuid() . '.jpg';
-        Storage::disk('public')->put($path, $binary);
+        if (! Storage::disk('public')->put($path, $binary)) {
+            return response()->json(['error' => 'Salvataggio su disco fallito'], 500);
+        }
 
         // Se si sta lavorando un ordine, la foto entra nel registro della
         // pratica: prima finiva su disco e nessuno se ne ricordava più. È un
@@ -251,7 +255,9 @@ class WizardApiController extends Controller
         }
 
         $path = self::DISK_DIR . '/ai/' . Str::uuid() . '.jpg';
-        Storage::disk('public')->put($path, $binary);
+        if (! Storage::disk('public')->put($path, $binary)) {
+            return response()->json(['error' => 'Salvataggio su disco fallito'], 500);
+        }
 
         $tipo = (string) $request->input('tipo', 'elaborata_ai');
         $principale = (bool) $request->input('is_principale', false);

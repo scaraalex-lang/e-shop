@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class Defunto extends Model
 {
@@ -56,10 +57,21 @@ class Defunto extends Model
             return null;
         }
 
-        return DB::table('foto_pratica')
+        $path = DB::table('foto_pratica')
             ->where('ordine_id', $this->ordine_id)
             ->where('is_principale', true)
             ->value('path');
+
+        // La riga a database può sopravvivere al file: se il salvataggio su
+        // disco è fallito silenziosamente (vedi WizardApiController) o il
+        // file è stato rimosso a mano, meglio un'anteprima assente che
+        // un'icona di immagine rotta in tutte le pagine che la mostrano
+        // (ordini, necrologio, manifesto, storia social).
+        if ($path && ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return $path;
     }
 
     public function nomeCompleto(): string
